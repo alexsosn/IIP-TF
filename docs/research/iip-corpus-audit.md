@@ -81,6 +81,22 @@ This report is generated from `iip-inventory.json`; counts are not hand-edited.
 - Records using explicit textpart: **47**
 - Line-break elements in source transcriptions: **13434**
 
+## Edition layers
+
+| Subtype | Divs | Records | Non-empty divs | Non-empty records | lb | textparts |
+|---|---:|---:|---:|---:|---:|---:|
+| `diplomatic` | 4158 | 4158 | 1349 | 1349 | 2534 | 52 |
+| `transcription` | 5348 | 5348 | 5136 | 5136 | 13434 | 80 |
+| `transcription_segmented` | 5160 | 5157 | 4898 | 4896 | 0 | 0 |
+
+### Edition relation-bearing attributes
+
+| Subtype | xml:id | corresp | ana | xml:lang |
+|---|---:|---:|---:|---:|
+| `diplomatic` | 433 | 281 | 3942 | 1850 |
+| `transcription` | 1601 | 1438 | 5335 | 2713 |
+| `transcription_segmented` | 0 | 0 | 0 | 0 |
+
 ## Languages
 
 ### Record-level textLang declarations
@@ -201,6 +217,31 @@ These are per-record observations. A project-wide redistribution conclusion must
 | `rdg` | 1 |
 | `subst` | 1 |
 
+### diplomatic
+
+| Construct | Count |
+|---|---:|
+| `lb` | 2484 |
+| `gap` | 1656 |
+| `unclear` | 659 |
+| `g` | 252 |
+| `hi` | 184 |
+| `supplied` | 127 |
+| `space` | 66 |
+| `foreign` | 32 |
+| `choice` | 27 |
+| `num` | 27 |
+| `am` | 22 |
+| `orig` | 20 |
+| `abbr` | 15 |
+| `ex` | 12 |
+| `expan` | 9 |
+| `del` | 4 |
+| `corr` | 2 |
+| `sic` | 2 |
+| `cb` | 1 |
+| `surplus` | 1 |
+
 ### textpart
 
 | Construct | Count |
@@ -233,6 +274,8 @@ The following textual/editorial constructs occur at most ten times in their cont
 
 | Construct | Count |
 |---|---:|
+| `diplomatic:cb` | 1 |
+| `diplomatic:surplus` | 1 |
 | `textpart:del` | 1 |
 | `transcription:cb` | 1 |
 | `transcription:height` | 1 |
@@ -242,10 +285,13 @@ The following textual/editorial constructs occur at most ten times in their cont
 | `transcription_segmented:lem` | 1 |
 | `transcription_segmented:rdg` | 1 |
 | `transcription_segmented:subst` | 1 |
+| `diplomatic:corr` | 2 |
+| `diplomatic:sic` | 2 |
 | `textpart:am` | 2 |
 | `transcription_segmented:milestone` | 2 |
 | `transcription_segmented:add` | 3 |
 | `transcription_segmented:reg` | 3 |
+| `diplomatic:del` | 4 |
 | `textpart:milestone` | 4 |
 | `transcription:handShift` | 4 |
 | `transcription:subst` | 4 |
@@ -254,6 +300,7 @@ The following textual/editorial constructs occur at most ten times in their cont
 | `transcription:figDesc` | 6 |
 | `transcription:figure` | 6 |
 | `transcription_segmented:foreign` | 7 |
+| `diplomatic:expan` | 9 |
 
 ## Mapping implications for issue #3
 
