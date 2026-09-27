@@ -97,6 +97,15 @@ This report is generated from `iip-inventory.json`; counts are not hand-edited.
 | `transcription` | 1601 | 1438 | 5335 | 2713 |
 | `transcription_segmented` | 0 | 0 | 0 | 0 |
 
+### Edition corresp target classes
+
+| Source subtype | Target class | Count |
+|---|---|---:|
+| `diplomatic` | `transcription` | 264 |
+| `diplomatic` | `translation` | 274 |
+| `transcription` | `diplomatic` | 261 |
+| `transcription` | `translation` | 1430 |
+
 ## Languages
 
 ### Record-level textLang declarations
