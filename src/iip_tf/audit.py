@@ -693,7 +693,12 @@ def render_markdown(inventory: Inventory) -> str:
     return "\n".join(lines)
 
 def _json_text(inventory: Inventory) -> str:
-    return json.dumps(inventory, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    return json.dumps(
+        inventory,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ) + "\n"
 
 
 def _check_or_write(path: Path, content: str, *, check: bool) -> bool:
