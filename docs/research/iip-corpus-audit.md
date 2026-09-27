@@ -106,6 +106,17 @@ This report is generated from `iip-inventory.json`; counts are not hand-edited.
 | `transcription` | `diplomatic` | 261 |
 | `transcription` | `translation` | 1430 |
 
+### Corresp target classes by source context
+
+| Source context | Target class | Count |
+|---|---|---:|
+| `diplomatic` | `transcription` | 264 |
+| `diplomatic` | `translation` | 274 |
+| `transcription` | `diplomatic` | 261 |
+| `transcription` | `translation` | 1430 |
+| `translation` | `diplomatic` | 282 |
+| `translation` | `transcription` | 1426 |
+
 ## Languages
 
 ### Record-level textLang declarations
