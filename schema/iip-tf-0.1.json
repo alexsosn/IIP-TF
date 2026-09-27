@@ -116,7 +116,11 @@
     "hand",
     "decoration",
     "image",
-    "revision"
+    "revision",
+    "paragraph",
+    "bibl_scope",
+    "dimension",
+    "facsimile_surface"
   ],
   "node_type_contract": {
     "inscription": "Record and top-level section node. Canonical TF section id is the unique source file stem; raw IIP/xml ids remain metadata.",
@@ -131,7 +135,26 @@
     "hand": "Writing-hand/technique record and letter-dimension metadata.",
     "decoration": "One decoration record.",
     "image": "Facsimile/image reference and credit only; never image bytes.",
-    "revision": "One source revisionDesc/change record."
+    "revision": "One source revisionDesc/change record.",
+    "paragraph": {
+      "source_elements": [
+        "p",
+        "ab"
+      ],
+      "semantics": "Textual block boundary inside an edition/textpart; preserves block-level language/certainty and multiple-block order without becoming a TF section.",
+      "features": [
+        "source_id",
+        "source_key",
+        "kind",
+        "layer",
+        "lang",
+        "lang_source",
+        "cert"
+      ]
+    },
+    "bibl_scope": "One source biblScope child; repeatable and parented to a bibl node.",
+    "dimension": "One source dimensions element; repeatable and usable for object/surface or hand/letter dimensions without flattening ranges.",
+    "facsimile_surface": "One source facsimile/surface grouping node carrying shared description/note context for child image nodes."
   },
   "features": {
     "slot": [
@@ -255,7 +278,18 @@
       "role",
       "calendar",
       "date_from",
-      "date_to"
+      "date_to",
+      "quantity_int",
+      "date_not_before_int",
+      "date_not_after_int",
+      "dimension_type",
+      "dimension_extent",
+      "height_min",
+      "height_max",
+      "width_min",
+      "width_max",
+      "depth_min",
+      "depth_max"
     ],
     "edge": [
       "parent",
@@ -335,19 +369,34 @@
       "semantics": "Deterministic converter key for a source element lacking xml:id; never an opaque XML fragment."
     },
     "quantity": {
-      "domain": "markup",
-      "value_type": "int_or_source_str",
-      "semantics": "Typed integer when losslessly parseable; exact source value otherwise retained in extent/source fields."
+      "domain": "markup|dimension",
+      "value_type": "str",
+      "semantics": "Exact raw source quantity string; never coerced in-place."
     },
     "date_not_before": {
       "domain": "inscription",
-      "value_type": "int_or_empty",
-      "semantics": "Losslessly parsed source notBefore year where possible."
+      "value_type": "str",
+      "semantics": "Exact raw source notBefore string."
     },
     "date_not_after": {
       "domain": "inscription",
-      "value_type": "int_or_empty",
-      "semantics": "Losslessly parsed source notAfter year where possible."
+      "value_type": "str",
+      "semantics": "Exact raw source notAfter string."
+    },
+    "quantity_int": {
+      "domain": "markup|dimension",
+      "value_type": "int",
+      "semantics": "Optional lossless integer derivative of quantity; absent when the raw value is not an exact integer."
+    },
+    "date_not_before_int": {
+      "domain": "inscription",
+      "value_type": "int",
+      "semantics": "Optional lossless integer-year derivative of date_not_before."
+    },
+    "date_not_after_int": {
+      "domain": "inscription",
+      "value_type": "int",
+      "semantics": "Optional lossless integer-year derivative of date_not_after."
     }
   },
   "display_readings": {
@@ -434,7 +483,8 @@
     ],
     "raw_attributes_blob": false,
     "preserve_direct_parent_edge": true,
-    "unknown_construct_policy": "release_blocking_diagnostic"
+    "unknown_construct_policy": "release_blocking_diagnostic",
+    "paragraph_elements_are_separate_nodes": true
   },
   "entities": {
     "node_type": "entity",
@@ -513,10 +563,6 @@
       "condition",
       "layout_columns",
       "layout_written_lines",
-      "height",
-      "width",
-      "depth",
-      "dimension_unit",
       "date_not_before",
       "date_not_after",
       "date_text",
@@ -538,7 +584,10 @@
       "hand",
       "decoration",
       "image",
-      "revision"
+      "revision",
+      "bibl_scope",
+      "dimension",
+      "facsimile_surface"
     ],
     "source_values_retained": true,
     "derived_values_must_be_separate_and_documented": true
@@ -549,21 +598,21 @@
         "source_id",
         "source_key",
         "target",
-        "ptr_type",
-        "scope",
-        "scope_unit",
-        "scope_n"
+        "ptr_type"
+      ],
+      "child_nodes": [
+        "bibl_scope"
       ]
     },
     "hand": {
       "features": [
+        "source_id",
         "source_key",
         "technique",
-        "note",
-        "letter_height",
-        "letter_height_min",
-        "letter_height_max",
-        "letter_height_unit"
+        "note"
+      ],
+      "child_nodes": [
+        "dimension"
       ]
     },
     "decoration": {
@@ -576,6 +625,7 @@
     },
     "image": {
       "features": [
+        "source_id",
         "source_key",
         "url",
         "description",
@@ -583,7 +633,8 @@
         "credit",
         "credit_role"
       ],
-      "binary_payload": false
+      "binary_payload": false,
+      "parent_policy": "facsimile_surface_when_present_else_inscription"
     },
     "revision": {
       "features": [
@@ -593,10 +644,55 @@
         "who",
         "description"
       ]
+    },
+    "bibl_scope": {
+      "parent_type": "bibl",
+      "features": [
+        "source_id",
+        "source_key",
+        "scope",
+        "scope_unit",
+        "scope_n"
+      ]
+    },
+    "dimension": {
+      "parent_types": [
+        "inscription",
+        "hand"
+      ],
+      "raw_values_are_strings": true,
+      "features": [
+        "source_id",
+        "source_key",
+        "dimension_type",
+        "dimension_extent",
+        "dimension_unit",
+        "height",
+        "height_min",
+        "height_max",
+        "width",
+        "width_min",
+        "width_max",
+        "depth",
+        "depth_min",
+        "depth_max",
+        "quantity",
+        "at_least",
+        "at_most"
+      ]
+    },
+    "facsimile_surface": {
+      "parent_type": "inscription",
+      "features": [
+        "source_id",
+        "source_key",
+        "description",
+        "note"
+      ]
     }
   },
   "edges": {
-    "parent": "Direct semantic parent for nested markup/entity nodes; preserves nesting even when spans are identical.",
+    "parent": "Direct semantic parent for nested markup/entity nodes and repeatable source structures such as paragraph blocks, bibliography scopes, hand dimensions, and facsimile images/surfaces; preserves hierarchy even when oslot anchors coincide.",
     "in_inscription": "Explicit ownership of metadata/segmentation nodes whose oslot anchor is technical.",
     "corresponds_to": "Resolved local EpiDoc @corresp relation between edition/text nodes; unresolved/raw value remains source_corresp.",
     "cites": "Resolved ana/bibliography relation to bibl nodes; raw ana value is retained.",
@@ -671,6 +767,34 @@
     "segmentation_conflict": "fail_closed",
     "segmentation_projection_conflict": "release_blocking_diagnostic",
     "duplicate_identity": "duplicate canonical record key or duplicate source element id within the same source file is release-blocking; cross-file raw IIP/xml id collisions are preserved and diagnosed",
-    "silent_drop": "forbidden"
+    "silent_drop": "forbidden",
+    "metadata_cardinality_loss": "forbidden; repeatable source children must remain repeatable TF nodes"
+  },
+  "tf_value_types": {
+    "slot_default": "str",
+    "node_default": "str",
+    "node_int": [
+      "line_n",
+      "quantity_int",
+      "date_not_before_int",
+      "date_not_after_int"
+    ],
+    "edge_default": "edge_without_values",
+    "rule": "Every TF feature has exactly one valueType. Raw source attributes are string features; optional numeric derivatives use separately named int features."
+  },
+  "textual_blocks": {
+    "node_type": "paragraph",
+    "source_elements": [
+      "p",
+      "ab"
+    ],
+    "preserve_order": true,
+    "preserve_empty_blocks": true,
+    "section_level": false,
+    "block_separator": "newline_in_rendered_layer_views",
+    "attributes": {
+      "xml:lang": "lang",
+      "cert": "cert"
+    }
   }
 }
