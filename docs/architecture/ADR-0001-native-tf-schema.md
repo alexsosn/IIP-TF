@@ -37,8 +37,11 @@ line structure, and most diplomatic editions have no explicit alignment to norma
 transcription. A string feature would lose ordering and spans. Real sign slots preserve the
 layer natively without inventing alignment.
 
-An `inscription` spans all textual slots for the record. `edition`, `textpart`, and `line`
-nodes delimit each layer. Default rendering does not concatenate all layers: only primary
+An `inscription` spans all textual slots for the record. `edition`, `textpart`, `paragraph`,
+and `line` nodes delimit each layer. Source `<p>` and textual `<ab>` elements become
+`paragraph` nodes, so multiple blocks and block-level `xml:lang`/`cert` are not flattened.
+Paragraphs are not TF sections; section navigation remains inscription/textpart/line. Default
+rendering does not concatenate all layers: only primary
 slots get `primary_glyph` / `primary_after`; layer-specific formats render the others.
 
 ## Sections
@@ -50,8 +53,8 @@ values across different files.
 
 Explicit EpiDoc textparts are preserved. A non-empty layer without explicit textparts gets
 one implicit layer textpart. Every source `lb` begins the following line and is also retained
-as a structured zero-width event. Empty editions stay as edition nodes but get no invented
-line nodes.
+as a structured zero-width event. Empty editions stay as edition nodes but get no invented line nodes. Empty source paragraphs
+may be retained as paragraph nodes on the edition's technical anchor without inventing text.
 
 ## Signs and zero-width source positions
 
@@ -108,19 +111,36 @@ Layer-specific formats use derived slot features that are undefined outside that
 is ordinary Text-Fabric format behavior. #8 may add normal TF app styling, but no separate web
 application is part of the architecture.
 
+## Text-Fabric feature value types
+
+Every emitted TF feature has exactly one `@valueType`. Raw source attributes are preserved as
+string features. A numeric convenience feature is separate and emitted only when conversion is
+lossless: for example `quantity` (raw string) / `quantity_int` (int), and
+`date_not_before` / `date_not_before_int`. This avoids impossible mixed int/string TF
+features and preserves spellings such as `unknown` or non-canonical source values.
+
 ## Metadata
 
-One-to-one physical, language, classification, origin, and provenance values live on
-`inscription`. Repeatable/structured data become native nodes: `bibl`, `hand`, `decoration`,
-`image`, and `revision`. Translation/reference spans such as `persName`, `rs`, `name`,
+One-to-one language, classification, origin, and provenance values live on `inscription`.
+Repeatable/structured data become native nodes: `bibl`, `bibl_scope`, `hand`,
+`dimension`, `decoration`, `facsimile_surface`, `image`, and `revision`.
+Translation/reference spans such as `persName`, `rs`, `name`,
 `placeName`, and `date` become structured `entity` nodes.
 
-Facsimile URLs, descriptions, notes, and credits are kept. Image binaries are not copied into
-the corpus because IIP does not establish one uniform redistribution right for every image.
+A `biblScope` is its own repeatable `bibl_scope` child node rather than a scalar on
+`bibl`; the pinned audit has more scopes than bibliography entries. Every source
+`<dimensions>` becomes a `dimension` node so decimal values, axis-specific ranges, repeated
+dimension records, and hand-letter dimensions survive unchanged.
+
+Facsimile `surface` grouping is preserved with `facsimile_surface` nodes. Child graphics
+become `image` nodes parented to the surface; graphics directly under `facsimile` belong
+directly to the inscription. URLs, descriptions, notes, and credits are kept. Image binaries
+are not copied into the corpus because IIP does not establish one uniform redistribution right
+for every image.
 
 ## Edges
 
-- `parent`: direct nested textual semantic parent;
+- `parent`: direct nested textual/metadata parent, including markup, paragraph blocks, bibliography scopes, dimensions, and facsimile surface/image grouping;
 - `in_inscription`: semantic owner for technically anchored metadata/provenance;
 - `corresponds_to`: resolved local EpiDoc `@corresp` relation;
 - `cites`: relation to a bibliography node;
@@ -170,3 +190,7 @@ non-deterministic projection fail explicitly rather than being hidden in a sidec
 
 This ADR freezes the 0.1 semantic contract. Semantic changes require a new ADR and schema
 version.
+
+## Metadata cardinality rule
+
+Repeatable source structures are never compressed into one scalar feature. If new full-corpus evidence shows a source child can repeat where schema 0.1 models it as scalar, conversion must stop with a schema diagnostic until the mapping is revised; it must not keep the last value.
