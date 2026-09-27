@@ -433,21 +433,23 @@ def render_markdown(inventory: Inventory) -> str:
         lines.extend(f"- `{name}`" for name in malformed)
     else:
         lines.append("- None")
+
     lines.extend(
         [
             "",
             "## Identity",
-        "",
-        f"- Distinct XML ids: **{identity['distinct_xml_ids']}**",
-        f"- Missing XML ids: **{identity['missing_xml_id_count']}**",
-        f"- Duplicate XML ids: **{len(identity['duplicate_xml_ids'])}**",
-        f"- Distinct IIP ids: **{identity['distinct_iip_ids']}**",
-        f"- Missing IIP ids: **{identity['missing_iip_id_count']}**",
-        f"- Duplicate IIP ids: **{len(identity['duplicate_iip_ids'])}**",
-        "",
-        "### Duplicate XML identities",
-        "",
-    ]
+            "",
+            f"- Distinct XML ids: **{identity['distinct_xml_ids']}**",
+            f"- Missing XML ids: **{identity['missing_xml_id_count']}**",
+            f"- Duplicate XML ids: **{len(identity['duplicate_xml_ids'])}**",
+            f"- Distinct IIP ids: **{identity['distinct_iip_ids']}**",
+            f"- Missing IIP ids: **{identity['missing_iip_id_count']}**",
+            f"- Duplicate IIP ids: **{len(identity['duplicate_iip_ids'])}**",
+            "",
+            "### Duplicate XML identities",
+            "",
+        ]
+    )
     duplicate_xml_files = identity["duplicate_xml_id_files"]
     if duplicate_xml_files:
         for identifier, filenames in sorted(duplicate_xml_files.items()):
@@ -455,13 +457,8 @@ def render_markdown(inventory: Inventory) -> str:
             lines.append(f"- `{identifier}`: {rendered}")
     else:
         lines.append("- None")
-    lines.extend(
-        [
-            "",
-            "### Duplicate IIP identities",
-            "",
-        ]
-    )
+
+    lines.extend(["", "### Duplicate IIP identities", ""])
     duplicate_iip_files = identity["duplicate_iip_id_files"]
     if duplicate_iip_files:
         for identifier, filenames in sorted(duplicate_iip_files.items()):
@@ -469,44 +466,46 @@ def render_markdown(inventory: Inventory) -> str:
             lines.append(f"- `{identifier}`: {rendered}")
     else:
         lines.append("- None")
+
     lines.extend(
         [
             "",
             "## Text and segmentation",
-        "",
-        f"- Records with transcription: **{transcriptions['records_with_transcription']}**",
-        (
-            "- Records with segmented transcription: "
-            f"**{transcriptions['records_with_segmented_transcription']}**"
-        ),
-        (
-            "- Records with transcription but no segmented transcription: "
-            f"**{transcriptions['records_with_unsegmented_only']}**"
-        ),
-        (
-            "- Records with segmented transcription but no source transcription: "
-            f"**{transcriptions['records_with_segmented_only']}**"
-        ),
-        (
-            "- Records whose transcription has no visible/source-bearing content: "
-            f"**{transcriptions['empty_transcription_records']}**"
-        ),
-        f"- Records using explicit textpart: **{structure['records_with_textpart']}**",
-        f"- Line-break elements in source transcriptions: **{structure['line_break_elements']}**",
-        "",
-        "## Languages",
-        "",
-        "### Record-level textLang declarations",
-        "",
-        _table(_sorted_counts(languages["record_declarations"])),
-        "",
-        "### Token-level xml:lang declarations",
-        "",
-        _table(_sorted_counts(languages["token_declarations"])),
-        "",
-        "## Repeatable metadata maxima",
-        "",
-    ]
+            "",
+            f"- Records with transcription: **{transcriptions['records_with_transcription']}**",
+            (
+                "- Records with segmented transcription: "
+                f"**{transcriptions['records_with_segmented_transcription']}**"
+            ),
+            (
+                "- Records with transcription but no segmented transcription: "
+                f"**{transcriptions['records_with_unsegmented_only']}**"
+            ),
+            (
+                "- Records with segmented transcription but no source transcription: "
+                f"**{transcriptions['records_with_segmented_only']}**"
+            ),
+            (
+                "- Records whose transcription has no visible/source-bearing content: "
+                f"**{transcriptions['empty_transcription_records']}**"
+            ),
+            f"- Records using explicit textpart: **{structure['records_with_textpart']}**",
+            f"- Line-break elements in source transcriptions: **{structure['line_break_elements']}**",
+            "",
+            "## Languages",
+            "",
+            "### Record-level textLang declarations",
+            "",
+            _table(_sorted_counts(languages["record_declarations"])),
+            "",
+            "### Token-level xml:lang declarations",
+            "",
+            _table(_sorted_counts(languages["token_declarations"])),
+            "",
+            "## Repeatable metadata maxima",
+            "",
+        ]
+    )
     for key, value in sorted(metadata.items()):
         lines.append(f"- `{key}`: **{value}**")
 
@@ -553,6 +552,7 @@ def render_markdown(inventory: Inventory) -> str:
         for name, count in elements.get(context, {}).items():
             if name not in CONTAINER_ELEMENTS and count <= 10:
                 rare.append((f"{context}:{name}", count))
+
     lines.extend(
         [
             "## Rare schema-decision surface",
@@ -587,7 +587,6 @@ def render_markdown(inventory: Inventory) -> str:
         ]
     )
     return "\n".join(lines)
-
 
 def _json_text(inventory: Inventory) -> str:
     return json.dumps(inventory, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
