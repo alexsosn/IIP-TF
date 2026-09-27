@@ -1,0 +1,10 @@
+<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="suhm0001"><text><body>
+<div type="edition" subtype="transcription_segmented" change="c2021-06-16"><p>
+<w xml:id="suhm0001-1" xml:lang="grc">ἐφυλοκαλέθη</w>
+<num xml:id="suhm0001-2" value="680" xml:lang="grc">πχʹ</num>
+</p></div>
+<div type="edition" subtype="transcription_segmented" change="c2023-07-10"><p>
+<w xml:lang="grc" xml:id="suhm0001-1">ἐφυλοκαλέθη</w>
+<num xml:lang="grc" value="680" xml:id="suhm0001-2">πχʹ</num>
+</p></div>
+</body></text></TEI>
