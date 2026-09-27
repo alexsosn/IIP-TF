@@ -190,3 +190,63 @@ def test_report_names_malformed_inputs(tmp_path: Path) -> None:
 
     assert "Malformed/unreadable files" in report
     assert "`broken0001.xml`" in report
+
+
+def test_test_files_are_accounted_but_excluded_from_semantic_counts(tmp_path: Path) -> None:
+    _write(
+        tmp_path,
+        "aaTestFile.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="xxxx0001">
+  <teiHeader><fileDesc><sourceDesc><msDesc><msContents>
+    <textLang mainLang="la"/>
+  </msContents></msDesc></sourceDesc></fileDesc></teiHeader>
+  <text><body>
+    <div type="edition" subtype="transcription">
+      <p>synthetic<gap reason="lost" unit="character" quantity="99"/></p>
+    </div>
+  </body></text>
+</TEI>""",
+    )
+    _write(
+        tmp_path,
+        "real0001.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="real0001">
+  <teiHeader><fileDesc><sourceDesc><msDesc><msContents>
+    <textLang mainLang="grc"/>
+  </msContents></msDesc></sourceDesc></fileDesc></teiHeader>
+  <text><body>
+    <div type="edition" subtype="transcription"><p>Α</p></div>
+  </body></text>
+</TEI>""",
+    )
+
+    inventory = audit_directory(tmp_path, source_revision="abc")
+
+    assert inventory["files"]["total_xml"] == 2
+    assert inventory["files"]["test_or_non_inscription"] == 1
+    assert inventory["transcriptions"]["records_with_transcription"] == 1
+    assert inventory["languages"]["record_declarations"] == {"grc": 1}
+    assert inventory["elements"]["transcription"].get("gap", 0) == 0
+
+
+def test_report_includes_textpart_editorial_constructs(tmp_path: Path) -> None:
+    _write(
+        tmp_path,
+        "parts0001.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="parts0001">
+  <text><body>
+    <div type="edition" subtype="transcription">
+      <div type="textpart" subtype="front">
+        <p><unclear>Α</unclear><gap reason="lost" unit="character" quantity="1"/></p>
+      </div>
+    </div>
+  </body></text>
+</TEI>""",
+    )
+
+    inventory = audit_directory(tmp_path, source_revision="abc")
+    report = render_markdown(inventory)
+
+    assert "### textpart" in report
+    assert "| `unclear` | 1 |" in report
+    assert "| `gap` | 1 |" in report
