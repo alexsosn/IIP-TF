@@ -133,3 +133,44 @@ def test_audit_output_is_deterministic_and_markdown_is_derived(tmp_path: Path) -
     assert "# IIP corpus audit" in report
     assert "Source revision: `abc`" in report
     assert "Total XML files: **1**" in report
+
+
+def test_audit_exposes_segmented_only_records(tmp_path: Path) -> None:
+    _write(
+        tmp_path,
+        "segonly0001.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="segonly0001">
+  <text><body>
+    <div type="edition" subtype="transcription_segmented">
+      <p><w xml:id="segonly0001-1" xml:lang="grc">Α</w></p>
+    </div>
+  </body></text>
+</TEI>""",
+    )
+
+    inventory = audit_directory(tmp_path, source_revision="abc")
+
+    assert inventory["transcriptions"]["records_with_segmented_only"] == 1
+
+
+def test_audit_reports_duplicate_identity_file_locations(tmp_path: Path) -> None:
+    for filename in ("a.xml", "b.xml"):
+        _write(
+            tmp_path,
+            filename,
+            """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="dup">
+  <teiHeader><fileDesc>
+    <publicationStmt><idno type="IIP">Dup 0001</idno></publicationStmt>
+  </fileDesc></teiHeader>
+  <text><body/></text>
+</TEI>""",
+        )
+
+    inventory = audit_directory(tmp_path, source_revision="abc")
+
+    assert inventory["identity"]["duplicate_xml_id_files"] == {
+        "dup": ["a.xml", "b.xml"]
+    }
+    assert inventory["identity"]["duplicate_iip_id_files"] == {
+        "Dup 0001": ["a.xml", "b.xml"]
+    }
