@@ -178,12 +178,15 @@ def audit_directory(source_dir: Path, *, source_revision: str) -> Inventory:
 
     xml_ids: Counter[str] = Counter()
     iip_ids: Counter[str] = Counter()
+    xml_id_files: dict[str, list[str]] = defaultdict(list)
+    iip_id_files: dict[str, list[str]] = defaultdict(list)
     missing_xml_id: list[str] = []
     missing_iip_id: list[str] = []
 
     with_transcription = 0
     with_segmented = 0
     with_unsegmented_only = 0
+    with_segmented_only = 0
     empty_transcription_records = 0
     records_with_textpart = 0
     line_break_elements = 0
@@ -219,6 +222,7 @@ def audit_directory(source_dir: Path, *, source_revision: str) -> Inventory:
         xml_id = root.attrib.get(XML_ID)
         if xml_id:
             xml_ids[xml_id] += 1
+            xml_id_files[xml_id].append(path.name)
         else:
             missing_xml_id.append(path.name)
 
@@ -232,6 +236,7 @@ def audit_directory(source_dir: Path, *, source_revision: str) -> Inventory:
         if record_iip_ids:
             for identifier in set(record_iip_ids):
                 iip_ids[identifier] += 1
+                iip_id_files[identifier].append(path.name)
         else:
             missing_iip_id.append(path.name)
 
@@ -273,6 +278,8 @@ def audit_directory(source_dir: Path, *, source_revision: str) -> Inventory:
             with_segmented += 1
         if transcription_divs and not segmented_divs:
             with_unsegmented_only += 1
+        if segmented_divs and not transcription_divs:
+            with_segmented_only += 1
         if has_textpart:
             records_with_textpart += 1
 
@@ -320,6 +327,12 @@ def audit_directory(source_dir: Path, *, source_revision: str) -> Inventory:
 
     duplicate_xml_ids = sorted(key for key, count in xml_ids.items() if count > 1)
     duplicate_iip_ids = sorted(key for key, count in iip_ids.items() if count > 1)
+    duplicate_xml_id_files = {
+        key: sorted(xml_id_files[key]) for key in duplicate_xml_ids
+    }
+    duplicate_iip_id_files = {
+        key: sorted(iip_id_files[key]) for key in duplicate_iip_ids
+    }
 
     inventory: Inventory = {
         "schema_version": 1,
@@ -338,15 +351,18 @@ def audit_directory(source_dir: Path, *, source_revision: str) -> Inventory:
             "missing_xml_id_count": len(missing_xml_id),
             "missing_xml_id_examples": missing_xml_id[:25],
             "duplicate_xml_ids": duplicate_xml_ids[:100],
+            "duplicate_xml_id_files": duplicate_xml_id_files,
             "distinct_iip_ids": len(iip_ids),
             "missing_iip_id_count": len(missing_iip_id),
             "missing_iip_id_examples": missing_iip_id[:25],
             "duplicate_iip_ids": duplicate_iip_ids[:100],
+            "duplicate_iip_id_files": duplicate_iip_id_files,
         },
         "transcriptions": {
             "records_with_transcription": with_transcription,
             "records_with_segmented_transcription": with_segmented,
             "records_with_unsegmented_only": with_unsegmented_only,
+            "records_with_segmented_only": with_segmented_only,
             "empty_transcription_records": empty_transcription_records,
         },
         "structure": {
@@ -428,6 +444,10 @@ def render_markdown(inventory: Inventory) -> str:
         (
             "- Records with transcription but no segmented transcription: "
             f"**{transcriptions['records_with_unsegmented_only']}**"
+        ),
+        (
+            "- Records with segmented transcription but no source transcription: "
+            f"**{transcriptions['records_with_segmented_only']}**"
         ),
         (
             "- Records whose transcription has no visible/source-bearing content: "
