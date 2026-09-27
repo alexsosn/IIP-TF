@@ -119,3 +119,12 @@ Builds from identical source + converter + supported environment should be deter
 - duplicate canonical record keys or duplicate element ids within one source file fail the build; cross-file raw IIP/XML-id collisions are preserved and reported;
 - unresolvable structural inconsistencies fail or are explicitly quarantined by a researched rule;
 - release validation reports converted, excluded, and failed source records separately.
+
+
+## Audited source mapping invariant
+
+The frozen schema enumerates mappings for every textual EpiDoc element/attribute observed at the
+pinned source revision. Selected `transcription_segmented` inline semantics are projected as
+annotation nodes onto primary slots (`annotation_source=transcription_segmented`) rather than
+discarded or materialized as another text copy. CI compares this mapping surface to the corpus
+audit so newly observed constructs fail explicitly.
