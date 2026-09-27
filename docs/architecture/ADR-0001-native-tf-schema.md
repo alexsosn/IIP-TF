@@ -44,7 +44,9 @@ slots get `primary_glyph` / `primary_after`; layer-specific formats render the o
 ## Sections
 
 The standard section hierarchy is `inscription -> textpart -> line` with section features
-`iip_id`, `section_part`, and `line_n`.
+`inscription_id`, `section_part`, and `line_n`. `inscription_id` is the unique repository file
+stem, because the source audit found 26 duplicated IIP ids and 9 duplicated TEI `xml:id`
+values across different files.
 
 Explicit EpiDoc textparts are preserved. A non-empty layer without explicit textparts gets
 one implicit layer textpart. Every source `lb` begins the following line and is also retained
@@ -138,9 +140,15 @@ are metadata only unless image rights are separately established.
 
 ## Identity
 
-`TEI/@xml:id` is canonical machine identity for an inscription; the IIP id is the human
-section heading. Source `xml:id` values are preserved as `source_id`; nodes without them get
-a deterministic `source_key`. A derived value never overwrites the raw source value.
+The canonical record key and top section heading is `inscription_id`, the unique source-file
+stem. Raw `idno[@type='IIP']` and `TEI/@xml:id` are both preserved verbatim as `iip_id` and
+`xml_id`, but neither is assumed globally unique.
+
+Source element `xml:id` values are file-scoped. Nodes without one get a deterministic
+file-scoped `source_key`. Bare local `@corresp` references resolve only inside their source
+file; a cross-file edge requires an explicit file-qualified target. A derived value never
+overwrites the raw source value. Duplicate canonical file keys or duplicate element ids
+within one file are release-blocking; cross-file raw-id collisions are preserved and reported.
 
 ## Representative cases
 
@@ -157,7 +165,7 @@ Shared DSS/BHSA semantics intentionally reuse `sign`, `word`, `line`, `lang`, `g
 standard sections, normal TF search/API, and a standard TF app. IIP-TF does not fabricate
 lexemes, phrases, clauses, or morphology absent from IIP.
 
-New source constructs, duplicate identities, unresolved segmentation conflicts, or
+New source constructs, duplicate canonical/file-scoped identities, unresolved segmentation conflicts, or
 non-deterministic projection fail explicitly rather than being hidden in a sidecar.
 
 This ADR freezes the 0.1 semantic contract. Semantic changes require a new ADR and schema
