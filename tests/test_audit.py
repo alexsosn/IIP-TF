@@ -27,14 +27,28 @@ def test_audit_counts_textual_and_metadata_constructs(tmp_path: Path) -> None:
         </licence></availability>
       </publicationStmt>
       <sourceDesc><msDesc>
-        <msContents><textLang mainLang="grc"/><msItem class="funerary" ana="jewish"/></msContents>
-        <physDesc><handDesc><handNote ana="engraved"/><handNote ana="painted"/></handDesc></physDesc>
+        <msContents>
+          <textLang mainLang="grc"/>
+          <msItem class="funerary" ana="jewish"/>
+        </msContents>
+        <physDesc><handDesc>
+          <handNote ana="engraved"/>
+          <handNote ana="painted"/>
+        </handDesc></physDesc>
       </msDesc></sourceDesc>
     </fileDesc>
   </teiHeader>
-  <facsimile><surface><graphic url="a.jpg"/></surface><surface><graphic url="b.jpg"/></surface></facsimile>
+  <facsimile>
+    <surface><graphic url="a.jpg"/></surface>
+    <surface><graphic url="b.jpg"/></surface>
+  </facsimile>
   <text><body>
-    <div type="edition" subtype="transcription"><p>Α<unclear>Β</unclear><lb/>Γ<gap reason="lost" unit="character" quantity="2"/></p></div>
+    <div type="edition" subtype="transcription">
+      <p>
+        Α<unclear>Β</unclear><lb/>
+        Γ<gap reason="lost" unit="character" quantity="2"/>
+      </p>
+    </div>
     <div type="edition" subtype="transcription_segmented"><p>
       <w xml:id="greek0001-1" xml:lang="grc">Α<unclear>Β</unclear></w>
       <w xml:id="greek0001-2" xml:lang="grc">Γ</w>
@@ -55,7 +69,9 @@ def test_audit_counts_textual_and_metadata_constructs(tmp_path: Path) -> None:
     <textLang mainLang="heb" otherLangs="arc"/>
   </msContents></msDesc></sourceDesc></fileDesc></teiHeader>
   <text><body>
-    <div type="edition" subtype="transcription"><div type="textpart" n="a"><p xml:lang="heb">אב<lb/>גד</p></div></div>
+    <div type="edition" subtype="transcription">
+      <div type="textpart" n="a"><p xml:lang="heb">אב<lb/>גד</p></div>
+    </div>
   </body></text>
 </TEI>""",
     )
@@ -63,8 +79,12 @@ def test_audit_counts_textual_and_metadata_constructs(tmp_path: Path) -> None:
         tmp_path,
         "empty0001.xml",
         """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="empty0001">
-  <teiHeader><fileDesc><sourceDesc><msDesc><msContents><textLang mainLang="arc"/></msContents></msDesc></sourceDesc></fileDesc></teiHeader>
-  <text><body><div type="edition" subtype="transcription"><p/></div></body></text>
+  <teiHeader><fileDesc><sourceDesc><msDesc><msContents>
+    <textLang mainLang="arc"/>
+  </msContents></msDesc></sourceDesc></fileDesc></teiHeader>
+  <text><body>
+    <div type="edition" subtype="transcription"><p/></div>
+  </body></text>
 </TEI>""",
     )
     _write(tmp_path, "broken0001.xml", "<TEI><broken>")
