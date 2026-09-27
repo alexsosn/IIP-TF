@@ -118,3 +118,30 @@ def test_audit_classifies_multi_target_corresp_relations(tmp_path: Path) -> None
     assert "| `diplomatic` | `transcription` | 1 |" in report
     assert "| `diplomatic` | `translation` | 1 |" in report
     assert "| `diplomatic` | `other` | 1 |" in report
+
+
+def test_audit_classifies_translation_source_corresp_relations(tmp_path: Path) -> None:
+    _write(
+        tmp_path,
+        "translation-relations.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="translation-relations">
+  <text><body>
+    <div type="translation"
+         corresp="#translation-relations.diplomatic #translation-relations.transcription"/>
+    <div type="edition" subtype="diplomatic"
+         corresp="#translation-relations.translation"/>
+  </body></text>
+</TEI>""",
+    )
+
+    inventory = audit_directory(tmp_path, source_revision="abc")
+
+    assert inventory["relations"]["corresp_targets_by_source_context"] == {
+        "diplomatic": {"translation": 1},
+        "translation": {"diplomatic": 1, "transcription": 1},
+    }
+
+    report = render_markdown(inventory)
+    assert "### Corresp target classes by source context" in report
+    assert "| `translation` | `diplomatic` | 1 |" in report
+    assert "| `translation` | `transcription` | 1 |" in report
