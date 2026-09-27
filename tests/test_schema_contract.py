@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any, cast
 
 ROOT = Path(__file__).parents[1]
 SCHEMA = ROOT / "schema" / "iip-tf-0.1.json"
@@ -9,8 +10,8 @@ ADR = ROOT / "docs" / "architecture" / "ADR-0001-native-tf-schema.md"
 REFERENCE = ROOT / "docs" / "reference" / "schema-0.1.md"
 
 
-def _schema() -> dict[str, object]:
-    return json.loads(SCHEMA.read_text(encoding="utf-8"))
+def _schema() -> dict[str, Any]:
+    return cast(dict[str, Any], json.loads(SCHEMA.read_text(encoding="utf-8")))
 
 
 def test_schema_freezes_single_sign_warp_and_native_text_layers() -> None:
