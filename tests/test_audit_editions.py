@@ -81,3 +81,40 @@ def test_audit_reports_every_observed_edition_subtype(tmp_path: Path) -> None:
 
     assert inventory["editions"]["by_subtype"]["source_facsimile"]["divs"] == 1
     assert inventory["editions"]["by_subtype"]["source_facsimile"]["nonempty_divs"] == 1
+
+
+def test_audit_classifies_multi_target_corresp_relations(tmp_path: Path) -> None:
+    _write(
+        tmp_path,
+        "relations.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="relations">
+  <text><body>
+    <div type="edition" subtype="diplomatic"
+         corresp="#relations.transcription #relations.translation #external"/>
+    <div type="edition" subtype="transcription"
+         corresp="#relations.diplomatic"/>
+    <div type="edition" subtype="source_facsimile"
+         corresp="#relations.transcription_segmented"/>
+  </body></text>
+</TEI>""",
+    )
+
+    inventory = audit_directory(tmp_path, source_revision="abc")
+
+    assert inventory["editions"]["corresp_targets_by_subtype"]["diplomatic"] == {
+        "other": 1,
+        "transcription": 1,
+        "translation": 1,
+    }
+    assert inventory["editions"]["corresp_targets_by_subtype"]["transcription"] == {
+        "diplomatic": 1,
+    }
+    assert inventory["editions"]["corresp_targets_by_subtype"]["source_facsimile"] == {
+        "transcription_segmented": 1,
+    }
+
+    report = render_markdown(inventory)
+    assert "### Edition corresp target classes" in report
+    assert "| `diplomatic` | `transcription` | 1 |" in report
+    assert "| `diplomatic` | `translation` | 1 |" in report
+    assert "| `diplomatic` | `other` | 1 |" in report
