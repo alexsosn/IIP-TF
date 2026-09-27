@@ -176,6 +176,19 @@ def _new_edition_stats() -> dict[str, int]:
     }
 
 
+def _corresp_target_class(target: str) -> str:
+    fragment = target.rsplit("#", 1)[-1].rstrip("/")
+    suffix = fragment.rsplit(".", 1)[-1].lower()
+    if suffix in {
+        "transcription",
+        "transcription_segmented",
+        "diplomatic",
+        "translation",
+    }:
+        return suffix
+    return "other"
+
+
 def audit_directory(source_dir: Path, *, source_revision: str) -> Inventory:
     """Audit all top-level XML files in an IIP epidoc-files directory."""
     paths = sorted(source_dir.glob("*.xml"), key=lambda path: path.name)
@@ -223,6 +236,7 @@ def audit_directory(source_dir: Path, *, source_revision: str) -> Inventory:
     records_with_cc_by_nc = 0
     records_with_doi = 0
     edition_stats: dict[str, dict[str, int]] = {}
+    edition_corresp_targets: dict[str, Counter[str]] = defaultdict(Counter)
 
     for path in paths:
         try:
@@ -306,6 +320,10 @@ def audit_directory(source_dir: Path, *, source_revision: str) -> Inventory:
                         stats["with_xml_id"] += 1
                     if "corresp" in element.attrib:
                         stats["with_corresp"] += 1
+                        for target in element.attrib["corresp"].split():
+                            edition_corresp_targets[edition_subtype][
+                                _corresp_target_class(target)
+                            ] += 1
                     if "ana" in element.attrib:
                         stats["with_ana"] += 1
                     if XML_LANG in element.attrib:
@@ -431,7 +449,11 @@ def audit_directory(source_dir: Path, *, source_revision: str) -> Inventory:
             "by_subtype": {
                 subtype: edition_stats[subtype]
                 for subtype in sorted(edition_stats)
-            }
+            },
+            "corresp_targets_by_subtype": {
+                subtype: _counter_dict(edition_corresp_targets[subtype])
+                for subtype in sorted(edition_corresp_targets)
+            },
         },
         "languages": {
             "record_declarations": _counter_dict(record_languages),
@@ -586,6 +608,23 @@ def render_markdown(inventory: Inventory) -> str:
             f"| `{subtype}` | {stats['with_xml_id']} | {stats['with_corresp']} | "
             f"{stats['with_ana']} | {stats['with_xml_lang']} |"
         )
+
+    lines.extend(
+        [
+            "",
+            "### Edition corresp target classes",
+            "",
+            "| Source subtype | Target class | Count |",
+            "|---|---|---:|",
+        ]
+    )
+    corresp_targets = inventory["editions"]["corresp_targets_by_subtype"]
+    if corresp_targets:
+        for subtype, target_counts in sorted(corresp_targets.items()):
+            for target_class, count in sorted(target_counts.items()):
+                lines.append(f"| `{subtype}` | `{target_class}` | {count} |")
+    else:
+        lines.append("| — | — | 0 |")
 
     lines.extend(
         [
