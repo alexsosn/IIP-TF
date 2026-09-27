@@ -40,7 +40,7 @@ primary fallback. Missing validated segmentation means no guessed `word` nodes.
 
 `sectionTypes=inscription,textpart,line`
 
-`sectionFeatures=iip_id,section_part,line_n`
+`sectionFeatures=inscription_id,section_part,line_n`
 
 `section_part` is layer-aware and incorporates explicit source subtype/n information where
 needed for uniqueness.
@@ -93,7 +93,8 @@ segmentation status/provenance. Words link to a `segmentation` node through `tok
 
 ## Inscription metadata
 
-Scalar record features include IIP/XML/source identity, `primary_layer`, language declarations,
+Scalar record features include unique file-stem `inscription_id`, raw (non-unique) `iip_id` and
+`xml_id`, `source_file`, `primary_layer`, language declarations,
 genre/religion, object/material/condition, layout, dimensions, origin date/place, Pleiades/
 PeriodO references, coordinates, locus, provenance, and physical/origin notes.
 
@@ -127,6 +128,16 @@ One zero-width source event consumes one synthetic sign regardless of encoded qu
 Metadata reuses the first primary anchor where possible; only an inscription with no primary
 source slot gets a technical anchor. Empty editions are retained without invented lines.
 
+## Record identity
+
+`inscription_id` is the repository filename stem and is the top TF section key. It is used
+because the pinned source contains duplicated IIP ids and duplicated TEI `xml:id` values
+across different files.
+
+`iip_id` and `xml_id` remain verbatim source metadata. Source element ids are scoped by
+source file. Bare local `@corresp` resolves within that file only; cross-file resolution
+requires an explicit file-qualified target.
+
 ## Provenance and licensing
 
 Source pin: `Brown-University-Library/iip-texts@0b7dc8358ccdfd0c9391f049da4839fbd91c26e5`.
@@ -142,6 +153,6 @@ not created unless the source actually supplies such analysis.
 
 ## Failure policy
 
-Unsupported textual constructs, duplicate source identity, unresolved segmentation conflicts,
+Unsupported textual constructs, duplicate canonical/file-scoped identity, unresolved segmentation conflicts,
 non-deterministic token projection, and malformed records lacking an explicit researched
 policy are release-blocking. Silent source-data loss is forbidden.
