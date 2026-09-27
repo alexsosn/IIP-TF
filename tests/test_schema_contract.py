@@ -8,6 +8,7 @@ ROOT = Path(__file__).parents[1]
 SCHEMA = ROOT / "schema" / "iip-tf-0.1.json"
 ADR = ROOT / "docs" / "architecture" / "ADR-0001-native-tf-schema.md"
 REFERENCE = ROOT / "docs" / "reference" / "schema-0.1.md"
+INVENTORY = ROOT / "docs" / "research" / "iip-inventory.json"
 
 
 def _schema() -> dict[str, Any]:
@@ -274,3 +275,43 @@ def test_facsimile_surface_grouping_is_preserved() -> None:
     assert schema["metadata_nodes"]["image"]["parent_policy"] == (
         "facsimile_surface_when_present_else_inscription"
     )
+
+
+def test_selected_segmented_markup_survives_as_projected_annotations() -> None:
+    schema = _schema()
+    segmentation = schema["segmentation"]
+
+    assert segmentation["selected_inline_markup"] == "project_as_annotation_nodes"
+    assert segmentation["inline_markup_target"] == "projected_primary_slots"
+    assert segmentation["creates_text_slots"] is False
+    assert "annotation_source" in set(schema["features"]["node"])
+    assert "transcription_segmented" in set(schema["annotation_sources"])
+
+
+def test_all_audited_textual_elements_and_attributes_have_frozen_mappings() -> None:
+    schema = _schema()
+    inventory = cast(
+        dict[str, Any],
+        json.loads(INVENTORY.read_text(encoding="utf-8")),
+    )
+    contexts = (
+        "transcription",
+        "diplomatic",
+        "translation",
+        "commentary",
+        "textpart",
+        "transcription_segmented",
+    )
+    observed_elements: set[str] = set()
+    observed_attributes: set[str] = set()
+    for context in contexts:
+        observed_elements.update(inventory["elements"].get(context, {}))
+        observed_attributes.update(inventory["attributes"].get(context, {}))
+
+    assert observed_elements <= set(schema["source_element_mapping"])
+    assert observed_attributes <= set(schema["source_attribute_mapping"])
+    assert schema["source_element_mapping"]["figDesc"] == "figure.description"
+    assert schema["source_element_mapping"]["height"] == "markup:height"
+    assert schema["source_element_mapping"]["app"] == "markup:apparatus"
+    assert schema["source_attribute_mapping"]["gap@quantity"] == "quantity"
+    assert schema["source_attribute_mapping"]["p@xml:lang"] == "paragraph.lang"
