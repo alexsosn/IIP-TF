@@ -1,0 +1,955 @@
+{
+  "schema_version": "0.1",
+  "status": "frozen-for-0.1",
+  "evidence": {
+    "corpus_audit": "docs/research/iip-corpus-audit.md",
+    "duplicate_segmentation_research": "docs/research/segmented-duplicates.md",
+    "pinned_source_revision": "0b7dc8358ccdfd0c9391f049da4839fbd91c26e5"
+  },
+  "warp": {
+    "slot_type": "sign",
+    "slot_granularity": "one Unicode code point for visible text; one synthetic sign for a source-critical zero-width event",
+    "text_layers": [
+      "transcription",
+      "diplomatic",
+      "translation",
+      "commentary"
+    ],
+    "segmented_transcription_role": "annotation_only",
+    "inscription_contains_all_text_layers": true,
+    "opaque_text_sidecars": false
+  },
+  "primary_text": {
+    "selection_order": [
+      "transcription",
+      "diplomatic",
+      "empty_anchor"
+    ],
+    "segmented_transcription_is_primary_fallback": false,
+    "evidence": {
+      "diplomatic_fallback_records": 374,
+      "segmented_nonempty_without_transcription_records": 1,
+      "segmented_only_record_also_has_diplomatic_text": "masa0779.xml",
+      "no_nonempty_source_text_records": 18
+    },
+    "empty_anchor": {
+      "synthetic_kind": "anchor",
+      "fabricates_visible_text": false,
+      "count_policy": "at most one technical anchor per inscription, only when no primary source-text slot exists"
+    },
+    "word_fallback": "none",
+    "word_policy": "Create word nodes only from a selected, validated IIP transcription_segmented source projected deterministically onto primary source-text slots."
+  },
+  "sections": {
+    "types": [
+      "inscription",
+      "textpart",
+      "line"
+    ],
+    "features": [
+      "inscription_id",
+      "section_part",
+      "line_n"
+    ]
+  },
+  "section_policy": {
+    "inscription": "One node per parsed non-test IIP record; spans every native textual-layer slot belonging to the record.",
+    "textpart": "Layer-aware. Preserve explicit EpiDoc textpart divisions; create one implicit textpart for each non-empty textual layer lacking explicit textparts.",
+    "section_part": "Stable unique heading within an inscription: layer plus explicit subtype/n when supplied, otherwise the layer name.",
+    "line": "Line 1 starts at the beginning of a textpart; each source lb starts the following line. The lb event itself is a synthetic sign and line_break markup node.",
+    "empty_editions": "Preserve edition nodes but do not invent line nodes for empty editions."
+  },
+  "text_formats": {
+    "text-orig-full": {
+      "purpose": "primary",
+      "target": "sign",
+      "template": "{primary_glyph}{primary_after}",
+      "description": "Default normalized/source-selected inscription text; all non-primary layer slots render empty."
+    },
+    "text-layer-full": {
+      "purpose": "current_layer",
+      "target": "sign",
+      "template": "{glyph}{after}",
+      "description": "Literal selected-reading text for a specific edition/textpart/line node."
+    },
+    "text-source-full": {
+      "purpose": "primary_source_reading",
+      "target": "sign",
+      "template": "{source_glyph}{source_after}"
+    },
+    "text-transcription-full": {
+      "purpose": "transcription",
+      "target": "sign",
+      "template": "{transcription_glyph}{transcription_after}"
+    },
+    "text-diplomatic-full": {
+      "purpose": "diplomatic",
+      "target": "sign",
+      "template": "{diplomatic_glyph}{diplomatic_after}"
+    },
+    "text-translation-full": {
+      "purpose": "translation",
+      "target": "sign",
+      "template": "{translation_glyph}{translation_after}"
+    },
+    "text-commentary-full": {
+      "purpose": "commentary",
+      "target": "sign",
+      "template": "{commentary_glyph}{commentary_after}"
+    },
+    "word-default": {
+      "purpose": "word",
+      "target": "word",
+      "template": "{word_text}"
+    }
+  },
+  "node_types": [
+    "inscription",
+    "edition",
+    "textpart",
+    "line",
+    "word",
+    "markup",
+    "entity",
+    "segmentation",
+    "bibl",
+    "hand",
+    "decoration",
+    "image",
+    "revision",
+    "paragraph",
+    "bibl_scope",
+    "dimension",
+    "facsimile_surface"
+  ],
+  "node_type_contract": {
+    "inscription": "Record and top-level section node. Canonical TF section id is the unique source file stem; raw IIP/xml ids remain metadata.",
+    "edition": "One node for each source transcription, diplomatic, translation, or commentary layer, including empty source layers.",
+    "textpart": "Explicit or implicit layer-aware section part.",
+    "line": "Layer-aware source line derived from lb boundaries.",
+    "word": "IIP segmented token (w/num/orig) projected to primary source-text slots; never guessed.",
+    "markup": "Structured inline EpiDoc/editorial phenomenon, including zero-width events; kind is enumerated.",
+    "entity": "Text-anchored named/reference entity in translation or other textual layers.",
+    "segmentation": "Provenance node for each transcription_segmented candidate and its #20 resolution status.",
+    "bibl": "One source bibliography entry.",
+    "hand": "Writing-hand/technique record and letter-dimension metadata.",
+    "decoration": "One decoration record.",
+    "image": "Facsimile/image reference and credit only; never image bytes.",
+    "revision": "One source revisionDesc/change record.",
+    "paragraph": {
+      "source_elements": [
+        "p",
+        "ab"
+      ],
+      "semantics": "Textual block boundary inside an edition/textpart; preserves block-level language/certainty and multiple-block order without becoming a TF section.",
+      "features": [
+        "source_id",
+        "source_key",
+        "kind",
+        "layer",
+        "lang",
+        "lang_source",
+        "cert"
+      ]
+    },
+    "bibl_scope": "One source biblScope child; repeatable and parented to a bibl node.",
+    "dimension": "One source dimensions element; repeatable and usable for object/surface or hand/letter dimensions without flattening ranges.",
+    "facsimile_surface": "One source facsimile/surface grouping node carrying shared description/note context for child image nodes."
+  },
+  "features": {
+    "slot": [
+      "glyph",
+      "after",
+      "layer",
+      "lang",
+      "lang_source",
+      "reading_role",
+      "synthetic_kind",
+      "primary_glyph",
+      "primary_after",
+      "source_glyph",
+      "source_after",
+      "transcription_glyph",
+      "transcription_after",
+      "diplomatic_glyph",
+      "diplomatic_after",
+      "translation_glyph",
+      "translation_after",
+      "commentary_glyph",
+      "commentary_after"
+    ],
+    "node": [
+      "source_id",
+      "source_key",
+      "kind",
+      "layer",
+      "lang",
+      "lang_source",
+      "reason",
+      "cert",
+      "unit",
+      "quantity",
+      "extent",
+      "at_least",
+      "at_most",
+      "precision",
+      "ref",
+      "value",
+      "rend",
+      "type",
+      "place",
+      "evidence",
+      "dim",
+      "break",
+      "new_hand",
+      "source_ana",
+      "source_corresp",
+      "source_change",
+      "inscription_id",
+      "iip_id",
+      "xml_id",
+      "source_file",
+      "primary_layer",
+      "main_lang",
+      "other_langs",
+      "genre",
+      "religion",
+      "object_type",
+      "material",
+      "condition",
+      "layout_columns",
+      "layout_written_lines",
+      "height",
+      "width",
+      "depth",
+      "dimension_unit",
+      "date_not_before",
+      "date_not_after",
+      "date_text",
+      "period_ref",
+      "region",
+      "settlement",
+      "settlement_ref",
+      "site",
+      "locus",
+      "geo",
+      "provenance_place",
+      "origin_note",
+      "support_note",
+      "condition_note",
+      "layout_note",
+      "section_part",
+      "line_n",
+      "edition_kind",
+      "is_primary",
+      "empty",
+      "token_kind",
+      "token_id",
+      "word_text",
+      "segmentation_status",
+      "selected",
+      "resolution_status",
+      "source_changes",
+      "suppressed_indices",
+      "conflict_fields",
+      "target",
+      "ptr_type",
+      "scope",
+      "scope_unit",
+      "scope_n",
+      "technique",
+      "note",
+      "letter_height",
+      "letter_height_min",
+      "letter_height_max",
+      "letter_height_unit",
+      "description",
+      "decoration_locus",
+      "url",
+      "credit",
+      "credit_role",
+      "when",
+      "when_custom",
+      "who",
+      "entity_kind",
+      "entity_type",
+      "ana",
+      "nym_ref",
+      "role",
+      "calendar",
+      "date_from",
+      "date_to",
+      "quantity_int",
+      "date_not_before_int",
+      "date_not_after_int",
+      "dimension_type",
+      "dimension_extent",
+      "height_min",
+      "height_max",
+      "width_min",
+      "width_max",
+      "depth_min",
+      "depth_max",
+      "annotation_source",
+      "subtype",
+      "source_n",
+      "candidate_index",
+      "token_count",
+      "candidate_langs"
+    ],
+    "edge": [
+      "parent",
+      "in_inscription",
+      "corresponds_to",
+      "cites",
+      "segmentation_of",
+      "token_from"
+    ]
+  },
+  "feature_contract": {
+    "glyph": {
+      "domain": "sign",
+      "value_type": "str",
+      "semantics": "Literal Unicode code point on a visible source/text slot; empty on synthetic slots."
+    },
+    "after": {
+      "domain": "sign",
+      "value_type": "str",
+      "semantics": "Semantically retained inter-sign/inter-token separator after this slot; source indentation is not copied."
+    },
+    "layer": {
+      "domain": "sign|edition|textpart|line|markup|entity",
+      "value_type": "str",
+      "values": [
+        "transcription",
+        "diplomatic",
+        "translation",
+        "commentary",
+        "anchor"
+      ]
+    },
+    "lang": {
+      "domain": "sign|word|markup|entity",
+      "value_type": "str",
+      "semantics": "Effective source language code without silently collapsing IIP distinctions such as he/heb/hbo."
+    },
+    "lang_source": {
+      "domain": "sign|word|markup|entity",
+      "value_type": "str",
+      "values": [
+        "xml:lang",
+        "textLang.mainLang",
+        "inherited",
+        "none",
+        "source_override"
+      ]
+    },
+    "synthetic_kind": {
+      "domain": "sign",
+      "value_type": "str",
+      "values": [
+        "anchor",
+        "line_break",
+        "column_break",
+        "gap",
+        "space",
+        "hand_shift",
+        "milestone",
+        "glyph_ref",
+        "figure",
+        "other_point"
+      ]
+    },
+    "primary_layer": {
+      "domain": "inscription",
+      "value_type": "str",
+      "values": [
+        "transcription",
+        "diplomatic",
+        "empty"
+      ]
+    },
+    "source_key": {
+      "domain": "non-slot nodes",
+      "value_type": "str",
+      "semantics": "Deterministic converter key for a source element lacking xml:id; never an opaque XML fragment."
+    },
+    "quantity": {
+      "domain": "markup|dimension",
+      "value_type": "str",
+      "semantics": "Exact raw source quantity string; never coerced in-place."
+    },
+    "date_not_before": {
+      "domain": "inscription",
+      "value_type": "str",
+      "semantics": "Exact raw source notBefore string."
+    },
+    "date_not_after": {
+      "domain": "inscription",
+      "value_type": "str",
+      "semantics": "Exact raw source notAfter string."
+    },
+    "quantity_int": {
+      "domain": "markup|dimension",
+      "value_type": "int",
+      "semantics": "Optional lossless integer derivative of quantity; absent when the raw value is not an exact integer."
+    },
+    "date_not_before_int": {
+      "domain": "inscription",
+      "value_type": "int",
+      "semantics": "Optional lossless integer-year derivative of date_not_before."
+    },
+    "date_not_after_int": {
+      "domain": "inscription",
+      "value_type": "int",
+      "semantics": "Optional lossless integer-year derivative of date_not_after."
+    }
+  },
+  "display_readings": {
+    "preservation": "All observed alternative/editorial branches receive slots or structured zero-width markup; display formats choose among them without deleting the other branch.",
+    "choice_normalized": {
+      "sic/corr": "corr",
+      "orig/reg": "reg"
+    },
+    "choice_source": {
+      "sic/corr": "sic",
+      "orig/reg": "orig"
+    },
+    "expansion": {
+      "normalized": "abbr lexical content plus ex; abbreviation marks remain structured markup",
+      "source": "abbr/am source content; ex is suppressed from source-oriented display"
+    },
+    "supplied": {
+      "normalized": "included and marked by supplied markup",
+      "source": "not rendered as physically present; supplied node and slots remain queryable"
+    },
+    "deletion_and_surplus": {
+      "normalized": "not rendered in normalized primary view unless source construct semantics require otherwise",
+      "source": "retained for source-oriented rendering and always queryable"
+    },
+    "unclear": "Visible text remains rendered; uncertainty is represented by markup/cert features.",
+    "gap": "No fabricated glyph. App/browser may render a marker from structured gap features."
+  },
+  "markup": {
+    "node_type": "markup",
+    "kinds": [
+      "supplied",
+      "unclear",
+      "gap",
+      "choice",
+      "sic",
+      "corr",
+      "orig",
+      "reg",
+      "expan",
+      "abbr",
+      "ex",
+      "am",
+      "del",
+      "surplus",
+      "space",
+      "glyph",
+      "num",
+      "foreign",
+      "hi",
+      "hand_shift",
+      "line_break",
+      "column_break",
+      "milestone",
+      "apparatus",
+      "lemma",
+      "reading",
+      "add",
+      "subst",
+      "figure",
+      "height"
+    ],
+    "scalar_features": [
+      "source_id",
+      "source_key",
+      "kind",
+      "layer",
+      "lang",
+      "reason",
+      "cert",
+      "unit",
+      "quantity",
+      "extent",
+      "at_least",
+      "at_most",
+      "precision",
+      "ref",
+      "value",
+      "rend",
+      "type",
+      "place",
+      "evidence",
+      "dim",
+      "break",
+      "new_hand",
+      "annotation_source"
+    ],
+    "raw_attributes_blob": false,
+    "preserve_direct_parent_edge": true,
+    "unknown_construct_policy": "release_blocking_diagnostic",
+    "paragraph_elements_are_separate_nodes": true
+  },
+  "entities": {
+    "node_type": "entity",
+    "kinds": [
+      "person",
+      "name",
+      "reference_string",
+      "place",
+      "date"
+    ],
+    "scalar_features": [
+      "source_id",
+      "source_key",
+      "entity_kind",
+      "entity_type",
+      "ref",
+      "ana",
+      "nym_ref",
+      "role",
+      "lang",
+      "calendar",
+      "date_from",
+      "date_to"
+    ],
+    "raw_xml": false
+  },
+  "segmentation": {
+    "source_subtype": "transcription_segmented",
+    "contributes_independent_text_slots": false,
+    "duplicate_resolution": "src/iip_tf/segmentation.py policy from issue #20",
+    "projection_target": "selected primary source-text edition",
+    "projection_requirement": "deterministic complete token/boundary projection",
+    "projection_failure": "release_blocking_diagnostic",
+    "whitespace_tokenization_fallback": false,
+    "guessed_word_nodes": false,
+    "candidate_provenance_nodes": true,
+    "selected_inline_markup": "project_as_annotation_nodes",
+    "inline_markup_target": "projected_primary_slots",
+    "creates_text_slots": false,
+    "annotation_source_feature": "annotation_source=transcription_segmented",
+    "selected_candidate_nodes": {
+      "preserve_candidate_provenance": true,
+      "candidate_features": [
+        "candidate_index",
+        "source_change",
+        "selected",
+        "resolution_status",
+        "token_count",
+        "candidate_langs",
+        "conflict_fields"
+      ],
+      "suppressed_content_policy": "Suppressed candidates are not duplicated as text. Empty/equivalent candidates preserve provenance; researched metadata conflicts preserve their differing summary fields; any unknown semantic conflict fails before conversion."
+    }
+  },
+  "anchoring": {
+    "zero_width_source_positions": {
+      "slot_policy": "one_synthetic_sign_per_event",
+      "quantity_does_not_multiply_slots": true,
+      "preserves_source_order": true,
+      "event_kinds": [
+        "line_break",
+        "column_break",
+        "gap",
+        "space",
+        "hand_shift",
+        "milestone",
+        "glyph_ref",
+        "figure"
+      ]
+    },
+    "metadata": {
+      "uses_existing_primary_anchor_when_available": true,
+      "creates_anchor_only_if_no_primary_slot_exists": true,
+      "anchor_semantics": "technical containment only; use in_inscription edge for semantic ownership"
+    },
+    "empty_editions": {
+      "preserve_edition_node": true,
+      "anchor_to_inscription_anchor": true,
+      "invent_line_nodes": false
+    }
+  },
+  "metadata_policy": {
+    "opaque_sidecars": false,
+    "raw_xml_or_json_blobs": false,
+    "image_binaries_in_corpus": false,
+    "scalar_on_inscription": [
+      "main_lang",
+      "other_langs",
+      "genre",
+      "religion",
+      "object_type",
+      "material",
+      "condition",
+      "layout_columns",
+      "layout_written_lines",
+      "date_not_before",
+      "date_not_after",
+      "date_text",
+      "period_ref",
+      "region",
+      "settlement",
+      "settlement_ref",
+      "site",
+      "locus",
+      "geo",
+      "provenance_place",
+      "origin_note",
+      "support_note",
+      "condition_note",
+      "layout_note"
+    ],
+    "repeatable_nodes": [
+      "bibl",
+      "hand",
+      "decoration",
+      "image",
+      "revision",
+      "bibl_scope",
+      "dimension",
+      "facsimile_surface"
+    ],
+    "source_values_retained": true,
+    "derived_values_must_be_separate_and_documented": true
+  },
+  "metadata_nodes": {
+    "bibl": {
+      "features": [
+        "source_id",
+        "source_key",
+        "target",
+        "ptr_type"
+      ],
+      "child_nodes": [
+        "bibl_scope"
+      ]
+    },
+    "hand": {
+      "features": [
+        "source_id",
+        "source_key",
+        "technique",
+        "note"
+      ],
+      "child_nodes": [
+        "dimension"
+      ]
+    },
+    "decoration": {
+      "features": [
+        "source_key",
+        "type",
+        "description",
+        "decoration_locus"
+      ]
+    },
+    "image": {
+      "features": [
+        "source_id",
+        "source_key",
+        "url",
+        "description",
+        "note",
+        "credit",
+        "credit_role"
+      ],
+      "binary_payload": false,
+      "parent_policy": "facsimile_surface_when_present_else_inscription"
+    },
+    "revision": {
+      "features": [
+        "source_key",
+        "when",
+        "when_custom",
+        "who",
+        "description"
+      ]
+    },
+    "bibl_scope": {
+      "parent_type": "bibl",
+      "features": [
+        "source_id",
+        "source_key",
+        "scope",
+        "scope_unit",
+        "scope_n"
+      ]
+    },
+    "dimension": {
+      "parent_types": [
+        "inscription",
+        "hand"
+      ],
+      "raw_values_are_strings": true,
+      "features": [
+        "source_id",
+        "source_key",
+        "dimension_type",
+        "dimension_extent",
+        "dimension_unit",
+        "height",
+        "height_min",
+        "height_max",
+        "width",
+        "width_min",
+        "width_max",
+        "depth",
+        "depth_min",
+        "depth_max",
+        "quantity",
+        "at_least",
+        "at_most"
+      ]
+    },
+    "facsimile_surface": {
+      "parent_type": "inscription",
+      "features": [
+        "source_id",
+        "source_key",
+        "description",
+        "note"
+      ]
+    }
+  },
+  "edges": {
+    "parent": "Direct semantic parent for nested markup/entity nodes and repeatable source structures such as paragraph blocks, bibliography scopes, hand dimensions, and facsimile images/surfaces; preserves hierarchy even when oslot anchors coincide.",
+    "in_inscription": "Explicit ownership of metadata/segmentation nodes whose oslot anchor is technical.",
+    "corresponds_to": "Resolved local EpiDoc @corresp relation between edition/text nodes; unresolved/raw value remains source_corresp.",
+    "cites": "Resolved ana/bibliography relation to bibl nodes; raw ana value is retained.",
+    "segmentation_of": "Selected/suppressed segmentation candidate provenance linked to the edition it annotates/projects onto.",
+    "token_from": "Word node linked to the selected segmentation provenance node."
+  },
+  "identity": {
+    "canonical_record_key": "source_file_stem",
+    "section_feature": "inscription_id",
+    "inscription_id": "Unique repository filename stem for the pinned source record (for example jaff0105).",
+    "iip_id": "Preserve idno[@type='IIP'] verbatim as non-unique source metadata.",
+    "xml_id": "Preserve TEI/@xml:id verbatim as non-unique-across-files source metadata.",
+    "iip_id_is_globally_unique": false,
+    "xml_id_is_globally_unique": false,
+    "source_element_ids_are_scoped_by_file": true,
+    "source_id": "Preserve xml:id verbatim where present; interpret uniqueness only inside the source file unless an explicit file-qualified reference says otherwise.",
+    "source_key": "Deterministic file-scoped structural key for a source element lacking xml:id.",
+    "bare_local_corresp_resolution_scope": "source_file",
+    "cross_file_reference_policy": "Require an explicit file-qualified target; never resolve a bare duplicated xml:id globally by guess.",
+    "duplicate_record_key": "release_blocking",
+    "duplicate_source_id_within_file": "release_blocking",
+    "duplicate_raw_iip_or_xml_id_across_files": "preserve_and_report",
+    "normalization": "Never overwrite a raw source identifier/value with a derived canonical value."
+  },
+  "provenance": {
+    "source_repository": "Brown-University-Library/iip-texts",
+    "source_revision": "0b7dc8358ccdfd0c9391f049da4839fbd91c26e5",
+    "source_project": "Inscriptions of Israel/Palestine, Brown University",
+    "doi": "10.26300/pz1d-st89",
+    "generated_data_license": "CC BY-NC 4.0",
+    "software_license": "MIT",
+    "required_corpus_metadata": [
+      "source",
+      "sourceUrl",
+      "sourceCommit",
+      "sourceDOI",
+      "license",
+      "licenseUrl",
+      "converterVersion",
+      "converterCommit",
+      "schemaVersion"
+    ],
+    "bibliography_must_remain_queryable": true,
+    "image_rights_boundary": "Preserve image references/credits only; do not redistribute image binaries without separately established rights."
+  },
+  "compatibility": {
+    "etcbc_dss_shared": [
+      "sign slot type",
+      "word node type",
+      "line node type",
+      "lang feature",
+      "glyph feature",
+      "after feature",
+      "standard otext formats"
+    ],
+    "bhsa_shared": [
+      "word node type",
+      "line/section navigation principles",
+      "normal Text-Fabric API/search/app workflow"
+    ],
+    "deliberately_absent": [
+      "lexeme nodes",
+      "phrase nodes",
+      "clause nodes",
+      "morphology features not present in IIP"
+    ],
+    "rule": "Reuse names only when semantics match; compatibility is not cosmetic aliasing."
+  },
+  "failure_policy": {
+    "malformed_xml": "explicit source-accounting failure; issue #15 policy applies",
+    "unsupported_textual_construct": "release_blocking_diagnostic",
+    "segmentation_conflict": "fail_closed",
+    "segmentation_projection_conflict": "release_blocking_diagnostic",
+    "duplicate_identity": "duplicate canonical record key or duplicate source element id within the same source file is release-blocking; cross-file raw IIP/xml id collisions are preserved and diagnosed",
+    "silent_drop": "forbidden",
+    "metadata_cardinality_loss": "forbidden; repeatable source children must remain repeatable TF nodes"
+  },
+  "tf_value_types": {
+    "slot_default": "str",
+    "node_default": "str",
+    "node_int": [
+      "line_n",
+      "quantity_int",
+      "date_not_before_int",
+      "date_not_after_int"
+    ],
+    "edge_default": "edge_without_values",
+    "rule": "Every TF feature has exactly one valueType. Raw source attributes are string features; optional numeric derivatives use separately named int features."
+  },
+  "textual_blocks": {
+    "node_type": "paragraph",
+    "source_elements": [
+      "p",
+      "ab"
+    ],
+    "preserve_order": true,
+    "preserve_empty_blocks": true,
+    "section_level": false,
+    "block_separator": "newline_in_rendered_layer_views",
+    "attributes": {
+      "xml:lang": "lang",
+      "cert": "cert"
+    }
+  },
+  "annotation_sources": [
+    "transcription_segmented"
+  ],
+  "source_element_mapping": {
+    "ab": "paragraph",
+    "abbr": "markup:abbr",
+    "add": "markup:add",
+    "am": "markup:am",
+    "app": "markup:apparatus",
+    "cb": "markup:column_break",
+    "choice": "markup:choice",
+    "corr": "markup:corr",
+    "date": "entity:date",
+    "del": "markup:del",
+    "div": "structural:edition_or_textpart",
+    "ex": "markup:ex",
+    "expan": "markup:expan",
+    "figDesc": "figure.description",
+    "figure": "markup:figure",
+    "foreign": "markup:foreign",
+    "g": "markup:glyph",
+    "gap": "markup:gap",
+    "handShift": "markup:hand_shift",
+    "height": "markup:height",
+    "hi": "markup:hi",
+    "lb": "markup:line_break",
+    "lem": "markup:lemma",
+    "milestone": "markup:milestone",
+    "name": "entity:name",
+    "num": "contextual:num_markup_or_token",
+    "orig": "contextual:orig_markup_or_token",
+    "p": "paragraph",
+    "persName": "entity:person",
+    "placeName": "entity:place",
+    "rdg": "markup:reading",
+    "reg": "markup:reg",
+    "rs": "entity:reference_string",
+    "sic": "markup:sic",
+    "space": "markup:space",
+    "subst": "markup:subst",
+    "supplied": "markup:supplied",
+    "surplus": "markup:surplus",
+    "unclear": "markup:unclear",
+    "w": "word"
+  },
+  "source_attribute_mapping": {
+    "add@place": "place",
+    "app@type": "type",
+    "date@calendar": "entity.calendar",
+    "date@from": "entity.date_from",
+    "date@to": "entity.date_to",
+    "del@extent": "extent",
+    "del@quantity": "quantity",
+    "del@rend": "rend",
+    "del@unit": "unit",
+    "div@ana": "source_ana+cites_when_resolved",
+    "div@change": "source_change",
+    "div@corresp": "source_corresp+corresponds_to_when_resolved",
+    "div@n": "source_n",
+    "div@subtype": "subtype",
+    "div@type": "kind",
+    "div@xml:id": "source_id",
+    "div@xml:lang": "lang",
+    "ex@cert": "cert",
+    "expan@cert": "cert",
+    "foreign@xml:lang": "lang",
+    "g@cert": "cert",
+    "g@ref": "ref",
+    "g@type": "type",
+    "gap@atLeast": "at_least",
+    "gap@atMost": "at_most",
+    "gap@cert": "cert",
+    "gap@extent": "extent",
+    "gap@precision": "precision",
+    "gap@quantity": "quantity",
+    "gap@reason": "reason",
+    "gap@unit": "unit",
+    "handShift@cert": "cert",
+    "handShift@new": "new_hand",
+    "hi@cert": "cert",
+    "hi@rend": "rend",
+    "lb@break": "break",
+    "milestone@n": "source_n",
+    "milestone@unit": "unit",
+    "name@type": "entity.entity_type",
+    "num@cert": "cert",
+    "num@type": "type",
+    "num@value": "value",
+    "num@xml:id": "contextual:source_id_or_token_id",
+    "num@xml:lang": "lang",
+    "orig@xml:id": "contextual:source_id_or_token_id",
+    "orig@xml:lang": "lang",
+    "p@cert": "paragraph.cert",
+    "p@xml:lang": "paragraph.lang",
+    "persName@nymRef": "entity.nym_ref",
+    "persName@ref": "entity.ref",
+    "persName@type": "entity.entity_type",
+    "persName@xml:lang": "entity.lang",
+    "rs@ana": "entity.ana",
+    "rs@type": "entity.entity_type",
+    "rs@xml:lang": "entity.lang",
+    "space@dim": "dim",
+    "space@extent": "extent",
+    "space@quantity": "quantity",
+    "space@unit": "unit",
+    "supplied@cert": "cert",
+    "supplied@evidence": "evidence",
+    "supplied@extent": "extent",
+    "supplied@reason": "reason",
+    "supplied@unit": "unit",
+    "surplus@cert": "cert",
+    "unclear@cert": "cert",
+    "unclear@reason": "reason",
+    "w@xml:id": "token_id",
+    "w@xml:lang": "lang"
+  },
+  "source_mapping_policy": {
+    "audited_contexts": [
+      "transcription",
+      "diplomatic",
+      "translation",
+      "commentary",
+      "textpart",
+      "transcription_segmented"
+    ],
+    "completeness_test": "tests/test_schema_contract.py compares mapping keys with docs/research/iip-inventory.json",
+    "new_element_or_attribute": "release_blocking_diagnostic_until_schema_mapping_is_added",
+    "fig_desc": "figDesc text is editorial description on the enclosing figure markup node and is not rendered as inscription glyphs.",
+    "segmented_annotations": "Selected transcription_segmented inline structures are source annotation nodes anchored to the deterministically projected primary slots and tagged annotation_source=transcription_segmented."
+  }
+}

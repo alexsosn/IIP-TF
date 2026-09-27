@@ -1,0 +1,210 @@
+# IIP-TF schema 0.1 reference
+
+This is the researcher-facing summary of `schema/iip-tf-0.1.json`.
+
+## Warp
+
+Slot type: **`sign`**. Native text layers are transcription, diplomatic, translation, and
+commentary. `transcription_segmented` supplies validated word boundaries/provenance and is not
+a duplicated text layer.
+
+Visible slots hold one Unicode code point. Source-critical zero-width events use one synthetic
+sign slot with no fabricated glyph.
+
+## Node types
+
+| Type | Meaning |
+|---|---|
+| `inscription` | One IIP record and top section |
+| `edition` | One transcription/diplomatic/translation/commentary layer |
+| `textpart` | Explicit or implicit layer-aware section part |
+| `paragraph` | Source textual block (`p` or textual `ab`), including block-level language/certainty |
+| `line` | Source line |
+| `word` | Validated IIP segmented token projected to primary text |
+| `markup` | Structured inline EpiDoc/editorial span or point |
+| `entity` | Named/reference span in textual layers |
+| `segmentation` | Segmentation provenance/resolution record |
+| `bibl` | Bibliographic source entry |
+| `bibl_scope` | Repeatable `biblScope` child |
+| `hand` | Writing technique record |
+| `dimension` | Repeatable physical or letter-dimension record |
+| `decoration` | Decoration record |
+| `facsimile_surface` | Source facsimile surface/caption grouping |
+| `image` | Graphic URL/credit metadata, never image bytes |
+| `revision` | Source revision-history entry |
+
+## Primary text
+
+Selection order: normalized transcription -> diplomatic -> empty anchor.
+
+Translation/commentary never masquerade as source text. Segmented transcription is not a
+primary fallback. Missing validated segmentation means no guessed `word` nodes.
+
+## Sections
+
+`sectionTypes=inscription,textpart,line`
+
+`sectionFeatures=inscription_id,section_part,line_n`
+
+`section_part` is layer-aware and incorporates explicit source subtype/n information where
+needed for uniqueness.
+
+## Text formats
+
+| Format | Use |
+|---|---|
+| `text-orig-full` | Default primary text |
+| `text-source-full` | Source-oriented primary reading |
+| `text-layer-full` | Literal view of one edition/textpart/line |
+| `text-transcription-full` | Normalized transcription layer |
+| `text-diplomatic-full` | Diplomatic layer |
+| `text-translation-full` | Translation layer |
+| `text-commentary-full` | Commentary layer |
+| `word-default` | Word-node display |
+
+The default uses `primary_glyph` / `primary_after`, undefined on non-primary slots.
+
+## Slot features
+
+Core features include `glyph`, `after`, `layer`, `lang`, `lang_source`, `reading_role`,
+`synthetic_kind`, primary/source display pairs, and layer-specific glyph/after pairs.
+
+`synthetic_kind` covers anchor, line/column break, gap, space, hand shift, milestone,
+glyph reference, figure, and other audited point events.
+
+## Common node features
+
+All source nodes use `source_id` when `xml:id` exists, otherwise deterministic `source_key`.
+Editorial fields include kind/layer/language, reason, certainty, unit, quantity, extent,
+bounds, precision, ref, value, rend, type, place, evidence, break, and hand reference.
+
+Raw source values remain available when a typed/derived value is also supplied.
+
+## Markup kinds
+
+The frozen vocabulary includes `supplied`, `unclear`, `gap`, `choice`, `sic`, `corr`, `orig`,
+`reg`, `expan`, `abbr`, `ex`, `am`, `del`, `surplus`, `space`, `glyph`, `num`, `foreign`,
+`hi`, `hand_shift`, `line_break`, `column_break`, `milestone`, `apparatus`, `lemma`,
+`reading`, `add`, `subst`, and `figure`.
+
+Nested markup uses the `parent` edge. Unsupported textual constructs block release instead of
+falling into a raw XML/JSON blob.
+
+## Textual blocks
+
+Source `p` and textual `ab` elements become `paragraph` nodes. They preserve block order,
+`xml:lang`, `cert`, and multiple paragraphs inside one edition. Paragraphs do not change the
+three-level TF section hierarchy.
+
+## Feature value types
+
+Each TF feature has one serializable value type. Raw source attributes are strings. Numeric
+derivatives use separate features only when lossless, for example:
+
+- `quantity` (str) and optional `quantity_int` (int);
+- `date_not_before` (str) and optional `date_not_before_int` (int);
+- `date_not_after` (str) and optional `date_not_after_int` (int).
+
+No feature is int-or-string depending on the node.
+
+## Words
+
+`word` features include `token_kind` (`w`, `num`, `orig`), token id, language, word text, and
+segmentation status/provenance. Words link to a `segmentation` node through `token_from`.
+
+Inline markup from the selected segmented candidate is not discarded and does not create a
+second copy of text. It becomes markup annotations on the deterministically projected primary
+slots with `annotation_source=transcription_segmented`. This includes the audited
+`app/lem/rdg` case.
+
+## Inscription metadata
+
+Scalar record features include unique file-stem `inscription_id`, raw (non-unique) `iip_id` and
+`xml_id`, `source_file`, `primary_layer`, language declarations,
+genre/religion, object/material/condition, layout, dimensions, origin date/place, Pleiades/
+PeriodO references, coordinates, locus, provenance, and physical/origin notes.
+
+## Repeatable metadata nodes
+
+- `bibl`: target and pointer type.
+- `bibl_scope`: one repeatable scope child with text/unit/n.
+- `hand`: technique and note; child `dimension` nodes hold letter dimensions.
+- `dimension`: raw string-valued surface/letter dimensions including axis-specific min/max ranges.
+- `decoration`: type, description, locus.
+- `facsimile_surface`: shared surface description/note context.
+- `image`: URL, description, note, credit/role; parented to a surface when present; no binary payload.
+- `revision`: when/custom-when, who, description.
+
+## Entity nodes
+
+`persName`, `name`, `rs`, `placeName`, and textual `date` annotations become `entity` nodes
+with ref/ana/nymRef/type/role/language/calendar/from/to fields as applicable.
+
+## Edges
+
+| Edge | Meaning |
+|---|---|
+| `parent` | Immediate nested textual or metadata parent (including scope/dimension/surface grouping) |
+| `in_inscription` | Explicit owner for technically anchored metadata/provenance |
+| `corresponds_to` | Resolved local EpiDoc `@corresp` |
+| `cites` | Relation to bibliography |
+| `segmentation_of` | Segmentation provenance annotates an edition |
+| `token_from` | Word derives from selected segmentation |
+
+## Empty and zero-width material
+
+One zero-width source event consumes one synthetic sign regardless of encoded quantity.
+Metadata reuses the first primary anchor where possible; only an inscription with no primary
+source slot gets a technical anchor. Empty editions are retained without invented lines.
+
+## Record identity
+
+`inscription_id` is the repository filename stem and is the top TF section key. It is used
+because the pinned source contains duplicated IIP ids and duplicated TEI `xml:id` values
+across different files.
+
+`iip_id` and `xml_id` remain verbatim source metadata. Source element ids are scoped by
+source file. Bare local `@corresp` resolves within that file only; cross-file resolution
+requires an explicit file-qualified target.
+
+## Provenance and licensing
+
+Source pin: `Brown-University-Library/iip-texts@0b7dc8358ccdfd0c9391f049da4839fbd91c26e5`.
+DOI: `10.26300/pz1d-st89`. Generated IIP-derived data carry project CC BY-NC 4.0 terms;
+IIP-TF converter software is MIT. Bibliography remains queryable. Image binaries are outside
+the corpus unless separately licensed.
+
+## Compatibility
+
+Shared semantics use familiar `sign`, `word`, `line`, `lang`, `glyph`, `after`, normal TF
+sections/formats/search/API/app workflow. Lexeme, clause, phrase, and morphology features are
+not created unless the source actually supplies such analysis.
+
+## Failure policy
+
+Unsupported textual constructs, duplicate canonical/file-scoped identity, unresolved segmentation conflicts,
+non-deterministic token projection, and malformed records lacking an explicit researched
+policy are release-blocking. Silent source-data loss is forbidden.
+
+## Cardinality guarantee
+
+Repeatable source children remain repeatable TF nodes. The converter must report a schema error rather than overwrite/concatenate repeated values that the frozen mapping treats as scalar.
+
+
+## Source EpiDoc mapping coverage
+
+`schema/iip-tf-0.1.json` contains an explicit mapping for every element and attribute observed
+in the audited textual contexts. CI checks the mapping against the pinned `iip-inventory.json`.
+
+Examples:
+
+- `p` / textual `ab` -> `paragraph`;
+- `w` -> `word`;
+- `app`, `lem`, `rdg` -> apparatus/lemma/reading markup annotations;
+- `figure` -> figure markup, with `figDesc` as its description rather than visible text;
+- rare textual `height` -> `markup(kind=height)`;
+- `persName`, `name`, `rs`, `placeName`, textual `date` -> entity nodes;
+- `gap@quantity` -> raw string `quantity` plus optional lossless `quantity_int`;
+- `p@xml:lang` -> paragraph `lang`.
+
+A source element/attribute missing from the frozen mapping is a schema error, not a silent drop.
