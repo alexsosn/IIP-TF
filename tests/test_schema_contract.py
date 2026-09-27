@@ -195,3 +195,82 @@ def test_record_identity_is_file_scoped_not_upstream_id_scoped() -> None:
     assert identity["xml_id_is_globally_unique"] is False
     assert identity["source_element_ids_are_scoped_by_file"] is True
     assert identity["bare_local_corresp_resolution_scope"] == "source_file"
+
+
+def test_textual_blocks_preserve_paragraph_and_ab_boundaries() -> None:
+    schema = _schema()
+    node_types = set(schema["node_types"])
+
+    assert "paragraph" in node_types
+    paragraph = schema["node_type_contract"]["paragraph"]
+    assert paragraph["source_elements"] == ["p", "ab"]
+    assert {"kind", "lang", "cert", "source_id", "source_key"} <= set(
+        paragraph["features"]
+    )
+
+
+def test_tf_feature_value_types_are_single_and_serializable() -> None:
+    schema = _schema()
+    types = schema["tf_value_types"]
+
+    assert types["slot_default"] == "str"
+    assert types["node_default"] == "str"
+    assert types["edge_default"] == "edge_without_values"
+    assert {"line_n", "quantity_int", "date_not_before_int", "date_not_after_int"} <= set(
+        types["node_int"]
+    )
+    assert schema["feature_contract"]["quantity"]["value_type"] == "str"
+    assert schema["feature_contract"]["quantity_int"]["value_type"] == "int"
+    assert schema["feature_contract"]["date_not_before"]["value_type"] == "str"
+    assert schema["feature_contract"]["date_not_before_int"]["value_type"] == "int"
+
+
+def test_repeatable_bibliography_scopes_are_native_nodes() -> None:
+    schema = _schema()
+
+    assert "bibl_scope" in set(schema["node_types"])
+    assert "bibl_scope" in set(schema["metadata_policy"]["repeatable_nodes"])
+    assert schema["metadata_nodes"]["bibl_scope"]["parent_type"] == "bibl"
+    assert set(schema["metadata_nodes"]["bibl_scope"]["features"]) >= {
+        "scope",
+        "scope_unit",
+        "scope_n",
+    }
+
+
+def test_physical_dimensions_are_repeatable_native_nodes() -> None:
+    schema = _schema()
+
+    assert "dimension" in set(schema["node_types"])
+    assert "dimension" in set(schema["metadata_policy"]["repeatable_nodes"])
+    dimension = schema["metadata_nodes"]["dimension"]
+    assert dimension["raw_values_are_strings"] is True
+    assert {
+        "dimension_type",
+        "dimension_extent",
+        "dimension_unit",
+        "height",
+        "height_min",
+        "height_max",
+        "width",
+        "width_min",
+        "width_max",
+        "depth",
+        "depth_min",
+        "depth_max",
+        "quantity",
+        "at_least",
+        "at_most",
+    } <= set(dimension["features"])
+
+
+def test_facsimile_surface_grouping_is_preserved() -> None:
+    schema = _schema()
+
+    assert "facsimile_surface" in set(schema["node_types"])
+    assert "facsimile_surface" in set(schema["metadata_policy"]["repeatable_nodes"])
+    surface = schema["metadata_nodes"]["facsimile_surface"]
+    assert {"description", "note"} <= set(surface["features"])
+    assert schema["metadata_nodes"]["image"]["parent_policy"] == (
+        "facsimile_surface_when_present_else_inscription"
+    )
