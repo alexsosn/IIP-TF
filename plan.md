@@ -7,12 +7,12 @@ Issue #12 is the release gate. The dependency flow is:
           |
           v
 #3 schema ADR
+          |
+          v
+#4 parser IR
      |         \
      v          v
-#4 parser IR   #6 metadata model
-     |
-     v
-#5 TF writer
+#5 TF writer   #6 metadata model
      \          /
       v        v
        #7 full-corpus validation
