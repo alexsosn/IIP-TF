@@ -40,12 +40,23 @@ jobs:
           cache: pip
       - name: Install
         run: python -m pip install -e '.[dev]'
-      - name: Check committed audit against pinned source
+      - name: Generate audit from pinned source
         run: |
           python -m iip_tf.audit upstream-iip/epidoc-files \
             --revision 0b7dc8358ccdfd0c9391f049da4839fbd91c26e5 \
-            --json docs/research/iip-inventory.json \
-            --markdown docs/research/iip-corpus-audit.md \
-            --check
+            --json /tmp/iip-inventory.json \
+            --markdown /tmp/iip-corpus-audit.md
+      - name: Upload generated evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: iip-corpus-audit
+          path: |
+            /tmp/iip-inventory.json
+            /tmp/iip-corpus-audit.md
+      - name: Check committed evidence is fresh
+        run: |
+          cmp /tmp/iip-inventory.json docs/research/iip-inventory.json
+          cmp /tmp/iip-corpus-audit.md docs/research/iip-corpus-audit.md
       - name: Print compact research report
-        run: cat docs/research/iip-corpus-audit.md
+        if: always()
+        run: cat /tmp/iip-corpus-audit.md
