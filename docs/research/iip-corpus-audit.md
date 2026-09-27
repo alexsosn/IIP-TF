@@ -23,10 +23,10 @@ This report is generated from `iip-inventory.json`; counts are not hand-edited.
 
 ## Identity
 
-- Distinct XML ids: **5520**
+- Distinct XML ids: **5519**
 - Missing XML ids: **0**
 - Duplicate XML ids: **9**
-- Distinct IIP ids: **5489**
+- Distinct IIP ids: **5488**
 - Missing IIP ids: **0**
 - Duplicate IIP ids: **26**
 
@@ -73,9 +73,9 @@ This report is generated from `iip-inventory.json`; counts are not hand-edited.
 
 ## Text and segmentation
 
-- Records with transcription: **5349**
+- Records with transcription: **5348**
 - Records with segmented transcription: **5157**
-- Records with transcription but no segmented transcription: **193**
+- Records with transcription but no segmented transcription: **192**
 - Records with segmented transcription but no source transcription: **1**
 - Records whose transcription has no visible/source-bearing content: **212**
 - Records using explicit textpart: **47**
@@ -90,7 +90,7 @@ This report is generated from `iip-inventory.json`; counts are not hand-edited.
 | `grc` | 3067 |
 | `arc` | 1805 |
 | `he` | 475 |
-| `la` | 301 |
+| `la` | 300 |
 | `phn` | 24 |
 | `syc` | 6 |
 | `heb` | 4 |
@@ -142,7 +142,7 @@ These are per-record observations. A project-wide redistribution conclusion must
 |---|---:|
 | `lb` | 13347 |
 | `supplied` | 6373 |
-| `gap` | 5097 |
+| `gap` | 5084 |
 | `unclear` | 4875 |
 | `abbr` | 4545 |
 | `ex` | 4115 |
@@ -201,12 +201,39 @@ These are per-record observations. A project-wide redistribution conclusion must
 | `rdg` | 1 |
 | `subst` | 1 |
 
+### textpart
+
+| Construct | Count |
+|---|---:|
+| `lb` | 137 |
+| `orig` | 90 |
+| `unclear` | 77 |
+| `gap` | 69 |
+| `supplied` | 46 |
+| `abbr` | 43 |
+| `ex` | 33 |
+| `expan` | 33 |
+| `ab` | 28 |
+| `choice` | 26 |
+| `reg` | 21 |
+| `hi` | 20 |
+| `g` | 19 |
+| `num` | 14 |
+| `space` | 13 |
+| `figDesc` | 11 |
+| `figure` | 11 |
+| `foreign` | 6 |
+| `milestone` | 4 |
+| `am` | 2 |
+| `del` | 1 |
+
 ## Rare schema-decision surface
 
 The following textual/editorial constructs occur at most ten times in their context. Rarity does not make them ignorable; issue #3 must decide their native TF representation or explicitly classify them.
 
 | Construct | Count |
 |---|---:|
+| `textpart:del` | 1 |
 | `transcription:cb` | 1 |
 | `transcription:height` | 1 |
 | `transcription_segmented:app` | 1 |
@@ -215,11 +242,14 @@ The following textual/editorial constructs occur at most ten times in their cont
 | `transcription_segmented:lem` | 1 |
 | `transcription_segmented:rdg` | 1 |
 | `transcription_segmented:subst` | 1 |
+| `textpart:am` | 2 |
 | `transcription_segmented:milestone` | 2 |
 | `transcription_segmented:add` | 3 |
 | `transcription_segmented:reg` | 3 |
+| `textpart:milestone` | 4 |
 | `transcription:handShift` | 4 |
 | `transcription:subst` | 4 |
+| `textpart:foreign` | 6 |
 | `transcription:add` | 6 |
 | `transcription:figDesc` | 6 |
 | `transcription:figure` | 6 |
