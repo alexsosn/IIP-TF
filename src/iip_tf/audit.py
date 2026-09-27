@@ -189,6 +189,14 @@ def _corresp_target_class(target: str) -> str:
     return "other"
 
 
+def _layer_state(divs: Sequence[ET.Element]) -> str:
+    if not divs:
+        return "absent"
+    if any(_is_meaningfully_nonempty(div) for div in divs):
+        return "nonempty"
+    return "empty"
+
+
 def audit_directory(source_dir: Path, *, source_revision: str) -> Inventory:
     """Audit all top-level XML files in an IIP epidoc-files directory."""
     paths = sorted(source_dir.glob("*.xml"), key=lambda path: path.name)
@@ -238,6 +246,16 @@ def audit_directory(source_dir: Path, *, source_revision: str) -> Inventory:
     edition_stats: dict[str, dict[str, int]] = {}
     edition_corresp_targets: dict[str, Counter[str]] = defaultdict(Counter)
     relation_corresp_targets: dict[str, Counter[str]] = defaultdict(Counter)
+    primary_cross_tab: Counter[str] = Counter()
+    primary_cases: dict[str, list[str]] = {
+        "transcription_absent_segmented_nonempty": [],
+        "transcription_absent_or_empty_diplomatic_nonempty": [],
+        "transcription_empty_segmented_nonempty": [],
+        "no_nonempty_source_text_edition": [],
+        "multiple_transcription_divs": [],
+        "multiple_segmented_divs": [],
+        "multiple_diplomatic_divs": [],
+    }
 
     for path in paths:
         try:
@@ -278,6 +296,7 @@ def audit_directory(source_dir: Path, *, source_revision: str) -> Inventory:
 
         transcription_divs: list[ET.Element] = []
         segmented_divs: list[ET.Element] = []
+        diplomatic_divs: list[ET.Element] = []
         has_textpart = False
         record_edition_subtypes: set[str] = set()
         record_nonempty_edition_subtypes: set[str] = set()
@@ -338,8 +357,43 @@ def audit_directory(source_dir: Path, *, source_revision: str) -> Inventory:
                     transcription_divs.append(element)
                 elif div_type == "edition" and subtype == "transcription_segmented":
                     segmented_divs.append(element)
+                elif div_type == "edition" and subtype == "diplomatic":
+                    diplomatic_divs.append(element)
                 if div_type == "textpart":
                     has_textpart = True
+
+        transcription_state = _layer_state(transcription_divs)
+        segmented_state = _layer_state(segmented_divs)
+        diplomatic_state = _layer_state(diplomatic_divs)
+        cross_tab_key = (
+            f"transcription={transcription_state}|"
+            f"transcription_segmented={segmented_state}|"
+            f"diplomatic={diplomatic_state}"
+        )
+        primary_cross_tab[cross_tab_key] += 1
+
+        if transcription_state == "absent" and segmented_state == "nonempty":
+            primary_cases["transcription_absent_segmented_nonempty"].append(path.name)
+        if (
+            transcription_state in {"absent", "empty"}
+            and diplomatic_state == "nonempty"
+        ):
+            primary_cases[
+                "transcription_absent_or_empty_diplomatic_nonempty"
+            ].append(path.name)
+        if transcription_state == "empty" and segmented_state == "nonempty":
+            primary_cases["transcription_empty_segmented_nonempty"].append(path.name)
+        if not any(
+            state == "nonempty"
+            for state in (transcription_state, segmented_state, diplomatic_state)
+        ):
+            primary_cases["no_nonempty_source_text_edition"].append(path.name)
+        if len(transcription_divs) > 1:
+            primary_cases["multiple_transcription_divs"].append(path.name)
+        if len(segmented_divs) > 1:
+            primary_cases["multiple_segmented_divs"].append(path.name)
+        if len(diplomatic_divs) > 1:
+            primary_cases["multiple_diplomatic_divs"].append(path.name)
 
         for subtype in record_edition_subtypes:
             edition_stats[subtype]["records"] += 1
@@ -467,6 +521,13 @@ def audit_directory(source_dir: Path, *, source_revision: str) -> Inventory:
                 for context in sorted(relation_corresp_targets)
             }
         },
+        "primary_layer_candidates": {
+            "cross_tab": _counter_dict(primary_cross_tab),
+            "cases": {
+                key: primary_cases[key]
+                for key in sorted(primary_cases)
+            },
+        },
         "languages": {
             "record_declarations": _counter_dict(record_languages),
             "token_declarations": _counter_dict(token_languages),
@@ -509,6 +570,7 @@ def render_markdown(inventory: Inventory) -> str:
     elements = inventory["elements"]
     identity = inventory["identity"]
     editions = inventory["editions"]["by_subtype"]
+    primary_layers = inventory["primary_layer_candidates"]
 
     lines = [
         "# IIP corpus audit",
@@ -594,6 +656,27 @@ def render_markdown(inventory: Inventory) -> str:
                 f"**{structure['line_break_elements']}**"
             ),
             "",
+            "## Primary source-text layer overlap",
+            "",
+            "| Layer-state combination | Records |",
+            "|---|---:|",
+        ]
+    )
+    for combination, count in sorted(primary_layers["cross_tab"].items()):
+        lines.append(f"| `{combination}` | {count} |")
+
+    lines.extend(["", "### Fallback-relevant record sets", ""])
+    for case, filenames in sorted(primary_layers["cases"].items()):
+        lines.append(f"#### `{case}` — {len(filenames)}")
+        lines.append("")
+        if filenames:
+            lines.extend(f"- `{filename}`" for filename in filenames)
+        else:
+            lines.append("- None")
+        lines.append("")
+
+    lines.extend(
+        [
             "## Edition layers",
             "",
             "| Subtype | Divs | Records | Non-empty divs | Non-empty records | lb | textparts |",
