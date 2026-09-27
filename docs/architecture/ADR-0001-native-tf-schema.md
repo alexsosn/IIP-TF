@@ -77,7 +77,9 @@ abbreviation structures, deletion/surplus, spaces, glyphs, numerals, foreign spa
 markup, hand shifts, line/column breaks, milestones, apparatus/lemma/reading, additions,
 substitutions, and figures.
 
-Nested markup uses the `parent` edge, so equal spans do not erase hierarchy. Unknown textual
+Nested markup uses the `parent` edge, so equal spans do not erase hierarchy. The rare textual
+`height` element is preserved as `markup(kind=height)`. `figDesc` is stored as the description
+of its enclosing `figure` markup and is not rendered as an inscription glyph. Unknown textual
 constructs are release-blocking diagnostics. There is no generic opaque attribute dictionary.
 
 ## Alternative readings
@@ -100,6 +102,14 @@ Failure is release-blocking; the converter never guesses boundaries.
 
 `segmentation` provenance nodes preserve candidate run dates/resolution. `word` nodes link via
 `token_from`; segmentation nodes link to the annotated edition via `segmentation_of`.
+
+Selected segmented markup is also preserved. It does not create a fifth set of sign slots:
+inline elements inside the selected `transcription_segmented` candidate are projected onto the
+same deterministically matched primary slots as annotation `markup` nodes and carry
+`annotation_source=transcription_segmented`. This matters in real source data such as
+`idum0375`, where segmented `app/lem/rdg` encodes an alternative differently from the
+normalized transcription. If such annotation cannot be projected without guessing, conversion
+fails closed.
 
 ## Text formats
 
@@ -194,3 +204,18 @@ version.
 ## Metadata cardinality rule
 
 Repeatable source structures are never compressed into one scalar feature. If new full-corpus evidence shows a source child can repeat where schema 0.1 models it as scalar, conversion must stop with a schema diagnostic until the mapping is revised; it must not keep the last value.
+
+
+## Audited EpiDoc coverage
+
+The machine schema contains `source_element_mapping` and `source_attribute_mapping` for every
+element and attribute name observed by the pinned corpus audit in transcription, diplomatic,
+translation, commentary, explicit textparts, and segmented transcription.
+
+Structural elements map to edition/textpart/paragraph/word nodes; inline editorial elements map
+to markup; names/dates map to entity nodes; `figDesc` maps to figure description. Attribute
+mappings point to explicit typed/raw features and resolved edges where appropriate.
+
+CI compares these mapping keys directly against `docs/research/iip-inventory.json`. A future
+source revision that introduces a new textual element or attribute therefore fails the mapping
+gate instead of being silently ignored.
