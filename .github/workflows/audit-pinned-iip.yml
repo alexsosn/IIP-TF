@@ -24,6 +24,8 @@ jobs:
     steps:
       - name: Checkout IIP-TF
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
       - name: Fetch pinned Brown IIP source
         env:
           IIP_REVISION: 0b7dc8358ccdfd0c9391f049da4839fbd91c26e5
