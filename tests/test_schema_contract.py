@@ -43,7 +43,7 @@ def test_sections_and_formats_are_standard_tf_oriented() -> None:
 
     assert schema["sections"] == {
         "types": ["inscription", "textpart", "line"],
-        "features": ["iip_id", "section_part", "line_n"],
+        "features": ["inscription_id", "section_part", "line_n"],
     }
     formats = schema["text_formats"]
     assert formats["text-orig-full"]["purpose"] == "primary"
@@ -183,3 +183,15 @@ def test_human_documents_exist_and_state_no_raw_blob_escape_hatch() -> None:
     assert "No raw XML or JSON blob" in adr
     assert "## Node types" in ref
     assert "## Text formats" in ref
+
+
+def test_record_identity_is_file_scoped_not_upstream_id_scoped() -> None:
+    schema = _schema()
+    identity = schema["identity"]
+
+    assert identity["canonical_record_key"] == "source_file_stem"
+    assert identity["section_feature"] == "inscription_id"
+    assert identity["iip_id_is_globally_unique"] is False
+    assert identity["xml_id_is_globally_unique"] is False
+    assert identity["source_element_ids_are_scoped_by_file"] is True
+    assert identity["bare_local_corresp_resolution_scope"] == "source_file"
