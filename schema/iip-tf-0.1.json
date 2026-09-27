@@ -47,7 +47,7 @@
       "line"
     ],
     "features": [
-      "iip_id",
+      "inscription_id",
       "section_part",
       "line_n"
     ]
@@ -119,7 +119,7 @@
     "revision"
   ],
   "node_type_contract": {
-    "inscription": "Record and top-level section node. Carries one-to-one IIP metadata and spans all textual layers.",
+    "inscription": "Record and top-level section node. Canonical TF section id is the unique source file stem; raw IIP/xml ids remain metadata.",
     "edition": "One node for each source transcription, diplomatic, translation, or commentary layer, including empty source layers.",
     "textpart": "Explicit or implicit layer-aware section part.",
     "line": "Layer-aware source line derived from lb boundaries.",
@@ -182,6 +182,7 @@
       "source_ana",
       "source_corresp",
       "source_change",
+      "inscription_id",
       "iip_id",
       "xml_id",
       "source_file",
@@ -603,11 +604,22 @@
     "token_from": "Word node linked to the selected segmentation provenance node."
   },
   "identity": {
-    "inscription": "xml:id is canonical machine id; IIP id is human section id; source filename retained.",
-    "source_id": "Preserve xml:id verbatim where present.",
-    "source_key": "Deterministic structural key scoped by source file and element kind/ordinal where xml:id is absent.",
-    "duplicate_source_id": "release_blocking",
-    "normalization": "Never overwrite a raw source value with a derived/canonical value."
+    "canonical_record_key": "source_file_stem",
+    "section_feature": "inscription_id",
+    "inscription_id": "Unique repository filename stem for the pinned source record (for example jaff0105).",
+    "iip_id": "Preserve idno[@type='IIP'] verbatim as non-unique source metadata.",
+    "xml_id": "Preserve TEI/@xml:id verbatim as non-unique-across-files source metadata.",
+    "iip_id_is_globally_unique": false,
+    "xml_id_is_globally_unique": false,
+    "source_element_ids_are_scoped_by_file": true,
+    "source_id": "Preserve xml:id verbatim where present; interpret uniqueness only inside the source file unless an explicit file-qualified reference says otherwise.",
+    "source_key": "Deterministic file-scoped structural key for a source element lacking xml:id.",
+    "bare_local_corresp_resolution_scope": "source_file",
+    "cross_file_reference_policy": "Require an explicit file-qualified target; never resolve a bare duplicated xml:id globally by guess.",
+    "duplicate_record_key": "release_blocking",
+    "duplicate_source_id_within_file": "release_blocking",
+    "duplicate_raw_iip_or_xml_id_across_files": "preserve_and_report",
+    "normalization": "Never overwrite a raw source identifier/value with a derived canonical value."
   },
   "provenance": {
     "source_repository": "Brown-University-Library/iip-texts",
@@ -658,7 +670,7 @@
     "unsupported_textual_construct": "release_blocking_diagnostic",
     "segmentation_conflict": "fail_closed",
     "segmentation_projection_conflict": "release_blocking_diagnostic",
-    "duplicate_identity": "release_blocking",
+    "duplicate_identity": "duplicate canonical record key or duplicate source element id within the same source file is release-blocking; cross-file raw IIP/xml id collisions are preserved and diagnosed",
     "silent_drop": "forbidden"
   }
 }
