@@ -1,6 +1,6 @@
 # IIP-TF design
 
-**Status: provisional architecture baseline. Issue #3 freezes the release schema after corpus-wide research in #2.**
+**Status: frozen 0.1 semantic architecture. The normative contract is `schema/iip-tf-0.1.json` and ADR-0001.**
 
 ## System boundary
 
@@ -25,7 +25,7 @@ The corpus graph is self-sufficient for research semantics. Build reports may us
 
 ## Warp and textual hierarchy
 
-Current direction:
+Frozen direction:
 
 - slot type: `sign`
 - `word`: IIP token/word unit when source evidence exists
@@ -84,13 +84,11 @@ The schema must be evidence-driven by #2 rather than mirroring every XML contain
 
 ## Translation and commentary
 
-Translation/commentary are not the base warp. Their text should be preserved natively as structured TF features/nodes anchored to the relevant inscription/textpart/line where the source establishes that relation.
-
-Do not tokenize a translation into the source sign sequence. Do not invent alignments absent from IIP.
+Translation and commentary are independent native textual layers in the same `sign` warp, each with their own edition/textpart/line nodes. They are never tokenized into or aligned with source transcription unless IIP explicitly supplies such a relation.
 
 ## Sections and navigation
 
-The target browser hierarchy is:
+The frozen browser hierarchy is:
 
 `inscription → textpart → line`
 
@@ -115,7 +113,7 @@ Every release records:
 
 - Brown source repository and exact commit;
 - converter version/commit;
-- IIP/XML identifier;
+- unique file-stem `inscription_id` plus raw IIP/XML identifiers (which are not globally unique);
 - whether token/structure information is source-provided or converter-derived;
 - source licence/attribution metadata required for redistribution.
 
@@ -125,6 +123,6 @@ Builds from identical source + converter + supported environment should be deter
 
 - unsupported source semantics are diagnostics, not silent drops;
 - parse failures are explicit and source-file-accounted;
-- duplicate stable identities fail the build;
+- duplicate canonical record keys or duplicate element ids within one source file fail the build; cross-file raw IIP/XML-id collisions are preserved and reported;
 - unresolvable structural inconsistencies fail or are explicitly quarantined by a researched rule;
 - release validation reports converted, excluded, and failed source records separately.
