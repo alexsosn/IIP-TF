@@ -21,13 +21,16 @@ jobs:
     steps:
       - name: Checkout IIP-TF
         uses: actions/checkout@v4
-      - name: Checkout pinned Brown IIP source
-        uses: actions/checkout@v4
-        with:
-          repository: Brown-University-Library/iip-texts
-          ref: 0b7dc8358ccdfd0c9391f049da4839fbd91c26e5
-          path: upstream-iip
-          persist-credentials: false
+      - name: Fetch pinned Brown IIP source
+        env:
+          IIP_REVISION: 0b7dc8358ccdfd0c9391f049da4839fbd91c26e5
+        run: |
+          set -euo pipefail
+          mkdir -p upstream-iip
+          curl --fail --location --retry 3 \
+            "https://codeload.github.com/Brown-University-Library/iip-texts/tar.gz/${IIP_REVISION}" \
+            | tar -xz --strip-components=1 -C upstream-iip
+          test -d upstream-iip/epidoc-files
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
