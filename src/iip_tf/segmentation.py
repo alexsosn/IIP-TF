@@ -82,15 +82,23 @@ def _tokens(div: ET.Element) -> tuple[ET.Element, ...]:
     return tuple(tokens)
 
 
-def _canonical_element(element: ET.Element, *, ignore_xml_lang: bool) -> str:
+def _canonical_element(
+    element: ET.Element,
+    *,
+    ignore_token_xml_lang: bool = False,
+) -> str:
+    is_token = _local_name(element.tag) in TOKEN_TAGS
     attributes = [
         (_local_name(name) if name not in {XML_ID, XML_LANG} else name, value)
         for name, value in element.attrib.items()
-        if not (ignore_xml_lang and name == XML_LANG)
+        if not (ignore_token_xml_lang and is_token and name == XML_LANG)
     ]
     children = [
         (
-            _canonical_element(child, ignore_xml_lang=ignore_xml_lang),
+            _canonical_element(
+                child,
+                ignore_token_xml_lang=ignore_token_xml_lang,
+            ),
             _normalise_text(child.tail),
         )
         for child in element
@@ -104,15 +112,33 @@ def _canonical_element(element: ET.Element, *, ignore_xml_lang: bool) -> str:
     return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
 
 
-def _token_signature(
+def _candidate_signature(
     div: ET.Element,
     *,
-    ignore_xml_lang: bool = False,
-) -> tuple[str, ...]:
-    return tuple(
-        _canonical_element(token, ignore_xml_lang=ignore_xml_lang)
-        for token in _tokens(div)
-    )
+    ignore_token_xml_lang: bool = False,
+) -> str:
+    attributes = [
+        (_local_name(name) if name not in {XML_ID, XML_LANG} else name, value)
+        for name, value in div.attrib.items()
+        if name != "change"
+    ]
+    children = [
+        (
+            _canonical_element(
+                child,
+                ignore_token_xml_lang=ignore_token_xml_lang,
+            ),
+            _normalise_text(child.tail),
+        )
+        for child in div
+    ]
+    payload: list[object] = [
+        _local_name(div.tag),
+        sorted(attributes),
+        _normalise_text(div.text),
+        children,
+    ]
+    return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
 
 
 def _token_ids(div: ET.Element) -> tuple[str, ...]:
@@ -179,9 +205,12 @@ def _resolve_zoor0453_override(
         raise SegmentationConflictError(
             "zoor0453: source-history override token shape no longer matches research"
         )
-    if _token_signature(first, ignore_xml_lang=True) != _token_signature(
+    if _candidate_signature(
+        first,
+        ignore_token_xml_lang=True,
+    ) != _candidate_signature(
         second,
-        ignore_xml_lang=True,
+        ignore_token_xml_lang=True,
     ):
         raise SegmentationConflictError(
             "zoor0453: source-history override has conflicts beyond xml:lang"
@@ -259,7 +288,7 @@ def resolve_segmented_editions(
             conflict_fields=(),
         )
 
-    signatures = tuple(_token_signature(candidates[index]) for index in nonempty)
+    signatures = tuple(_candidate_signature(candidates[index]) for index in nonempty)
     if len(set(signatures)) == 1:
         selected = nonempty[0]
         return SegmentationResolution(
