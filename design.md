@@ -1,0 +1,130 @@
+# IIP-TF design
+
+**Status: provisional architecture baseline. Issue #3 freezes the release schema after corpus-wide research in #2.**
+
+## System boundary
+
+```text
+Brown IIP EpiDoc source
+        |
+        v
+source inventory / validation
+        |
+        v
+typed canonical IR
+        |
+        v
+native Text-Fabric writer
+        |
+        +----> TF corpus data
+        +----> standard TF app config
+        +----> build/validation report
+```
+
+The corpus graph is self-sufficient for research semantics. Build reports may use machine-readable diagnostic files, but TF consumers must not need raw XML, JSON blobs, or semantic sidecars to understand the converted corpus.
+
+## Warp and textual hierarchy
+
+Current direction:
+
+- slot type: `sign`
+- `word`: IIP token/word unit when source evidence exists
+- `line`: line structure from EpiDoc
+- `textpart`: explicit source textpart, plus a documented implicit default only where needed for a stable hierarchy
+- `inscription`: one authoritative IIP record/file
+
+A `word` can span one or more sign slots. `num` and `orig` source tokens remain distinguishable through token-kind features rather than being silently coerced to lexical words.
+
+## Empty and zero-width source positions
+
+Text-Fabric requires non-slot nodes to occupy slots. The release ADR must distinguish:
+
+1. **semantic/source positions** such as explicit gaps or independently positioned empty textual material: represent with synthetic sign slots carrying no fabricated glyph;
+2. **metadata-only inscriptions or repeated metadata nodes** that otherwise have no textual extent: use the smallest documented technical anchoring rule, normally reusing an inscription anchor rather than multiplying fake slots;
+3. **ancestor structure**: reuse descendant anchors.
+
+Synthetic slots never receive invented lexical or visible source text.
+
+## Editorial markup
+
+The graph should make common philological questions queryable without reparsing TEI.
+
+Expected feature families include, subject to #3:
+
+- visible/source glyph;
+- language;
+- source XML id;
+- token kind;
+- uncertainty;
+- supplied/lost state and reason;
+- gap reason/unit/quantity;
+- expansion/abbreviation relation;
+- alternative/choice identity and ordering;
+- surplus/deletion-like editorial status;
+- glyph reference;
+- numeral value;
+- hand shift/hand identity;
+- source-vs-derived segmentation provenance.
+
+Where markup spans several signs, use nodes/edges when a scalar slot feature would lose grouping or alternatives.
+
+## Metadata model
+
+Scalar inscription-level properties belong on `inscription` where that preserves cardinality and meaning.
+
+Repeatable/structured records should become dedicated node types where queryability would otherwise be lost. Candidate node types include:
+
+- `bibl`
+- `hand`
+- `decoration`
+- `image`
+- possibly `entity` / `name` where source references are research-useful.
+
+The schema must be evidence-driven by #2 rather than mirroring every XML container mechanically.
+
+## Translation and commentary
+
+Translation/commentary are not the base warp. Their text should be preserved natively as structured TF features/nodes anchored to the relevant inscription/textpart/line where the source establishes that relation.
+
+Do not tokenize a translation into the source sign sequence. Do not invent alignments absent from IIP.
+
+## Sections and navigation
+
+The target browser hierarchy is:
+
+`inscription → textpart → line`
+
+This should be encoded through normal `otext.tf` section types/features so the standard TF browser can navigate IIP identifiers and lines.
+
+## Compatibility policy
+
+Compatibility with BHSA/DSS/ETCBC means:
+
+- ordinary TF warp semantics;
+- conventional structural node names where meanings match;
+- familiar language/text-format behavior;
+- standard app/browser loading;
+- provenance in TF metadata;
+- common feature names only where definitions match.
+
+IIP-TF must not imitate BHSA morphology, lexeme, clause, phrase, or verse features that do not exist in IIP source data.
+
+## Provenance and identity
+
+Every release records:
+
+- Brown source repository and exact commit;
+- converter version/commit;
+- IIP/XML identifier;
+- whether token/structure information is source-provided or converter-derived;
+- source licence/attribution metadata required for redistribution.
+
+Builds from identical source + converter + supported environment should be deterministic.
+
+## Failure policy
+
+- unsupported source semantics are diagnostics, not silent drops;
+- parse failures are explicit and source-file-accounted;
+- duplicate stable identities fail the build;
+- unresolvable structural inconsistencies fail or are explicitly quarantined by a researched rule;
+- release validation reports converted, excluded, and failed source records separately.
