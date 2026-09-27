@@ -11,6 +11,16 @@ This report is generated from `iip-inventory.json`; counts are not hand-edited.
 - Malformed/unreadable: **7**
 - Test/non-inscription records: **1**
 
+### Malformed/unreadable files
+
+- `bqut0002.xml`
+- `caes0433.xml`
+- `sepp0018.xml`
+- `sepp0019.xml`
+- `sepp0020.xml`
+- `sepp0021.xml`
+- `sepp0024.xml`
+
 ## Identity
 
 - Distinct XML ids: **5520**
@@ -19,6 +29,47 @@ This report is generated from `iip-inventory.json`; counts are not hand-edited.
 - Distinct IIP ids: **5489**
 - Missing IIP ids: **0**
 - Duplicate IIP ids: **26**
+
+### Duplicate XML identities
+
+- `jaff0103`: `jaff0103.xml`, `jaff0105.xml`
+- `jaff0108`: `jaff0108.xml`, `jaff0109.xml`
+- `jeru0365`: `jeru0364.xml`, `jeru0365.xml`
+- `jeru0366`: `jeru0336.xml`, `jeru0366.xml`
+- `jeru0462`: `jeru0461.xml`, `jeru0462.xml`
+- `jeru0619`: `jeru0618.xml`, `jeru0619.xml`
+- `mare0190`: `mare0190.xml`, `mare0191.xml`
+- `odob0025`: `odob0025.xml`, `odob0026.xml`
+- `sina0134`: `sina0132.xml`, `sina0134.xml`
+
+### Duplicate IIP identities
+
+- `Bleh 0015`: `bleh0012.xml`, `bleh0015.xml`
+- `Jaff 0103`: `jaff0103.xml`, `jaff0105.xml`
+- `Jaff 0108`: `jaff0108.xml`, `jaff0109.xml`
+- `Jeru 0312`: `jeru0312.xml`, `jeru0313.xml`
+- `Jeru 0350`: `jeru0349.xml`, `jeru0350.xml`
+- `Jeru 0365`: `jeru0364.xml`, `jeru0365.xml`
+- `Jeru 0366`: `jeru0336.xml`, `jeru0366.xml`
+- `Jeru 0462`: `jeru0461.xml`, `jeru0462.xml`
+- `Jeru 0619`: `jeru0618.xml`, `jeru0619.xml`
+- `Mare 0125`: `mare0125.xml`, `mare0126.xml`
+- `Mare 0234`: `mare0123.xml`, `mare0234.xml`
+- `Mare0190`: `mare0190.xml`, `mare0191.xml`
+- `Masa 0613`: `masa0612.xml`, `masa0613.xml`
+- `Mero 0001`: `mero0001.xml`, `mero0002.xml`
+- `Mger 0118`: `mger0118.xml`, `mger0119.xml`
+- `Odob 0025`: `odob0025.xml`, `odob0026.xml`
+- `Sina 0134`: `sina0132.xml`, `sina0134.xml`
+- `beth0283`: `beth0283.xml`, `bloy0001.xml`, `shik0004.xml`
+- `elus0105`: `elus0105.xml`, `elus0106.xml`
+- `emma0001`: `emma0001.xml`, `emma0002.xml`
+- `jeri0015`: `jeri0015.xml`, `jeri0022.xml`
+- `jeri0017`: `arch0001.xml`, `arch0002.xml`, `arch0003.xml`, `arch0004.xml`, `jeri0017.xml`
+- `zoor0336`: `zoor0336.xml`, `zoor0389.xml`
+- `zoor0354`: `zoor0354.xml`, `zoor0390.xml`
+- `zoor0357`: `zoor0357.xml`, `zoor0392.xml`
+- `zoor0361`: `fein0001.xml`, `fein0002.xml`, `fein0003.xml`, `fein0004.xml`, `fein0005.xml`, `fein0006.xml`, `fein0007.xml`, `fein0008.xml`, `fein0009.xml`, `fein0010.xml`, `fein0011.xml`, `fein0012.xml`, `fein0013.xml`, `kqaz0001.xml`, `zoor0361.xml`, `zoor0393.xml`
 
 ## Text and segmentation
 
