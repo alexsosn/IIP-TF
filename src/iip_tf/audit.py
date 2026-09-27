@@ -425,7 +425,18 @@ def render_markdown(inventory: Inventory) -> str:
         f"- Malformed/unreadable: **{files['malformed']}**",
         f"- Test/non-inscription records: **{files['test_or_non_inscription']}**",
         "",
-        "## Identity",
+        "### Malformed/unreadable files",
+        "",
+    ]
+    malformed = inventory["diagnostics"]["malformed_examples"]
+    if malformed:
+        lines.extend(f"- `{name}`" for name in malformed)
+    else:
+        lines.append("- None")
+    lines.extend(
+        [
+            "",
+            "## Identity",
         "",
         f"- Distinct XML ids: **{identity['distinct_xml_ids']}**",
         f"- Missing XML ids: **{identity['missing_xml_id_count']}**",
@@ -434,7 +445,34 @@ def render_markdown(inventory: Inventory) -> str:
         f"- Missing IIP ids: **{identity['missing_iip_id_count']}**",
         f"- Duplicate IIP ids: **{len(identity['duplicate_iip_ids'])}**",
         "",
-        "## Text and segmentation",
+        "### Duplicate XML identities",
+        "",
+    ]
+    duplicate_xml_files = identity["duplicate_xml_id_files"]
+    if duplicate_xml_files:
+        for identifier, filenames in sorted(duplicate_xml_files.items()):
+            rendered = ", ".join(f"`{name}`" for name in filenames)
+            lines.append(f"- `{identifier}`: {rendered}")
+    else:
+        lines.append("- None")
+    lines.extend(
+        [
+            "",
+            "### Duplicate IIP identities",
+            "",
+        ]
+    )
+    duplicate_iip_files = identity["duplicate_iip_id_files"]
+    if duplicate_iip_files:
+        for identifier, filenames in sorted(duplicate_iip_files.items()):
+            rendered = ", ".join(f"`{name}`" for name in filenames)
+            lines.append(f"- `{identifier}`: {rendered}")
+    else:
+        lines.append("- None")
+    lines.extend(
+        [
+            "",
+            "## Text and segmentation",
         "",
         f"- Records with transcription: **{transcriptions['records_with_transcription']}**",
         (
