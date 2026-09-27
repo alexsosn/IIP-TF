@@ -3,7 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from iip_tf.segmentation import (
     PINNED_IIP_REVISION,
     SegmentationConflictError,
