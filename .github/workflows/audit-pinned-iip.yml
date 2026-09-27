@@ -16,7 +16,7 @@ on:
       - ".github/workflows/audit-pinned-iip.yml"
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   audit:
@@ -55,21 +55,10 @@ jobs:
           path: |
             /tmp/iip-inventory.json
             /tmp/iip-corpus-audit.md
-      - name: Refresh generated evidence on this development branch
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-        env:
-          HEAD_REF: ${{ github.head_ref }}
+      - name: Verify committed evidence is fresh
         run: |
-          cp /tmp/iip-inventory.json docs/research/iip-inventory.json
-          cp /tmp/iip-corpus-audit.md docs/research/iip-corpus-audit.md
-          git add docs/research/iip-inventory.json docs/research/iip-corpus-audit.md
-          if git diff --cached --quiet; then
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Issue #16: refresh corresp target evidence"
-          git push origin "HEAD:${HEAD_REF}"
+          cmp /tmp/iip-inventory.json docs/research/iip-inventory.json
+          cmp /tmp/iip-corpus-audit.md docs/research/iip-corpus-audit.md
       - name: Print compact research report
         if: always()
         run: cat /tmp/iip-corpus-audit.md
