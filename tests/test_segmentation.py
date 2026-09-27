@@ -81,3 +81,25 @@ def test_zoor_override_refuses_changed_conflict_shape(tmp_path: Path) -> None:
 
     with pytest.raises(SegmentationConflictError, match="override"):
         resolve_segmented_editions(path, source_revision=PINNED_IIP_REVISION)
+
+
+def test_equivalent_tokens_do_not_hide_candidate_level_semantic_conflict(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "candidate-metadata.xml"
+    path.write_text(
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="candidate-metadata"><text><body>
+<div type="edition" subtype="transcription_segmented" change="c2024-01-01">
+  <p xml:lang="grc"><w xml:id="candidate-metadata-1" xml:lang="grc">Α</w>
+  <milestone unit="section" n="a"/></p>
+</div>
+<div type="edition" subtype="transcription_segmented" change="c2024-02-01">
+  <p xml:lang="arc"><w xml:id="candidate-metadata-1" xml:lang="grc">Α</w>
+  <milestone unit="section" n="b"/></p>
+</div>
+</body></text></TEI>""",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(SegmentationConflictError, match="candidate-metadata"):
+        resolve_segmented_editions(path, source_revision=PINNED_IIP_REVISION)
