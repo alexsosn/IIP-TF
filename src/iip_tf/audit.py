@@ -490,7 +490,10 @@ def render_markdown(inventory: Inventory) -> str:
                 f"**{transcriptions['empty_transcription_records']}**"
             ),
             f"- Records using explicit textpart: **{structure['records_with_textpart']}**",
-            f"- Line-break elements in source transcriptions: **{structure['line_break_elements']}**",
+            (
+                "- Line-break elements in source transcriptions: "
+                f"**{structure['line_break_elements']}**"
+            ),
             "",
             "## Languages",
             "",
