@@ -112,6 +112,11 @@ No feature is int-or-string depending on the node.
 `word` features include `token_kind` (`w`, `num`, `orig`), token id, language, word text, and
 segmentation status/provenance. Words link to a `segmentation` node through `token_from`.
 
+Inline markup from the selected segmented candidate is not discarded and does not create a
+second copy of text. It becomes markup annotations on the deterministically projected primary
+slots with `annotation_source=transcription_segmented`. This includes the audited
+`app/lem/rdg` case.
+
 ## Inscription metadata
 
 Scalar record features include unique file-stem `inscription_id`, raw (non-unique) `iip_id` and
@@ -184,3 +189,22 @@ policy are release-blocking. Silent source-data loss is forbidden.
 ## Cardinality guarantee
 
 Repeatable source children remain repeatable TF nodes. The converter must report a schema error rather than overwrite/concatenate repeated values that the frozen mapping treats as scalar.
+
+
+## Source EpiDoc mapping coverage
+
+`schema/iip-tf-0.1.json` contains an explicit mapping for every element and attribute observed
+in the audited textual contexts. CI checks the mapping against the pinned `iip-inventory.json`.
+
+Examples:
+
+- `p` / textual `ab` -> `paragraph`;
+- `w` -> `word`;
+- `app`, `lem`, `rdg` -> apparatus/lemma/reading markup annotations;
+- `figure` -> figure markup, with `figDesc` as its description rather than visible text;
+- rare textual `height` -> `markup(kind=height)`;
+- `persName`, `name`, `rs`, `placeName`, textual `date` -> entity nodes;
+- `gap@quantity` -> raw string `quantity` plus optional lossless `quantity_int`;
+- `p@xml:lang` -> paragraph `lang`.
+
+A source element/attribute missing from the frozen mapping is a schema error, not a silent drop.
