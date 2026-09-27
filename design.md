@@ -30,6 +30,7 @@ Frozen direction:
 - slot type: `sign`
 - `word`: IIP token/word unit when source evidence exists
 - `line`: line structure from EpiDoc
+- `paragraph`: source `p`/textual `ab` block preserving block attributes and multiplicity
 - `textpart`: explicit source textpart, plus a documented implicit default only where needed for a stable hierarchy
 - `inscription`: one authoritative IIP record/file
 
@@ -72,15 +73,7 @@ Where markup spans several signs, use nodes/edges when a scalar slot feature wou
 
 Scalar inscription-level properties belong on `inscription` where that preserves cardinality and meaning.
 
-Repeatable/structured records should become dedicated node types where queryability would otherwise be lost. Candidate node types include:
-
-- `bibl`
-- `hand`
-- `decoration`
-- `image`
-- possibly `entity` / `name` where source references are research-useful.
-
-The schema must be evidence-driven by #2 rather than mirroring every XML container mechanically.
+Repeatable/structured records use dedicated native nodes where flattening would lose cardinality or hierarchy. Frozen 0.1 types include `bibl`, `bibl_scope`, `hand`, `dimension`, `decoration`, `facsimile_surface`, `image`, `revision`, and textual `entity`. Raw source scalars remain string-valued TF features; numeric conveniences are separate lossless derived int features.
 
 ## Translation and commentary
 
