@@ -25,6 +25,7 @@ This report is generated from `iip-inventory.json`; counts are not hand-edited.
 - Records with transcription: **5349**
 - Records with segmented transcription: **5157**
 - Records with transcription but no segmented transcription: **193**
+- Records with segmented transcription but no source transcription: **1**
 - Records whose transcription has no visible/source-bearing content: **212**
 - Records using explicit textpart: **47**
 - Line-break elements in source transcriptions: **13434**
