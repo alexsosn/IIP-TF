@@ -8,6 +8,7 @@ from iip_tf.segmentation import (
     SegmentationConflictError,
     resolve_segmented_editions,
 )
+
 FIXTURES = Path(__file__).parent / "fixtures" / "segmented_duplicates"
 
 
