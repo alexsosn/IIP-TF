@@ -12,12 +12,14 @@ The MIT licence does **not** relicense:
 - source transcriptions, translations, annotations, bibliography, metadata or images;
 - Text-Fabric data generated from those source materials.
 
-Those components retain the upstream terms that apply to them.
-
-During bootstrap, many current IIP records were observed to declare **CC BY-NC 4.0** and to require reuse/distribution to include a link to the IIP DOI:
+The official IIP copyright and citation guide publishes the IIP project work under **Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)** and identifies the project DOI:
 
 https://doi.org/10.26300/pz1d-st89
 
-Issue #2 is the mandatory corpus-wide licence audit. Until it is complete, this repository must not make a stronger claim that every source component is uniformly licensed or that generated corpus redistribution has been fully cleared under one simple label.
+Generated IIP-TF corpus data must preserve those upstream project terms, attribution, DOI, and the exact source revision.
 
-Every released generated artifact must preserve the verified upstream attribution/licence requirements in its TF provenance and distribution documentation.
+IIP also states that scholarly contributions retain contributor copyright and that it republishes inscription data from attributed scholarly editions. Researchers must therefore retain and consult the underlying source citations rather than treating the TF conversion as a substitute for edition provenance.
+
+IIP further states that images are public-domain or used with permission and that it generally does not own their copyright. IIP-TF therefore does not redistribute image binaries by default. Image/facsimile references and credits may be preserved as metadata.
+
+The detailed research and release implications are recorded in `docs/research/iip-licence-audit.md`.
