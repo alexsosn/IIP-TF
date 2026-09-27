@@ -45,7 +45,8 @@ Token-by-token canonical comparison shows:
 - same 38 token ids;
 - same token kinds;
 - same token text and nested editorial markup;
-- same token attributes after attribute-order normalization.
+- same token attributes after attribute-order normalization;
+- same complete `transcription_segmented` subtree semantics outside the parent `change` value.
 
 The difference is only serialization/whitespace/attribute ordering plus the parent `change` value.
 
@@ -77,10 +78,11 @@ For a record's `transcription_segmented` candidates:
 1. no candidates → no segmented layer;
 2. one candidate → use it;
 3. multiple candidates with exactly one meaningfully non-empty candidate → use that one;
-4. multiple non-empty candidates with identical canonical token semantics → collapse them as equivalent reruns and use the first source occurrence deterministically;
-5. a pinned-source override may resolve a known metadata-only conflict only when the observed candidates exactly match the researched expected shape;
-6. every other multiple non-empty semantic conflict fails closed.
+4. multiple candidates that are all meaningfully empty → select no segmentation layer, preserve all run dates, and report every candidate as suppressed;
+5. multiple non-empty candidates with identical canonical **complete segmented-edition subtree semantics** → collapse them as equivalent reruns and use the first source occurrence deterministically;
+6. a pinned-source override may resolve a known metadata-only conflict only when the observed candidates exactly match the researched expected shape;
+7. every other multiple non-empty semantic conflict fails closed.
 
-Canonical token semantics preserve token kind, id, attributes, text, and nested editorial markup while ignoring serialization whitespace, XML attribute order, parent `change`, and inter-token whitespace.
+Canonical equivalence covers the complete `transcription_segmented` subtree: div/p attributes, token kind/id/attributes/text/nested markup, and non-token editorial children. It ignores only serialization whitespace, XML attribute order, and the parent segmentation-run `change` attribute. The `zoor0453` override additionally ignores **token-level** `xml:lang` only after the rest of that complete subtree is proven identical and the pinned 13-token source shape matches.
 
 The resolver must never concatenate duplicate segmented layers and must never silently choose the latest run.
