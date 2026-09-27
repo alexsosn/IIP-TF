@@ -237,6 +237,7 @@ def audit_directory(source_dir: Path, *, source_revision: str) -> Inventory:
     records_with_doi = 0
     edition_stats: dict[str, dict[str, int]] = {}
     edition_corresp_targets: dict[str, Counter[str]] = defaultdict(Counter)
+    relation_corresp_targets: dict[str, Counter[str]] = defaultdict(Counter)
 
     for path in paths:
         try:
@@ -321,13 +322,18 @@ def audit_directory(source_dir: Path, *, source_revision: str) -> Inventory:
                     if "corresp" in element.attrib:
                         stats["with_corresp"] += 1
                         for target in element.attrib["corresp"].split():
-                            edition_corresp_targets[edition_subtype][
-                                _corresp_target_class(target)
-                            ] += 1
+                            target_class = _corresp_target_class(target)
+                            edition_corresp_targets[edition_subtype][target_class] += 1
+                            relation_corresp_targets[edition_subtype][target_class] += 1
                     if "ana" in element.attrib:
                         stats["with_ana"] += 1
                     if XML_LANG in element.attrib:
                         stats["with_xml_lang"] += 1
+                if div_type == "translation" and "corresp" in element.attrib:
+                    for target in element.attrib["corresp"].split():
+                        relation_corresp_targets["translation"][
+                            _corresp_target_class(target)
+                        ] += 1
                 if div_type == "edition" and subtype == "transcription":
                     transcription_divs.append(element)
                 elif div_type == "edition" and subtype == "transcription_segmented":
@@ -454,6 +460,12 @@ def audit_directory(source_dir: Path, *, source_revision: str) -> Inventory:
                 subtype: _counter_dict(edition_corresp_targets[subtype])
                 for subtype in sorted(edition_corresp_targets)
             },
+        },
+        "relations": {
+            "corresp_targets_by_source_context": {
+                context: _counter_dict(relation_corresp_targets[context])
+                for context in sorted(relation_corresp_targets)
+            }
         },
         "languages": {
             "record_declarations": _counter_dict(record_languages),
@@ -623,6 +635,23 @@ def render_markdown(inventory: Inventory) -> str:
         for subtype, target_counts in sorted(corresp_targets.items()):
             for target_class, count in sorted(target_counts.items()):
                 lines.append(f"| `{subtype}` | `{target_class}` | {count} |")
+    else:
+        lines.append("| — | — | 0 |")
+
+    lines.extend(
+        [
+            "",
+            "### Corresp target classes by source context",
+            "",
+            "| Source context | Target class | Count |",
+            "|---|---|---:|",
+        ]
+    )
+    relation_targets = inventory["relations"]["corresp_targets_by_source_context"]
+    if relation_targets:
+        for context, target_counts in sorted(relation_targets.items()):
+            for target_class, count in sorted(target_counts.items()):
+                lines.append(f"| `{context}` | `{target_class}` | {count} |")
     else:
         lines.append("| — | — | 0 |")
 
