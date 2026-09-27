@@ -18,15 +18,19 @@ sign slot with no fabricated glyph.
 | `inscription` | One IIP record and top section |
 | `edition` | One transcription/diplomatic/translation/commentary layer |
 | `textpart` | Explicit or implicit layer-aware section part |
+| `paragraph` | Source textual block (`p` or textual `ab`), including block-level language/certainty |
 | `line` | Source line |
 | `word` | Validated IIP segmented token projected to primary text |
 | `markup` | Structured inline EpiDoc/editorial span or point |
 | `entity` | Named/reference span in textual layers |
 | `segmentation` | Segmentation provenance/resolution record |
 | `bibl` | Bibliographic source entry |
-| `hand` | Writing technique / letter dimensions |
+| `bibl_scope` | Repeatable `biblScope` child |
+| `hand` | Writing technique record |
+| `dimension` | Repeatable physical or letter-dimension record |
 | `decoration` | Decoration record |
-| `image` | Facsimile URL/credit metadata, never image bytes |
+| `facsimile_surface` | Source facsimile surface/caption grouping |
+| `image` | Graphic URL/credit metadata, never image bytes |
 | `revision` | Source revision-history entry |
 
 ## Primary text
@@ -86,6 +90,23 @@ The frozen vocabulary includes `supplied`, `unclear`, `gap`, `choice`, `sic`, `c
 Nested markup uses the `parent` edge. Unsupported textual constructs block release instead of
 falling into a raw XML/JSON blob.
 
+## Textual blocks
+
+Source `p` and textual `ab` elements become `paragraph` nodes. They preserve block order,
+`xml:lang`, `cert`, and multiple paragraphs inside one edition. Paragraphs do not change the
+three-level TF section hierarchy.
+
+## Feature value types
+
+Each TF feature has one serializable value type. Raw source attributes are strings. Numeric
+derivatives use separate features only when lossless, for example:
+
+- `quantity` (str) and optional `quantity_int` (int);
+- `date_not_before` (str) and optional `date_not_before_int` (int);
+- `date_not_after` (str) and optional `date_not_after_int` (int).
+
+No feature is int-or-string depending on the node.
+
 ## Words
 
 `word` features include `token_kind` (`w`, `num`, `orig`), token id, language, word text, and
@@ -100,10 +121,13 @@ PeriodO references, coordinates, locus, provenance, and physical/origin notes.
 
 ## Repeatable metadata nodes
 
-- `bibl`: target, pointer type, scope/unit/n.
-- `hand`: technique, note, letter dimensions.
+- `bibl`: target and pointer type.
+- `bibl_scope`: one repeatable scope child with text/unit/n.
+- `hand`: technique and note; child `dimension` nodes hold letter dimensions.
+- `dimension`: raw string-valued surface/letter dimensions including axis-specific min/max ranges.
 - `decoration`: type, description, locus.
-- `image`: URL, description, note, credit/role; no binary payload.
+- `facsimile_surface`: shared surface description/note context.
+- `image`: URL, description, note, credit/role; parented to a surface when present; no binary payload.
 - `revision`: when/custom-when, who, description.
 
 ## Entity nodes
@@ -115,7 +139,7 @@ with ref/ana/nymRef/type/role/language/calendar/from/to fields as applicable.
 
 | Edge | Meaning |
 |---|---|
-| `parent` | Immediate nested semantic parent |
+| `parent` | Immediate nested textual or metadata parent (including scope/dimension/surface grouping) |
 | `in_inscription` | Explicit owner for technically anchored metadata/provenance |
 | `corresponds_to` | Resolved local EpiDoc `@corresp` |
 | `cites` | Relation to bibliography |
@@ -156,3 +180,7 @@ not created unless the source actually supplies such analysis.
 Unsupported textual constructs, duplicate canonical/file-scoped identity, unresolved segmentation conflicts,
 non-deterministic token projection, and malformed records lacking an explicit researched
 policy are release-blocking. Silent source-data loss is forbidden.
+
+## Cardinality guarantee
+
+Repeatable source children remain repeatable TF nodes. The converter must report a schema error rather than overwrite/concatenate repeated values that the frozen mapping treats as scalar.
