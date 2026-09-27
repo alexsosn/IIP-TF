@@ -1,6 +1,6 @@
 # Research baseline
 
-This document records evidence already checked before implementation. It is intentionally incomplete; issue #2 must replace sample-based assumptions with corpus-wide measurements.
+This document records durable evidence checked before implementation. The corpus-wide measurements from issue #2 are committed in `docs/research/iip-inventory.json` and the generated `docs/research/iip-corpus-audit.md`; licensing analysis is in `docs/research/iip-licence-audit.md`.
 
 ## Upstream source
 
@@ -11,7 +11,7 @@ Primary source repository:
 - commit date: 2024-07-17
 - repository README describes `epidoc-files` as the current IIP inscriptions encoded in EpiDoc XML.
 
-A bootstrap tree inventory found roughly 5.5k XML files under `epidoc-files/`; issue #2 must produce the authoritative release count and exclude test/non-inscription files explicitly.
+The pinned issue-#2 audit accounts for **5,536 XML files** under `epidoc-files/`: 5,529 parse successfully, seven are malformed, and one parsed file is a test/non-inscription fixture. The release converter must make the seven malformed sources and the test-file exclusion explicit rather than silently reducing the corpus.
 
 ## Word segmentation evidence
 
@@ -65,7 +65,7 @@ Observed non-textual research metadata include:
 - bibliography pointers and scoped references;
 - revision history and contributor information.
 
-These examples justify a native graph model, but they do not prove complete corpus coverage. Issue #2 must inventory all element/attribute patterns.
+The full inventory confirms these common constructs and also exposes rare cases that must receive explicit #3 mapping decisions, including `app/lem/rdg`, `handShift`, `subst`, `cb`, `milestone`, `figure/figDesc`, and low-count `add/reg` usage.
 
 ## Text-Fabric precedents
 
@@ -79,7 +79,7 @@ For IIP, sign slots are the current design direction because:
 - unsegmented or irregular inscriptions do not require invented word analysis;
 - line/textpart/inscription nodes remain conventional TF structures.
 
-Issue #3 must freeze the precise schema after #2 measures the full source.
+The full audit also finds 193 records with a source transcription but no segmented transcription, at least one segmented-only case, 212 empty source transcriptions, and 47 records with explicit `textpart`. Issue #3 must therefore freeze separate policies for base-text selection, segmentation provenance, empty textual positions, and textpart navigation.
 
 ## Standard web interface
 
@@ -100,8 +100,8 @@ IIP-TF should eventually publish `agora.materializer.json` from this repository.
 
 ## Licence evidence
 
-Many current IIP XML records explicitly state Creative Commons Attribution-NonCommercial 4.0 International and require reuse/distribution to include a link to the IIP DOI `10.26300/pz1d-st89`.
+The authoritative IIP copyright/citation page publishes the project work under **CC BY-NC 4.0** and gives DOI `10.26300/pz1d-st89` for project citation. It also preserves contributor rights in scholarly contributions, describes inscription readings as attributed republications of source editions, and says IIP generally does not own image copyrights.
 
-Some older/current files use XInclude or differ structurally, so the bootstrap does **not** claim that every source component has already been audited under one uniform licence statement. Issue #2 must establish the defensible corpus-wide licence/redistribution conclusion before generated data are published.
+The pinned XML snapshot embeds a complete licence/DOI block in only a small subset of records, so converter licensing must follow the authoritative project-level terms rather than infer different rights from missing inline XML. Generated TF data will carry IIP attribution, DOI, exact source revision, and CC BY-NC 4.0 project terms; source-edition bibliography remains queryable, and image binaries are excluded unless separately cleared. See `docs/research/iip-licence-audit.md`.
 
-Software authored in IIP-TF is intended to be MIT licensed independently from source/generated corpus data.
+Software authored in IIP-TF remains MIT licensed independently from source/generated corpus data.
