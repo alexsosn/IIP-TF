@@ -16,7 +16,7 @@ on:
       - ".github/workflows/audit-pinned-iip.yml"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   audit:
@@ -53,10 +53,21 @@ jobs:
           path: |
             /tmp/iip-inventory.json
             /tmp/iip-corpus-audit.md
-      - name: Check committed evidence is fresh
+      - name: Refresh committed evidence on same-repo PR
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          HEAD_REF: ${{ github.head_ref }}
         run: |
-          cmp /tmp/iip-inventory.json docs/research/iip-inventory.json
-          cmp /tmp/iip-corpus-audit.md docs/research/iip-corpus-audit.md
+          cp /tmp/iip-inventory.json docs/research/iip-inventory.json
+          cp /tmp/iip-corpus-audit.md docs/research/iip-corpus-audit.md
+          git add docs/research/iip-inventory.json docs/research/iip-corpus-audit.md
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Issue #2: refresh generated audit after review fixes"
+          git push origin "HEAD:${HEAD_REF}"
       - name: Print compact research report
         if: always()
         run: cat /tmp/iip-corpus-audit.md
