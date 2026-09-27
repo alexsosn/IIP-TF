@@ -218,6 +218,7 @@ def audit_directory(source_dir: Path, *, source_revision: str) -> Inventory:
             files["test_or_non_inscription"] += 1
             if len(non_inscription_examples) < 25:
                 non_inscription_examples.append(path.name)
+            continue
 
         xml_id = root.attrib.get(XML_ID)
         if xml_id:
@@ -541,7 +542,8 @@ def render_markdown(inventory: Inventory) -> str:
         ]
     )
 
-    for context in ("transcription", "transcription_segmented"):
+    textual_contexts = ("transcription", "transcription_segmented", "textpart")
+    for context in textual_contexts:
         counts = elements.get(context, {})
         rows = [
             (name, count)
@@ -551,7 +553,7 @@ def render_markdown(inventory: Inventory) -> str:
         lines.extend([f"### {context}", "", _table(rows), ""])
 
     rare: list[tuple[str, int]] = []
-    for context in ("transcription", "transcription_segmented"):
+    for context in textual_contexts:
         for name, count in elements.get(context, {}).items():
             if name not in CONTAINER_ELEMENTS and count <= 10:
                 rare.append((f"{context}:{name}", count))
