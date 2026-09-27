@@ -72,7 +72,11 @@ def _next_context(element: ET.Element, inherited: str) -> str:
     if name == "div":
         div_type = element.attrib.get("type", "")
         subtype = element.attrib.get("subtype", "")
-        if div_type == "edition" and subtype in {"transcription", "transcription_segmented"}:
+        if div_type == "edition" and subtype in {
+            "transcription",
+            "transcription_segmented",
+            "diplomatic",
+        }:
             return subtype
         if div_type in {"translation", "commentary", "bibliography"}:
             return div_type
@@ -157,6 +161,34 @@ def _is_test_or_non_inscription(path: Path, root: ET.Element) -> bool:
     return _local_name(root.tag) != "TEI"
 
 
+def _new_edition_stats() -> dict[str, int]:
+    return {
+        "divs": 0,
+        "records": 0,
+        "nonempty_divs": 0,
+        "records_with_nonempty": 0,
+        "line_break_elements": 0,
+        "textpart_divs": 0,
+        "with_xml_id": 0,
+        "with_corresp": 0,
+        "with_ana": 0,
+        "with_xml_lang": 0,
+    }
+
+
+def _corresp_target_class(target: str) -> str:
+    fragment = target.rsplit("#", 1)[-1].rstrip("/")
+    suffix = fragment.rsplit(".", 1)[-1].lower()
+    if suffix in {
+        "transcription",
+        "transcription_segmented",
+        "diplomatic",
+        "translation",
+    }:
+        return suffix
+    return "other"
+
+
 def audit_directory(source_dir: Path, *, source_revision: str) -> Inventory:
     """Audit all top-level XML files in an IIP epidoc-files directory."""
     paths = sorted(source_dir.glob("*.xml"), key=lambda path: path.name)
@@ -203,6 +235,9 @@ def audit_directory(source_dir: Path, *, source_revision: str) -> Inventory:
     records_with_any_licence = 0
     records_with_cc_by_nc = 0
     records_with_doi = 0
+    edition_stats: dict[str, dict[str, int]] = {}
+    edition_corresp_targets: dict[str, Counter[str]] = defaultdict(Counter)
+    relation_corresp_targets: dict[str, Counter[str]] = defaultdict(Counter)
 
     for path in paths:
         try:
@@ -244,6 +279,8 @@ def audit_directory(source_dir: Path, *, source_revision: str) -> Inventory:
         transcription_divs: list[ET.Element] = []
         segmented_divs: list[ET.Element] = []
         has_textpart = False
+        record_edition_subtypes: set[str] = set()
+        record_nonempty_edition_subtypes: set[str] = set()
 
         for element in root.iter():
             name = _local_name(element.tag)
@@ -258,12 +295,56 @@ def audit_directory(source_dir: Path, *, source_revision: str) -> Inventory:
             if name == "div":
                 div_type = element.attrib.get("type")
                 subtype = element.attrib.get("subtype")
+                if div_type == "edition":
+                    edition_subtype = subtype or "(missing)"
+                    stats = edition_stats.setdefault(
+                        edition_subtype,
+                        _new_edition_stats(),
+                    )
+                    stats["divs"] += 1
+                    record_edition_subtypes.add(edition_subtype)
+                    if _is_meaningfully_nonempty(element):
+                        stats["nonempty_divs"] += 1
+                        record_nonempty_edition_subtypes.add(edition_subtype)
+                    stats["line_break_elements"] += sum(
+                        1
+                        for descendant in element.iter()
+                        if _local_name(descendant.tag) == "lb"
+                    )
+                    stats["textpart_divs"] += sum(
+                        1
+                        for descendant in element.iter()
+                        if _local_name(descendant.tag) == "div"
+                        and descendant.attrib.get("type") == "textpart"
+                    )
+                    if XML_ID in element.attrib:
+                        stats["with_xml_id"] += 1
+                    if "corresp" in element.attrib:
+                        stats["with_corresp"] += 1
+                        for target in element.attrib["corresp"].split():
+                            target_class = _corresp_target_class(target)
+                            edition_corresp_targets[edition_subtype][target_class] += 1
+                            relation_corresp_targets[edition_subtype][target_class] += 1
+                    if "ana" in element.attrib:
+                        stats["with_ana"] += 1
+                    if XML_LANG in element.attrib:
+                        stats["with_xml_lang"] += 1
+                if div_type == "translation" and "corresp" in element.attrib:
+                    for target in element.attrib["corresp"].split():
+                        relation_corresp_targets["translation"][
+                            _corresp_target_class(target)
+                        ] += 1
                 if div_type == "edition" and subtype == "transcription":
                     transcription_divs.append(element)
                 elif div_type == "edition" and subtype == "transcription_segmented":
                     segmented_divs.append(element)
                 if div_type == "textpart":
                     has_textpart = True
+
+        for subtype in record_edition_subtypes:
+            edition_stats[subtype]["records"] += 1
+        for subtype in record_nonempty_edition_subtypes:
+            edition_stats[subtype]["records_with_nonempty"] += 1
 
         if transcription_divs:
             with_transcription += 1
@@ -370,6 +451,22 @@ def audit_directory(source_dir: Path, *, source_revision: str) -> Inventory:
             "records_with_textpart": records_with_textpart,
             "line_break_elements": line_break_elements,
         },
+        "editions": {
+            "by_subtype": {
+                subtype: edition_stats[subtype]
+                for subtype in sorted(edition_stats)
+            },
+            "corresp_targets_by_subtype": {
+                subtype: _counter_dict(edition_corresp_targets[subtype])
+                for subtype in sorted(edition_corresp_targets)
+            },
+        },
+        "relations": {
+            "corresp_targets_by_source_context": {
+                context: _counter_dict(relation_corresp_targets[context])
+                for context in sorted(relation_corresp_targets)
+            }
+        },
         "languages": {
             "record_declarations": _counter_dict(record_languages),
             "token_declarations": _counter_dict(token_languages),
@@ -411,6 +508,7 @@ def render_markdown(inventory: Inventory) -> str:
     licence = inventory["licence"]
     elements = inventory["elements"]
     identity = inventory["identity"]
+    editions = inventory["editions"]["by_subtype"]
 
     lines = [
         "# IIP corpus audit",
@@ -496,6 +594,70 @@ def render_markdown(inventory: Inventory) -> str:
                 f"**{structure['line_break_elements']}**"
             ),
             "",
+            "## Edition layers",
+            "",
+            "| Subtype | Divs | Records | Non-empty divs | Non-empty records | lb | textparts |",
+            "|---|---:|---:|---:|---:|---:|---:|",
+        ]
+    )
+    for subtype, stats in sorted(editions.items()):
+        lines.append(
+            f"| `{subtype}` | {stats['divs']} | {stats['records']} | "
+            f"{stats['nonempty_divs']} | {stats['records_with_nonempty']} | "
+            f"{stats['line_break_elements']} | {stats['textpart_divs']} |"
+        )
+    lines.extend(
+        [
+            "",
+            "### Edition relation-bearing attributes",
+            "",
+            "| Subtype | xml:id | corresp | ana | xml:lang |",
+            "|---|---:|---:|---:|---:|",
+        ]
+    )
+    for subtype, stats in sorted(editions.items()):
+        lines.append(
+            f"| `{subtype}` | {stats['with_xml_id']} | {stats['with_corresp']} | "
+            f"{stats['with_ana']} | {stats['with_xml_lang']} |"
+        )
+
+    lines.extend(
+        [
+            "",
+            "### Edition corresp target classes",
+            "",
+            "| Source subtype | Target class | Count |",
+            "|---|---|---:|",
+        ]
+    )
+    corresp_targets = inventory["editions"]["corresp_targets_by_subtype"]
+    if corresp_targets:
+        for subtype, target_counts in sorted(corresp_targets.items()):
+            for target_class, count in sorted(target_counts.items()):
+                lines.append(f"| `{subtype}` | `{target_class}` | {count} |")
+    else:
+        lines.append("| — | — | 0 |")
+
+    lines.extend(
+        [
+            "",
+            "### Corresp target classes by source context",
+            "",
+            "| Source context | Target class | Count |",
+            "|---|---|---:|",
+        ]
+    )
+    relation_targets = inventory["relations"]["corresp_targets_by_source_context"]
+    if relation_targets:
+        for context, target_counts in sorted(relation_targets.items()):
+            for target_class, count in sorted(target_counts.items()):
+                lines.append(f"| `{context}` | `{target_class}` | {count} |")
+    else:
+        lines.append("| — | — | 0 |")
+
+    lines.extend(
+        [
+            "",
             "## Languages",
             "",
             "### Record-level textLang declarations",
@@ -542,7 +704,12 @@ def render_markdown(inventory: Inventory) -> str:
         ]
     )
 
-    textual_contexts = ("transcription", "transcription_segmented", "textpart")
+    textual_contexts = (
+        "transcription",
+        "transcription_segmented",
+        "diplomatic",
+        "textpart",
+    )
     for context in textual_contexts:
         counts = elements.get(context, {})
         rows = [
@@ -594,7 +761,12 @@ def render_markdown(inventory: Inventory) -> str:
     return "\n".join(lines)
 
 def _json_text(inventory: Inventory) -> str:
-    return json.dumps(inventory, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    return json.dumps(
+        inventory,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ) + "\n"
 
 
 def _check_or_write(path: Path, content: str, *, check: bool) -> bool:
