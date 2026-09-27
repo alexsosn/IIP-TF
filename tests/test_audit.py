@@ -174,3 +174,19 @@ def test_audit_reports_duplicate_identity_file_locations(tmp_path: Path) -> None
     assert inventory["identity"]["duplicate_iip_id_files"] == {
         "Dup 0001": ["a.xml", "b.xml"]
     }
+
+    report = render_markdown(inventory)
+    assert "Duplicate XML identities" in report
+    assert "`dup`: `a.xml`, `b.xml`" in report
+    assert "Duplicate IIP identities" in report
+    assert "`Dup 0001`: `a.xml`, `b.xml`" in report
+
+
+def test_report_names_malformed_inputs(tmp_path: Path) -> None:
+    _write(tmp_path, "broken0001.xml", "<TEI><broken>")
+
+    inventory = audit_directory(tmp_path, source_revision="abc")
+    report = render_markdown(inventory)
+
+    assert "Malformed/unreadable files" in report
+    assert "`broken0001.xml`" in report
