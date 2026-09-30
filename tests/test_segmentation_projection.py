@@ -4,9 +4,9 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from iip_tf.segmentation_projection import SegmentationProjectionError
 
 from iip_tf.ir import EdgeType, InscriptionIR, IREdge, IRNode, Layer, NodeType
+from iip_tf.segmentation_projection import SegmentationProjectionError
 from iip_tf.text_parser import parse_epidoc_file
 
 
