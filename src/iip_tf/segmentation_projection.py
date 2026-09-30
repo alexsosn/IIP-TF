@@ -688,9 +688,7 @@ def enrich_segmentation(
     embedding = _unique_embedding(primary, specs, record_id=record_id)
     selected_candidate_key = candidate_keys[resolution.selected_index]
 
-    for token_index, (spec, (start, end)) in enumerate(
-        zip(specs, embedding, strict=True)
-    ):
+    for spec, (start, end) in zip(specs, embedding, strict=True):
         first_sign = primary[start].sign_index
         last_sign = primary[end - 1].sign_index
         sign_keys = tuple(
