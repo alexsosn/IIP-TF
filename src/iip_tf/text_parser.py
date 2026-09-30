@@ -24,6 +24,7 @@ from iip_tf.ir import (
     SourceProvenance,
 )
 from iip_tf.source_repair import SourceConflictError, repair_source_file
+from iip_tf.metadata_parser import enrich_metadata
 
 TEI_NS: Final = "http://www.tei-c.org/ns/1.0"
 XML_NS: Final = "http://www.w3.org/XML/1998/namespace"
@@ -1080,7 +1081,7 @@ def parse_epidoc_file(path: Path, *, source_revision: str) -> InscriptionIR:
         features=inscription_features,
     )
     builder.finalize_corresp()
-    return builder.freeze()
+    return enrich_metadata(builder.freeze(), root)
 
 
 def validate_text_directory(
