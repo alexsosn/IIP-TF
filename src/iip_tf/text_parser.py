@@ -1033,10 +1033,9 @@ def parse_epidoc_file(path: Path, *, source_revision: str) -> InscriptionIR:
         if layer is not None:
             native_editions.append((element, layer))
 
-    layer_starts: dict[Layer, int] = {}
-    layer_ends: dict[Layer, int] = {}
+    layer_positions: Counter[Layer] = Counter()
     for element, layer in native_editions:
-        layer_starts.setdefault(layer, len(builder.signs))
+        before = len(builder.signs)
         _parse_edition(
             builder,
             element,
@@ -1044,14 +1043,10 @@ def parse_epidoc_file(path: Path, *, source_revision: str) -> InscriptionIR:
             header_lang=header_lang,
             inscription_key=inscription_key,
         )
-        layer_ends[layer] = len(builder.signs)
+        layer_positions[layer] += len(builder.signs) - before
 
-    transcription_has = layer_ends.get(Layer.TRANSCRIPTION, 0) > layer_starts.get(
-        Layer.TRANSCRIPTION, layer_ends.get(Layer.TRANSCRIPTION, 0)
-    )
-    diplomatic_has = layer_ends.get(Layer.DIPLOMATIC, 0) > layer_starts.get(
-        Layer.DIPLOMATIC, layer_ends.get(Layer.DIPLOMATIC, 0)
-    )
+    transcription_has = layer_positions[Layer.TRANSCRIPTION] > 0
+    diplomatic_has = layer_positions[Layer.DIPLOMATIC] > 0
     if transcription_has:
         primary_layer = "transcription"
     elif diplomatic_has:
