@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from iip_tf.ir import InscriptionIR, IRNode, Layer, NodeType
+from iip_tf.ir import EdgeType, InscriptionIR, IREdge, IRNode, Layer, NodeType
 from iip_tf.text_parser import (
     UnsupportedTextualConstructError,
     parse_epidoc_file,
@@ -189,3 +189,35 @@ def test_unknown_textual_constructs_and_attributes_fail_closed(tmp_path: Path) -
 
     with pytest.raises(UnsupportedTextualConstructError, match="bogus"):
         parse_epidoc_file(unknown_attribute, source_revision="deadbeef")
+
+
+def test_edition_level_lb_between_explicit_textparts_starts_following_part(
+    tmp_path: Path,
+) -> None:
+    path = _write(
+        tmp_path,
+        "parts-lb.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="parts-lb"><text><body>
+        <div type="edition" subtype="transcription" xml:id="parts-lb.transcription">
+          <div type="textpart" n="a"><p>Alpha</p></div>
+          <lb/>
+          <div type="textpart" n="b"><p>Beta</p></div>
+        </div>
+        </body></text></TEI>""",
+    )
+
+    ir = parse_epidoc_file(path, source_revision="deadbeef")
+
+    parts = _nodes(ir, NodeType.TEXTPART)
+    assert len(parts) == 2
+    second = next(node for node in parts if node.feature("source_n") == "b")
+    boundary = next(sign for sign in ir.signs if sign.synthetic_kind == "line_break")
+    assert boundary.key in second.sign_keys
+
+    line_break = next(
+        node
+        for node in _nodes(ir, NodeType.MARKUP)
+        if node.feature("kind") == "line_break"
+    )
+    edition = next(node for node in _nodes(ir, NodeType.EDITION))
+    assert IREdge(EdgeType.PARENT, line_break.key, edition.key) in ir.edges
