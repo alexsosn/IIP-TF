@@ -9,6 +9,7 @@ from iip_tf.source_repair import (
     REPAIR_ID,
     SourceConflictError,
     repair_source_file,
+    validate_source_directory,
 )
 
 FIXTURES = Path(__file__).parent / "fixtures" / "source_conflicts"
@@ -125,3 +126,25 @@ def test_well_formed_future_revision_passes_through_unchanged(tmp_path: Path) ->
     assert result.repair_id is None
     assert result.conflict_count == 0
     assert result.text == text
+
+
+def test_directory_validation_accounts_clean_and_repaired_files(tmp_path: Path) -> None:
+    (tmp_path / "bqut0002.xml").write_text(
+        (FIXTURES / "bqut0002.xml").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    (tmp_path / "clean.xml").write_text(
+        '<TEI xmlns="http://www.tei-c.org/ns/1.0"><text><body/></text></TEI>',
+        encoding="utf-8",
+    )
+
+    report = validate_source_directory(
+        tmp_path,
+        source_revision=PINNED_IIP_REVISION,
+    )
+
+    assert report.total_xml == 2
+    assert report.well_formed == 2
+    assert report.repaired == 1
+    assert report.repaired_files == ("bqut0002.xml",)
+    assert report.failures == ()
