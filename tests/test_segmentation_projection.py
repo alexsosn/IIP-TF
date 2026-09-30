@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from iip_tf.segmentation_projection import SegmentationProjectionError
 
-from iip_tf.ir import EdgeType, InscriptionIR, IREdge, IRNode, Layer
+from iip_tf.ir import EdgeType, InscriptionIR, IREdge, IRNode, Layer, NodeType
 from iip_tf.text_parser import parse_epidoc_file
 
 
@@ -76,7 +76,7 @@ def test_projects_segmented_tokens_to_diplomatic_fallback_including_cb(tmp_path:
     )
 
     ir = parse_epidoc_file(path, source_revision="deadbeef")
-    assert ir.node_feature("inscription", "primary_layer") == "diplomatic"
+    assert ir.node_feature(NodeType.INSCRIPTION, "primary_layer") == "diplomatic"
 
     words = _nodes(ir, "word")
     assert len(words) == 4
