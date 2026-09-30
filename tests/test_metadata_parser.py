@@ -54,10 +54,9 @@ def test_scalar_metadata_and_dimensions_are_preserved_without_overwriting(tmp_pa
         <date period="period:roman" notBefore="-0020" notAfter="0070">20 BCE to 70 CE</date>
         <placeName>
           <region>Judaea</region>
-          <settlement ref="pleiades:1">Jerusalem</settlement>
+          <settlement ref="pleiades:1">Jerusalem<geo>31.7 35.2</geo></settlement>
           <geogName type="site">Kidron Valley</geogName>
           <geogFeat type="locus">Tomb 5</geogFeat>
-          <geo>31.7 35.2</geo>
         </placeName>
         <p>origin note</p>
       </origin>
