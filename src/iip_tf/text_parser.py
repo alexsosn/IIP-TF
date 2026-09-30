@@ -817,72 +817,94 @@ def _parse_edition(
     key = builder.node_key(element)
     source_id = element.attrib.get(XML_ID)
     start = len(builder.signs)
+    children = list(element)
+    explicit_parts = [
+        child
+        for child in children
+        if _local(child.tag) == "div" and child.attrib.get("type") == "textpart"
+    ]
 
-    implicit_key = builder.derived_key("textpart", f"{key}:implicit")
-    implicit_start = len(builder.signs)
-    implicit_state = _TextPartState(
-        key=implicit_key,
-        layer=layer,
-        line_start=implicit_start,
-    )
-    implicit_child_keys_before = len(builder.edges)
-
-    if element.text and element.text.strip():
-        _emit_text(builder, element.text, layer=layer, lang=edition_lang, role="both")
-
-    for child in list(element):
-        name = _local(child.tag)
-        if name == "div" and child.attrib.get("type") == "textpart":
-            _parse_textpart(
-                builder,
-                child,
-                layer=layer,
-                lang=edition_lang,
-                edition_key=key,
-            )
-        elif name in {"p", "ab"}:
-            _parse_paragraph(
-                builder,
-                child,
-                layer=layer,
-                lang=edition_lang,
-                parent=implicit_key,
-                state=implicit_state,
-            )
-        elif name == "div":
+    if explicit_parts:
+        if element.text and element.text.strip():
             raise UnsupportedTextualConstructError(
-                f"{builder.identity.source_file}: unsupported nested div "
-                f"type={child.attrib.get('type')!r}"
+                f"{builder.identity.source_file}: edition mixes explicit textparts "
+                "with direct textual content"
             )
-        else:
-            _parse_inline(
-                builder,
-                child,
-                layer=layer,
-                lang=edition_lang,
-                role="both",
-                parent=implicit_key,
-                state=implicit_state,
-            )
-        _emit_text(builder, child.tail, layer=layer, lang=edition_lang, role="both")
-
-    implicit_end = len(builder.signs)
-    if implicit_end > implicit_start:
-        _finish_line(builder, implicit_state)
-        builder.add_node(
-            key=implicit_key,
-            node_type=NodeType.TEXTPART,
-            start=implicit_start,
-            end=implicit_end,
-            features={
-                "source_key": implicit_key,
-                "layer": layer.value,
-                "section_part": _section_part(layer, None),
-            },
-            parent=key,
-        )
+        for child in children:
+            name = _local(child.tag)
+            if child in explicit_parts:
+                _parse_textpart(
+                    builder,
+                    child,
+                    layer=layer,
+                    lang=edition_lang,
+                    edition_key=key,
+                )
+            else:
+                raise UnsupportedTextualConstructError(
+                    f"{builder.identity.source_file}: edition mixes explicit textparts "
+                    f"with direct {name!r} content"
+                )
+            if child.tail and child.tail.strip():
+                raise UnsupportedTextualConstructError(
+                    f"{builder.identity.source_file}: edition has direct text outside "
+                    "explicit textparts"
+                )
     else:
-        if len(builder.edges) > implicit_child_keys_before:
+        implicit_key = builder.derived_key("textpart", f"{key}:implicit")
+        implicit_start = len(builder.signs)
+        implicit_state = _TextPartState(
+            key=implicit_key,
+            layer=layer,
+            line_start=implicit_start,
+        )
+        implicit_child_keys_before = len(builder.edges)
+
+        _emit_text(builder, element.text, layer=layer, lang=edition_lang, role="both")
+        for child in children:
+            name = _local(child.tag)
+            if name in {"p", "ab"}:
+                _parse_paragraph(
+                    builder,
+                    child,
+                    layer=layer,
+                    lang=edition_lang,
+                    parent=implicit_key,
+                    state=implicit_state,
+                )
+            elif name == "div":
+                raise UnsupportedTextualConstructError(
+                    f"{builder.identity.source_file}: unsupported nested div "
+                    f"type={child.attrib.get('type')!r}"
+                )
+            else:
+                _parse_inline(
+                    builder,
+                    child,
+                    layer=layer,
+                    lang=edition_lang,
+                    role="both",
+                    parent=implicit_key,
+                    state=implicit_state,
+                )
+            _emit_text(builder, child.tail, layer=layer, lang=edition_lang, role="both")
+
+        implicit_end = len(builder.signs)
+        if implicit_end > implicit_start:
+            _finish_line(builder, implicit_state)
+            builder.add_node(
+                key=implicit_key,
+                node_type=NodeType.TEXTPART,
+                start=implicit_start,
+                end=implicit_end,
+                features={
+                    "source_key": implicit_key,
+                    "layer": layer.value,
+                    "section_part": _section_part(layer, None),
+                },
+                parent=key,
+            )
+        elif len(builder.edges) > implicit_child_keys_before:
             builder.replace_parent(implicit_key, key)
 
     features = _mapped_features(
@@ -901,7 +923,6 @@ def _parse_edition(
         source_id=source_id,
         parent=inscription_key,
     )
-
 
 def _identity(root: ET.Element, path: Path) -> SourceIdentity:
     inscription_id = path.stem
