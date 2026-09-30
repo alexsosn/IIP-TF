@@ -121,7 +121,7 @@ slots with `annotation_source=transcription_segmented`. This includes the audite
 
 Scalar record features include unique file-stem `inscription_id`, raw (non-unique) `iip_id` and
 `xml_id`, `source_file`, `primary_layer`, language declarations,
-genre/religion, object/material/condition, layout, dimensions, origin date/place, Pleiades/
+`genre_cert`, `date_precision`, `region_cert`, and `settlement_cert` preserve audited raw certainty/precision qualifiers for their specific metadata paths rather than sharing a generic `cert` scalar. genre/religion, object/material/condition, layout, dimensions, origin date/place, Pleiades/
 PeriodO references, coordinates, locus, provenance, and physical/origin notes.
 
 ## Repeatable metadata nodes
