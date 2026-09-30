@@ -232,19 +232,14 @@ def _resolve_zoor0453_override(
     )
 
 
-def resolve_segmented_editions(
-    path: Path,
+def resolve_segmented_root(
+    root: ET.Element,
     *,
     source_revision: str,
+    record_id: str,
 ) -> SegmentationResolution:
-    """Resolve duplicate segmented editions in one IIP XML record.
+    """Resolve segmented candidates from an already validated/repaired XML root."""
 
-    The resolver deliberately does not infer that the latest segmentation run is authoritative.
-    Unknown non-equivalent duplicate layers raise instead of being concatenated or silently
-    selected.
-    """
-    root = ET.parse(path).getroot()
-    record_id = root.attrib.get(XML_ID) or path.stem
     candidates = _segmented_divs(root)
     source_changes = tuple(candidate.attrib.get("change", "") for candidate in candidates)
 
@@ -308,4 +303,20 @@ def resolve_segmented_editions(
 
     raise SegmentationConflictError(
         f"{record_id}: non-equivalent duplicate transcription_segmented editions"
+    )
+
+
+def resolve_segmented_editions(
+    path: Path,
+    *,
+    source_revision: str,
+) -> SegmentationResolution:
+    """Resolve duplicate segmented editions in one IIP XML record."""
+
+    root = ET.parse(path).getroot()
+    record_id = root.attrib.get(XML_ID) or path.stem
+    return resolve_segmented_root(
+        root,
+        source_revision=source_revision,
+        record_id=record_id,
     )
