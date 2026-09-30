@@ -1,0 +1,50 @@
+name: Validate pinned source repairs
+
+on:
+  pull_request:
+    paths:
+      - "src/iip_tf/source_repair.py"
+      - "tests/test_source_repair.py"
+      - "tests/fixtures/source_conflicts/**"
+      - "docs/research/source-conflict-repair.md"
+      - "docs/plans/issue-15.md"
+      - ".github/workflows/validate-pinned-source.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/iip_tf/source_repair.py"
+      - ".github/workflows/validate-pinned-source.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact event head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Fetch pinned Brown IIP source
+        env:
+          IIP_REVISION: 0b7dc8358ccdfd0c9391f049da4839fbd91c26e5
+        run: |
+          set -euo pipefail
+          mkdir -p upstream-iip
+          curl --fail --location --retry 3 \
+            "https://codeload.github.com/Brown-University-Library/iip-texts/tar.gz/${IIP_REVISION}" \
+            | tar -xz --strip-components=1 -C upstream-iip
+          test -d upstream-iip/epidoc-files
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install
+        run: python -m pip install -e '.[dev]'
+      - name: Validate all pinned XML
+        run: |
+          python -m iip_tf.source_repair upstream-iip/epidoc-files \
+            --revision 0b7dc8358ccdfd0c9391f049da4839fbd91c26e5 \
+            --expect-total 5536 \
+            --expect-repairs 7
