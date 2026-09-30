@@ -132,6 +132,7 @@ features and preserves spellings such as `unknown` or non-canonical source value
 ## Metadata
 
 One-to-one language, classification, origin, and provenance values live on `inscription`.
+Audited certainty/precision on those scalar claims remains path-specific: `genre_cert` stores `msItem@cert`, `date_precision` stores origin `date@precision`, `region_cert` stores origin `region@cert`, and `settlement_cert` stores origin `settlement@cert`. These are raw source strings and are not collapsed into the generic textual/editorial `cert` feature.
 Repeatable/structured data become native nodes: `bibl`, `bibl_scope`, `hand`,
 `dimension`, `decoration`, `facsimile_surface`, `image`, and `revision`.
 Translation/reference spans such as `persName`, `rs`, `name`,
