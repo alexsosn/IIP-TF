@@ -304,3 +304,54 @@ def test_metadata_scalar_cardinality_and_mapped_unknowns_fail_closed(tmp_path: P
 
     with pytest.raises(ValueError, match="handNote@bogus"):
         parse_epidoc_file(unknown, source_revision="deadbeef")
+
+
+def test_support_note_preserves_multiple_source_paragraphs_in_order(tmp_path: Path) -> None:
+    path = _write(
+        tmp_path,
+        "support-paragraphs.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0"><teiHeader><fileDesc><sourceDesc><msDesc>
+          <physDesc><objectDesc><supportDesc><support>
+            <p>First support paragraph.</p>
+            <dimensions type="surface" unit="cm"><height>1</height></dimensions>
+            <p>Second support paragraph.</p>
+          </support></supportDesc></objectDesc></physDesc>
+        </msDesc></sourceDesc></fileDesc></teiHeader>
+        <text><body><div type="edition" subtype="transcription"><p>A</p></div></body></text>
+        </TEI>""",
+    )
+
+    ir = parse_epidoc_file(path, source_revision="deadbeef")
+    inscription = _nodes(ir, "inscription")[0]
+
+    assert inscription.feature("support_note") == (
+        "First support paragraph.\n\nSecond support paragraph."
+    )
+
+
+def test_nested_facsimile_surfaces_preserve_parent_hierarchy(tmp_path: Path) -> None:
+    path = _write(
+        tmp_path,
+        "nested-surface.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0">
+          <facsimile>
+            <surface>
+              <desc>Left side.</desc><graphic url="left.jpg"/>
+              <surface><desc>Right side.</desc><graphic url="right.jpg"/></surface>
+            </surface>
+          </facsimile>
+          <text><body><div type="edition" subtype="transcription"><p>A</p></div></body></text>
+        </TEI>""",
+    )
+
+    ir = parse_epidoc_file(path, source_revision="deadbeef")
+    surfaces = _nodes(ir, "facsimile_surface")
+    images = _nodes(ir, "image")
+
+    assert len(surfaces) == 2
+    outer = next(node for node in surfaces if node.feature("description") == "Left side.")
+    inner = next(node for node in surfaces if node.feature("description") == "Right side.")
+    right = next(node for node in images if node.feature("url") == "right.jpg")
+
+    assert IREdge(EdgeType.PARENT, inner.key, outer.key) in ir.edges
+    assert IREdge(EdgeType.PARENT, right.key, inner.key) in ir.edges
