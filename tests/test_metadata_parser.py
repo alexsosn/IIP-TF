@@ -57,6 +57,7 @@ def test_scalar_metadata_and_dimensions_are_preserved_without_overwriting(tmp_pa
           <region cert="high">Judaea</region>
           <settlement ref="pleiades:1" cert="medium">Jerusalem<geo>31.7 35.2</geo></settlement>
           <geogName type="site">Kidron Valley</geogName>
+          <lb/>
           <geogFeat type="locus">Tomb 5</geogFeat>
         </placeName>
         <p>origin note</p>
