@@ -149,3 +149,18 @@ def test_directory_validation_accounts_clean_and_repaired_files(tmp_path: Path) 
     assert report.repaired == 1
     assert report.repaired_files == ("bqut0002.xml",)
     assert report.failures == ()
+
+
+def test_well_formed_future_revision_allows_marker_like_text(tmp_path: Path) -> None:
+    text = (
+        '<TEI xmlns="http://www.tei-c.org/ns/1.0"><text><body>'
+        '<p>Editorial separator: =======</p>'
+        '</body></text></TEI>'
+    )
+    path = tmp_path / "future.xml"
+    path.write_text(text, encoding="utf-8")
+
+    result = repair_source_file(path, source_revision="future-revision")
+
+    assert result.repaired is False
+    assert result.text == text
