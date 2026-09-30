@@ -116,7 +116,9 @@ _ALLOWED_ATTRS: Final[dict[str, frozenset[str]]] = {
     "figure": frozenset(),
     "foreign": frozenset({"xml:lang"}),
     "g": frozenset({"cert", "ref", "type"}),
-    "gap": frozenset({"atLeast", "atMost", "cert", "extent", "precision", "quantity", "reason", "unit"}),
+    "gap": frozenset(
+        {"atLeast", "atMost", "cert", "extent", "precision", "quantity", "reason", "unit"}
+    ),
     "handShift": frozenset({"cert", "new"}),
     "height": frozenset(),
     "hi": frozenset({"cert", "rend"}),
