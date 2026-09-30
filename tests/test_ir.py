@@ -3,13 +3,12 @@ from __future__ import annotations
 from dataclasses import FrozenInstanceError
 
 import pytest
-
 from iip_tf.ir import (
     EdgeType,
+    InscriptionIR,
     IREdge,
     IRNode,
     IRSign,
-    InscriptionIR,
     Layer,
     NodeType,
     SourceIdentity,
