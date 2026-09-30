@@ -82,6 +82,17 @@ def _text(element: ET.Element | None) -> str | None:
     return value or None
 
 
+def _direct_text(element: ET.Element) -> str | None:
+    parts: list[str] = []
+    if element.text:
+        parts.append(element.text)
+    for child in list(element):
+        if child.tail:
+            parts.append(child.tail)
+    value = " ".join("".join(parts).split())
+    return value or None
+
+
 def _values(elements: list[ET.Element], attr: str | None = None) -> list[str]:
     values: list[str] = []
     for element in elements:
@@ -415,10 +426,9 @@ def _scalar_metadata(root: ET.Element) -> dict[str, str | int]:
         if _local(child.tag) == "geogFeat"
     ]
     geos = [
-        child
+        geo
         for place in origin_places
-        for child in list(place)
-        if _local(child.tag) == "geo"
+        for geo in place.findall(".//tei:geo", _NS)
     ]
 
     for element in regions:
@@ -451,7 +461,10 @@ def _scalar_metadata(root: ET.Element) -> dict[str, str | int]:
     _append_feature(
         features,
         "settlement",
-        _scalar("settlement", [value for e in settlements if (value := _text(e))]),
+        _scalar(
+            "settlement",
+            [value for e in settlements if (value := _direct_text(e))],
+        ),
     )
     _append_feature(
         features,
