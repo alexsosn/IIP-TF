@@ -213,6 +213,7 @@
       "main_lang",
       "other_langs",
       "genre",
+      "genre_cert",
       "religion",
       "object_type",
       "material",
@@ -226,9 +227,12 @@
       "date_not_before",
       "date_not_after",
       "date_text",
+      "date_precision",
       "period_ref",
       "region",
+      "region_cert",
       "settlement",
+      "settlement_cert",
       "settlement_ref",
       "site",
       "locus",
@@ -403,6 +407,26 @@
       "domain": "inscription",
       "value_type": "int",
       "semantics": "Optional lossless integer-year derivative of date_not_after."
+    },
+    "genre_cert": {
+      "domain": "inscription",
+      "value_type": "str",
+      "semantics": "Exact raw source msItem/@cert value qualifying genre/classification."
+    },
+    "date_precision": {
+      "domain": "inscription",
+      "value_type": "str",
+      "semantics": "Exact raw source origin date/@precision value."
+    },
+    "region_cert": {
+      "domain": "inscription",
+      "value_type": "str",
+      "semantics": "Exact raw source origin region/@cert value."
+    },
+    "settlement_cert": {
+      "domain": "inscription",
+      "value_type": "str",
+      "semantics": "Exact raw source origin settlement/@cert value."
     }
   },
   "display_readings": {
@@ -582,6 +606,7 @@
       "main_lang",
       "other_langs",
       "genre",
+      "genre_cert",
       "religion",
       "object_type",
       "material",
@@ -591,9 +616,12 @@
       "date_not_before",
       "date_not_after",
       "date_text",
+      "date_precision",
       "period_ref",
       "region",
+      "region_cert",
       "settlement",
+      "settlement_cert",
       "settlement_ref",
       "site",
       "locus",
@@ -951,5 +979,11 @@
     "new_element_or_attribute": "release_blocking_diagnostic_until_schema_mapping_is_added",
     "fig_desc": "figDesc text is editorial description on the enclosing figure markup node and is not rendered as inscription glyphs.",
     "segmented_annotations": "Selected transcription_segmented inline structures are source annotation nodes anchored to the deterministically projected primary slots and tagged annotation_source=transcription_segmented."
+  },
+  "metadata_source_attribute_mapping": {
+    "msItem@cert": "genre_cert",
+    "origin/date@precision": "date_precision",
+    "origin/region@cert": "region_cert",
+    "origin/settlement@cert": "settlement_cert"
   }
 }
