@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from iip_tf.ir import EdgeType, InscriptionIR, IRNode
+from iip_tf.ir import EdgeType, InscriptionIR, IREdge, IRNode
 from iip_tf.text_parser import parse_epidoc_file
 
 
