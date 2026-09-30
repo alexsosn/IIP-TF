@@ -29,6 +29,7 @@ _METADATA_ATTRS: Final[dict[str, frozenset[str]]] = {
     "origin": frozenset(),
     "placeName": frozenset(),
     "geo": frozenset(),
+    "lb": frozenset({"break"}),
     "div": frozenset({"type"}),
     "listBibl": frozenset(),
     "dimensions": frozenset({"atLeast", "atMost", "extent", "quantity", "type", "unit"}),
@@ -441,8 +442,11 @@ def _scalar_metadata(root: ET.Element) -> dict[str, str | int]:
         _validate_attrs(place)
         _validate_children(
             place,
-            {"region", "settlement", "geogName", "geogFeat", "geo"},
+            {"region", "settlement", "geogName", "geogFeat", "geo", "lb"},
         )
+        for child in list(place):
+            if _local(child.tag) == "lb":
+                _validate_attrs(child)
 
     regions = [
         child
