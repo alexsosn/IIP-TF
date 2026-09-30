@@ -23,6 +23,14 @@ _METADATA_ATTRS: Final[dict[str, frozenset[str]]] = {
     "support": frozenset({"ana"}),
     "condition": frozenset({"ana"}),
     "layout": frozenset({"columns", "writtenLines"}),
+    "layoutDesc": frozenset(),
+    "handDesc": frozenset(),
+    "decoDesc": frozenset(),
+    "origin": frozenset(),
+    "placeName": frozenset(),
+    "geo": frozenset(),
+    "div": frozenset({"type"}),
+    "listBibl": frozenset(),
     "dimensions": frozenset({"atLeast", "atMost", "extent", "quantity", "type", "unit"}),
     "height": frozenset({"atLeast", "atMost"}),
     "width": frozenset({"atLeast", "atMost"}),
@@ -73,6 +81,19 @@ def _validate_attrs(element: ET.Element) -> None:
         attr = _attr_name(raw_name)
         if attr not in allowed:
             raise MetadataParseError(f"{name}@{attr}: unsupported mapped metadata attribute")
+
+
+def _validate_children(element: ET.Element, allowed: set[str]) -> None:
+    name = _local(element.tag)
+    unknown = [
+        _local(child.tag)
+        for child in list(element)
+        if _local(child.tag) not in allowed
+    ]
+    if unknown:
+        raise MetadataParseError(
+            f"{name}: unsupported mapped metadata children {unknown!r}"
+        )
 
 
 def _text(element: ET.Element | None) -> str | None:
@@ -264,6 +285,7 @@ def _scalar_metadata(root: ET.Element) -> dict[str, str | int]:
     ms_items = root.findall(".//tei:msContents/tei:msItem", _NS)
     for element in ms_items:
         _validate_attrs(element)
+        _validate_children(element, {"p"})
     _append_feature(features, "genre", _scalar("genre", _values(ms_items, "class")))
     _append_feature(
         features,
@@ -279,6 +301,7 @@ def _scalar_metadata(root: ET.Element) -> dict[str, str | int]:
     object_descs = root.findall(".//tei:physDesc/tei:objectDesc", _NS)
     for element in object_descs:
         _validate_attrs(element)
+        _validate_children(element, {"supportDesc", "layoutDesc"})
     _append_feature(
         features,
         "object_type",
@@ -287,8 +310,12 @@ def _scalar_metadata(root: ET.Element) -> dict[str, str | int]:
 
     support_descs = root.findall(".//tei:objectDesc/tei:supportDesc", _NS)
     supports = root.findall(".//tei:objectDesc/tei:supportDesc/tei:support", _NS)
-    for element in [*support_descs, *supports]:
+    for element in support_descs:
         _validate_attrs(element)
+        _validate_children(element, {"support", "condition"})
+    for element in supports:
+        _validate_attrs(element)
+        _validate_children(element, {"p", "dimensions"})
     _append_feature(
         features,
         "material",
@@ -314,6 +341,7 @@ def _scalar_metadata(root: ET.Element) -> dict[str, str | int]:
     conditions = root.findall(".//tei:supportDesc/tei:condition", _NS)
     for element in conditions:
         _validate_attrs(element)
+        _validate_children(element, {"p"})
     _append_feature(
         features,
         "condition",
@@ -334,9 +362,14 @@ def _scalar_metadata(root: ET.Element) -> dict[str, str | int]:
         ),
     )
 
+    layout_descs = root.findall(".//tei:objectDesc/tei:layoutDesc", _NS)
+    for element in layout_descs:
+        _validate_attrs(element)
+        _validate_children(element, {"layout"})
     layouts = root.findall(".//tei:objectDesc/tei:layoutDesc/tei:layout", _NS)
     for element in layouts:
         _validate_attrs(element)
+        _validate_children(element, {"p"})
     _append_feature(
         features,
         "layout_columns",
@@ -363,6 +396,9 @@ def _scalar_metadata(root: ET.Element) -> dict[str, str | int]:
     )
 
     origins = root.findall(".//tei:history/tei:origin", _NS)
+    for element in origins:
+        _validate_attrs(element)
+        _validate_children(element, {"date", "placeName", "p"})
     origin_dates = [
         child
         for origin in origins
@@ -401,6 +437,13 @@ def _scalar_metadata(root: ET.Element) -> dict[str, str | int]:
         for child in list(origin)
         if _local(child.tag) == "placeName"
     ]
+    for place in origin_places:
+        _validate_attrs(place)
+        _validate_children(
+            place,
+            {"region", "settlement", "geogName", "geogFeat", "geo"},
+        )
+
     regions = [
         child
         for place in origin_places
@@ -435,6 +478,7 @@ def _scalar_metadata(root: ET.Element) -> dict[str, str | int]:
         _validate_attrs(element)
     for element in settlements:
         _validate_attrs(element)
+        _validate_children(element, {"geo"})
     for element in geog_names:
         _validate_attrs(element)
         if element.attrib.get("type") not in {None, "site"}:
@@ -577,8 +621,12 @@ def enrich_metadata(ir: InscriptionIR, root: ET.Element) -> InscriptionIR:
         )
 
     # Hand records and their dimensions.
+    for hand_desc in root.findall(".//tei:physDesc/tei:handDesc", _NS):
+        _validate_attrs(hand_desc)
+        _validate_children(hand_desc, {"handNote"})
     for hand_note in root.findall(".//tei:physDesc/tei:handDesc/tei:handNote", _NS):
         _validate_attrs(hand_note)
+        _validate_children(hand_note, {"p", "dimensions"})
         hand_key = key_for(hand_note)
         hand_features: dict[str, str | int] = {"source_key": hand_key}
         _append_feature(hand_features, "source_id", hand_note.attrib.get(XML_ID))
@@ -634,6 +682,15 @@ def enrich_metadata(ir: InscriptionIR, root: ET.Element) -> InscriptionIR:
 
     # Bibliography and nested scopes.
     bibl_by_id: dict[str, str] = {}
+    bibliography_divs = root.findall(".//tei:div[@type='bibliography']", _NS)
+    for element in bibliography_divs:
+        _validate_attrs(element)
+        _validate_children(element, {"listBibl"})
+    for list_bibl in root.findall(
+        ".//tei:div[@type='bibliography']/tei:listBibl", _NS
+    ):
+        _validate_attrs(list_bibl)
+        _validate_children(list_bibl, {"bibl"})
     bibls = root.findall(
         ".//tei:div[@type='bibliography']/tei:listBibl/tei:bibl", _NS
     )
@@ -705,6 +762,9 @@ def enrich_metadata(ir: InscriptionIR, root: ET.Element) -> InscriptionIR:
             )
 
     # Decorations.
+    for deco_desc in root.findall(".//tei:physDesc/tei:decoDesc", _NS):
+        _validate_attrs(deco_desc)
+        _validate_children(deco_desc, {"decoNote"})
     for deco in root.findall(".//tei:physDesc/tei:decoDesc/tei:decoNote", _NS):
         _validate_attrs(deco)
         allowed = {"ab", "locus"}
