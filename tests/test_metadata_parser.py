@@ -27,7 +27,7 @@ def test_scalar_metadata_and_dimensions_are_preserved_without_overwriting(tmp_pa
   <sourceDesc><msDesc>
     <msContents>
       <textLang mainLang="la" otherLangs="grc arc"/>
-      <msItem class="#dedicatory" ana="other_religion"><p>summary</p></msItem>
+      <msItem class="#dedicatory" ana="other_religion" cert="medium"><p>summary</p></msItem>
     </msContents>
     <physDesc>
       <objectDesc ana="#block">
@@ -51,10 +51,10 @@ def test_scalar_metadata_and_dimensions_are_preserved_without_overwriting(tmp_pa
     </physDesc>
     <history>
       <origin>
-        <date period="period:roman" notBefore="-0020" notAfter="0070">20 BCE to 70 CE</date>
+        <date period="period:roman" notBefore="-0020" notAfter="0070" precision="low">20 BCE to 70 CE</date>
         <placeName>
-          <region>Judaea</region>
-          <settlement ref="pleiades:1">Jerusalem<geo>31.7 35.2</geo></settlement>
+          <region cert="high">Judaea</region>
+          <settlement ref="pleiades:1" cert="medium">Jerusalem<geo>31.7 35.2</geo></settlement>
           <geogName type="site">Kidron Valley</geogName>
           <geogFeat type="locus">Tomb 5</geogFeat>
         </placeName>
@@ -73,6 +73,7 @@ def test_scalar_metadata_and_dimensions_are_preserved_without_overwriting(tmp_pa
     assert inscription.feature("main_lang") == "la"
     assert inscription.feature("other_langs") == "grc arc"
     assert inscription.feature("genre") == "#dedicatory"
+    assert inscription.feature("genre_cert") == "medium"
     assert inscription.feature("religion") == "other_religion"
     assert inscription.feature("object_type") == "#block"
     assert inscription.feature("material") == "limestone"
@@ -86,9 +87,12 @@ def test_scalar_metadata_and_dimensions_are_preserved_without_overwriting(tmp_pa
     assert inscription.feature("date_not_after") == "0070"
     assert inscription.feature("date_not_after_int") == 70
     assert inscription.feature("date_text") == "20 BCE to 70 CE"
+    assert inscription.feature("date_precision") == "low"
     assert inscription.feature("period_ref") == "period:roman"
     assert inscription.feature("region") == "Judaea"
+    assert inscription.feature("region_cert") == "high"
     assert inscription.feature("settlement") == "Jerusalem"
+    assert inscription.feature("settlement_cert") == "medium"
     assert inscription.feature("settlement_ref") == "pleiades:1"
     assert inscription.feature("site") == "Kidron Valley"
     assert inscription.feature("locus") == "Tomb 5"
@@ -354,3 +358,18 @@ def test_nested_facsimile_surfaces_preserve_parent_hierarchy(tmp_path: Path) -> 
 
     assert IREdge(EdgeType.PARENT, inner.key, outer.key) in ir.edges
     assert IREdge(EdgeType.PARENT, right.key, inner.key) in ir.edges
+
+
+def test_unknown_child_inside_mapped_metadata_scope_fails_closed(tmp_path: Path) -> None:
+    path = _write(
+        tmp_path,
+        "unknown-child.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0"><teiHeader><fileDesc><sourceDesc><msDesc>
+          <physDesc><handDesc><handNote ana="#engraved"><foo>lost structure</foo></handNote></handDesc></physDesc>
+        </msDesc></sourceDesc></fileDesc></teiHeader>
+        <text><body><div type="edition" subtype="transcription"><p>A</p></div></body></text>
+        </TEI>""",
+    )
+
+    with pytest.raises(ValueError, match="handNote.*foo"):
+        parse_epidoc_file(path, source_revision="deadbeef")
