@@ -161,8 +161,15 @@ class InscriptionIR:
 
     def text(self, sign_keys: tuple[str, ...] | list[str]) -> str:
         wanted = set(sign_keys)
-        return "".join(
-            f"{sign.glyph}{sign.after}"
-            for sign in self.signs
-            if sign.key in wanted
-        )
+        parts: list[str] = []
+        for index, sign in enumerate(self.signs):
+            if sign.key not in wanted:
+                continue
+            parts.append(sign.glyph)
+            if (
+                sign.after
+                and index + 1 < len(self.signs)
+                and self.signs[index + 1].key in wanted
+            ):
+                parts.append(sign.after)
+        return "".join(parts)
