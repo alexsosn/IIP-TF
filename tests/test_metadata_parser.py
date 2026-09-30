@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from iip_tf.ir import EdgeType, InscriptionIR, IRNode, NodeType
+from iip_tf.ir import EdgeType, InscriptionIR, IRNode
 from iip_tf.text_parser import parse_epidoc_file
 
 
@@ -166,8 +166,12 @@ def test_bibliography_scopes_repeat_and_local_ana_resolves_to_cites(tmp_path: Pa
     )
 
     editions = _nodes(ir, "edition")
-    transcription = next(node for node in editions if node.feature("edition_kind") == "transcription")
-    translation = next(node for node in editions if node.feature("edition_kind") == "translation")
+    transcription = next(
+        node for node in editions if node.feature("edition_kind") == "transcription"
+    )
+    translation = next(
+        node for node in editions if node.feature("edition_kind") == "translation"
+    )
     cites = {(edge.source, edge.target) for edge in ir.edges if edge.edge_type == EdgeType.CITES}
     assert (transcription.key, b1.key) in cites
     assert (translation.key, b2.key) in cites
@@ -251,12 +255,23 @@ def test_decorations_and_revisions_remain_repeatable_nodes(tmp_path: Path) -> No
     revisions = _nodes(ir, "revision")
 
     assert len(decorations) == 2
-    assert {(n.feature("type"), n.feature("description"), n.feature("decoration_locus")) for n in decorations} == {
+    assert {
+        (n.feature("type"), n.feature("description"), n.feature("decoration_locus"))
+        for n in decorations
+    } == {
         ("#zigzag", "zigzag bands", "front"),
         ("#rosette", "rosette", "side"),
     }
     assert len(revisions) == 2
-    assert {(n.feature("when"), n.feature("when_custom"), n.feature("who"), n.feature("description")) for n in revisions} == {
+    assert {
+        (
+            n.feature("when"),
+            n.feature("when_custom"),
+            n.feature("who"),
+            n.feature("description"),
+        )
+        for n in revisions
+    } == {
         ("2020-01-01", None, "A", "Creation"),
         (None, "later", "B", "Revision"),
     }
