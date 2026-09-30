@@ -24,6 +24,7 @@ from iip_tf.ir import (
     SourceProvenance,
 )
 from iip_tf.metadata_parser import enrich_metadata
+from iip_tf.segmentation_projection import enrich_segmentation
 from iip_tf.source_repair import SourceConflictError, repair_source_file
 
 TEI_NS: Final = "http://www.tei-c.org/ns/1.0"
@@ -1082,7 +1083,12 @@ def parse_epidoc_file(path: Path, *, source_revision: str) -> InscriptionIR:
         features=inscription_features,
     )
     builder.finalize_corresp()
-    return enrich_metadata(builder.freeze(), root)
+    enriched = enrich_metadata(builder.freeze(), root)
+    return enrich_segmentation(
+        enriched,
+        root,
+        source_revision=source_revision,
+    )
 
 
 def validate_text_directory(
