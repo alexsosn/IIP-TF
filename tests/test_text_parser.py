@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from iip_tf.ir import Layer, NodeType
+from iip_tf.ir import IRNode, InscriptionIR, Layer, NodeType
 from iip_tf.text_parser import (
     UnsupportedTextualConstructError,
     parse_epidoc_file,
@@ -18,8 +18,8 @@ def _write(path: Path, name: str, text: str) -> Path:
     return target
 
 
-def _nodes(ir: object, node_type: NodeType) -> list[object]:
-    return [node for node in ir.nodes if node.node_type == node_type]  # type: ignore[attr-defined]
+def _nodes(ir: InscriptionIR, node_type: NodeType) -> list[IRNode]:
+    return [node for node in ir.nodes if node.node_type == node_type]
 
 
 def test_parse_transcription_preserves_signs_lines_and_zero_width_events(tmp_path: Path) -> None:
