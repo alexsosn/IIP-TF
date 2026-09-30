@@ -104,6 +104,10 @@ class DirectoryValidationResult:
     failures: tuple[str, ...]
 
 
+def _marker_count(text: str, marker: str) -> int:
+    return sum(1 for line in text.splitlines() if line == marker)
+
+
 def _validate_xml(text: str, *, filename: str) -> None:
     try:
         ET.fromstring(text)
@@ -116,10 +120,12 @@ def repair_source_file(path: Path, *, source_revision: str) -> SourceRepairResul
 
     text = path.read_text(encoding="utf-8")
     filename = path.name
-    conflict_count = text.count(_START)
+    conflict_count = _marker_count(text, _START)
+    middle_count = _marker_count(text, _MIDDLE)
+    end_count = _marker_count(text, _END)
 
     if conflict_count == 0:
-        if _MIDDLE in text or _END in text:
+        if middle_count or end_count:
             raise SourceConflictError(f"{filename}: incomplete Git conflict markers")
         _validate_xml(text, filename=filename)
         return SourceRepairResult(
@@ -144,15 +150,19 @@ def repair_source_file(path: Path, *, source_revision: str) -> SourceRepairResul
     expected, replacement = rule
     marker_shape_ok = (
         conflict_count == 1
-        and text.count(_MIDDLE) == 1
-        and text.count(_END) == 1
+        and middle_count == 1
+        and end_count == 1
         and text.count(expected) == 1
     )
     if not marker_shape_ok:
         raise SourceConflictError(f"{filename}: source no longer matches researched conflict block")
 
     repaired = text.replace(expected, replacement, 1)
-    if _START in repaired or _MIDDLE in repaired or _END in repaired:
+    if (
+        _marker_count(repaired, _START)
+        or _marker_count(repaired, _MIDDLE)
+        or _marker_count(repaired, _END)
+    ):
         raise SourceConflictError(f"{filename}: conflict markers remain after researched repair")
 
     _validate_xml(repaired, filename=filename)
