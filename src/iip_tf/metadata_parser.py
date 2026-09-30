@@ -876,19 +876,21 @@ def enrich_metadata(ir: InscriptionIR, root: ET.Element) -> InscriptionIR:
                 )
             _validate_attrs(change)
             key = key_for(change)
-            features: dict[str, str | int] = {"source_key": key}
-            _append_feature(features, "source_id", change.attrib.get(XML_ID))
-            _append_feature(features, "when", change.attrib.get("when"))
+            revision_features: dict[str, str | int] = {"source_key": key}
             _append_feature(
-                features, "when_custom", change.attrib.get("when-custom")
+                revision_features, "source_id", change.attrib.get(XML_ID)
             )
-            _append_feature(features, "who", change.attrib.get("who"))
-            _append_feature(features, "description", _text(change))
+            _append_feature(revision_features, "when", change.attrib.get("when"))
+            _append_feature(
+                revision_features, "when_custom", change.attrib.get("when-custom")
+            )
+            _append_feature(revision_features, "who", change.attrib.get("who"))
+            _append_feature(revision_features, "description", _text(change))
             node = _make_node(
                 key=key,
                 node_type=NodeType.REVISION,
                 anchor=anchor,
-                features=features,
+                features=revision_features,
             )
             _add_owned(
                 nodes=nodes,
