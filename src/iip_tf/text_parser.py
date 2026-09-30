@@ -23,8 +23,8 @@ from iip_tf.ir import (
     SourceIdentity,
     SourceProvenance,
 )
-from iip_tf.source_repair import SourceConflictError, repair_source_file
 from iip_tf.metadata_parser import enrich_metadata
+from iip_tf.source_repair import SourceConflictError, repair_source_file
 
 TEI_NS: Final = "http://www.tei-c.org/ns/1.0"
 XML_NS: Final = "http://www.w3.org/XML/1998/namespace"
