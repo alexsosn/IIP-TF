@@ -25,6 +25,11 @@ def test_ir_is_immutable_and_contains_explicit_graph_primitives() -> None:
         sign_keys=("x#s1",),
         features=(("kind", "unclear"),),
     )
+    parent = IRNode(
+        key="x#p1",
+        node_type=NodeType.PARAGRAPH,
+        sign_keys=("x#s1",),
+    )
     edge = IREdge(edge_type=EdgeType.PARENT, source="x#n1", target="x#p1")
     ir = InscriptionIR(
         identity=SourceIdentity(
@@ -41,7 +46,7 @@ def test_ir_is_immutable_and_contains_explicit_graph_primitives() -> None:
             conflict_count=0,
         ),
         signs=(sign,),
-        nodes=(node,),
+        nodes=(node, parent),
         edges=(edge,),
         diagnostics=(),
     )
