@@ -103,6 +103,10 @@ def _scalar(name: str, values: list[str]) -> str | None:
     return distinct[0] if distinct else None
 
 
+def _ordered_prose(values: list[str]) -> str | None:
+    return "\n\n".join(values) if values else None
+
+
 def _int_derivative(value: str | None) -> int | None:
     if value is None or re.fullmatch(r"[+-]?\d+", value) is None:
         return None
@@ -291,7 +295,9 @@ def _scalar_metadata(root: ET.Element) -> dict[str, str | int]:
     _append_feature(
         features,
         "support_note",
-        _scalar("support_note", [value for element in support_notes if (value := _text(element))]),
+        _ordered_prose(
+            [value for element in support_notes if (value := _text(element))]
+        ),
     )
 
     conditions = root.findall(".//tei:supportDesc/tei:condition", _NS)
@@ -738,133 +744,126 @@ def enrich_metadata(ir: InscriptionIR, root: ET.Element) -> InscriptionIR:
         )
 
     # Facsimile surfaces, direct images, and explicit credits.
+    def add_image(
+        graphic: ET.Element,
+        *,
+        parent_key: str,
+        description: str | None = None,
+        note: str | None = None,
+        credit: str | None = None,
+        credit_role: str | None = None,
+    ) -> None:
+        _validate_attrs(graphic)
+        image_key = key_for(graphic)
+        image_features: dict[str, str | int] = {"source_key": image_key}
+        _append_feature(image_features, "source_id", graphic.attrib.get(XML_ID))
+        _append_feature(image_features, "url", graphic.attrib.get("url"))
+        _append_feature(image_features, "description", description)
+        _append_feature(image_features, "note", note)
+        _append_feature(image_features, "credit", credit)
+        _append_feature(image_features, "credit_role", credit_role)
+        image_node = _make_node(
+            key=image_key,
+            node_type=NodeType.IMAGE,
+            anchor=anchor,
+            features=image_features,
+        )
+        _add_owned(
+            nodes=nodes,
+            edges=edges,
+            node=image_node,
+            inscription_key=inscription_key,
+            parent=parent_key,
+        )
+
+    def add_surface(surface: ET.Element, *, parent_key: str) -> None:
+        _validate_attrs(surface)
+        allowed_surface = {"desc", "graphic", "note", "surface"}
+        unknown = [
+            _local(item.tag)
+            for item in list(surface)
+            if _local(item.tag) not in allowed_surface
+        ]
+        if unknown:
+            raise MetadataParseError(
+                f"surface: unsupported children {unknown!r}"
+            )
+        surface_key = key_for(surface)
+        descriptions = [
+            item for item in list(surface) if _local(item.tag) == "desc"
+        ]
+        notes = [
+            item for item in list(surface) if _local(item.tag) == "note"
+        ]
+        for item in [*descriptions, *notes]:
+            _validate_attrs(item)
+        description = _scalar(
+            "facsimile surface description",
+            [value for item in descriptions if (value := _text(item))],
+        )
+        note = _scalar(
+            "facsimile surface note",
+            [value for item in notes if (value := _text(item))],
+        )
+        surface_features: dict[str, str | int] = {"source_key": surface_key}
+        _append_feature(surface_features, "source_id", surface.attrib.get(XML_ID))
+        _append_feature(surface_features, "description", description)
+        _append_feature(surface_features, "note", note)
+        surface_node = _make_node(
+            key=surface_key,
+            node_type=NodeType.FACSIMILE_SURFACE,
+            anchor=anchor,
+            features=surface_features,
+        )
+        _add_owned(
+            nodes=nodes,
+            edges=edges,
+            node=surface_node,
+            inscription_key=inscription_key,
+            parent=parent_key,
+        )
+
+        credit_elements: list[ET.Element] = []
+        for desc in descriptions:
+            for descendant in desc.iter():
+                if _local(descendant.tag) == "persName":
+                    _validate_attrs(descendant)
+                    if descendant.attrib.get("role"):
+                        credit_elements.append(descendant)
+        credit = _scalar(
+            "image credit",
+            [value for item in credit_elements if (value := _text(item))],
+        )
+        credit_role = _scalar(
+            "image credit role",
+            _values(credit_elements, "role"),
+        )
+
+        for item in list(surface):
+            name = _local(item.tag)
+            if name == "graphic":
+                add_image(
+                    item,
+                    parent_key=surface_key,
+                    description=description,
+                    note=note,
+                    credit=credit,
+                    credit_role=credit_role,
+                )
+            elif name == "surface":
+                add_surface(item, parent_key=surface_key)
+
     for facsimile in root.findall(".//tei:facsimile", _NS):
         _validate_attrs(facsimile)
         for child in list(facsimile):
             name = _local(child.tag)
             if name == "graphic":
-                _validate_attrs(child)
-                key = key_for(child)
-                features: dict[str, str | int] = {"source_key": key}
-                _append_feature(features, "source_id", child.attrib.get(XML_ID))
-                _append_feature(features, "url", child.attrib.get("url"))
-                node = _make_node(
-                    key=key,
-                    node_type=NodeType.IMAGE,
-                    anchor=anchor,
-                    features=features,
-                )
-                _add_owned(
-                    nodes=nodes,
-                    edges=edges,
-                    node=node,
-                    inscription_key=inscription_key,
-                )
-                continue
-            if name != "surface":
+                add_image(child, parent_key=inscription_key)
+            elif name == "surface":
+                add_surface(child, parent_key=inscription_key)
+            else:
                 raise MetadataParseError(
                     f"facsimile: unsupported child {name!r}"
-                )
-            _validate_attrs(child)
-            surface = child
-            allowed_surface = {"desc", "graphic", "note"}
-            unknown = [
-                _local(item.tag)
-                for item in list(surface)
-                if _local(item.tag) not in allowed_surface
-            ]
-            if unknown:
-                raise MetadataParseError(
-                    f"surface: unsupported children {unknown!r}"
-                )
-            surface_key = key_for(surface)
-            descriptions = [
-                item
-                for item in list(surface)
-                if _local(item.tag) == "desc"
-            ]
-            notes = [
-                item
-                for item in list(surface)
-                if _local(item.tag) == "note"
-            ]
-            for item in [*descriptions, *notes]:
-                _validate_attrs(item)
-            description = _scalar(
-                "facsimile surface description",
-                [value for item in descriptions if (value := _text(item))],
-            )
-            note = _scalar(
-                "facsimile surface note",
-                [value for item in notes if (value := _text(item))],
-            )
-            surface_features: dict[str, str | int] = {
-                "source_key": surface_key
-            }
-            _append_feature(
-                surface_features, "source_id", surface.attrib.get(XML_ID)
-            )
-            _append_feature(surface_features, "description", description)
-            _append_feature(surface_features, "note", note)
-            surface_node = _make_node(
-                key=surface_key,
-                node_type=NodeType.FACSIMILE_SURFACE,
-                anchor=anchor,
-                features=surface_features,
-            )
-            _add_owned(
-                nodes=nodes,
-                edges=edges,
-                node=surface_node,
-                inscription_key=inscription_key,
-            )
-
-            credit_elements: list[ET.Element] = []
-            for desc in descriptions:
-                for descendant in desc.iter():
-                    if _local(descendant.tag) == "persName":
-                        _validate_attrs(descendant)
-                        if descendant.attrib.get("role"):
-                            credit_elements.append(descendant)
-            credit = _scalar(
-                "image credit",
-                [value for item in credit_elements if (value := _text(item))],
-            )
-            credit_role = _scalar(
-                "image credit role",
-                _values(credit_elements, "role"),
-            )
-
-            for graphic in [
-                item
-                for item in list(surface)
-                if _local(item.tag) == "graphic"
-            ]:
-                _validate_attrs(graphic)
-                image_key = key_for(graphic)
-                image_features: dict[str, str | int] = {
-                    "source_key": image_key
-                }
-                _append_feature(
-                    image_features, "source_id", graphic.attrib.get(XML_ID)
-                )
-                _append_feature(image_features, "url", graphic.attrib.get("url"))
-                _append_feature(image_features, "description", description)
-                _append_feature(image_features, "note", note)
-                _append_feature(image_features, "credit", credit)
-                _append_feature(image_features, "credit_role", credit_role)
-                image_node = _make_node(
-                    key=image_key,
-                    node_type=NodeType.IMAGE,
-                    anchor=anchor,
-                    features=image_features,
-                )
-                _add_owned(
-                    nodes=nodes,
-                    edges=edges,
-                    node=image_node,
-                    inscription_key=inscription_key,
-                    parent=surface_key,
                 )
 
     # Revision history.
