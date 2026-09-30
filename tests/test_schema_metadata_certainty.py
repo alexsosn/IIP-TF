@@ -26,7 +26,7 @@ def test_metadata_certainty_paths_have_distinct_raw_string_features() -> None:
     assert required <= set(schema["metadata_policy"]["scalar_on_inscription"])
     assert required <= set(schema["features"]["node"])
     for feature in required:
-        assert schema["feature_contract"][feature]["domain"] == "node"
+        assert schema["feature_contract"][feature]["domain"] == "inscription"
         assert schema["feature_contract"][feature]["value_type"] == "str"
 
 
