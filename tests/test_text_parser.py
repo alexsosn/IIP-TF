@@ -1,9 +1,9 @@
+# ruff: noqa: E501
 from __future__ import annotations
 
 from pathlib import Path
 
 import pytest
-
 from iip_tf.ir import Layer, NodeType
 from iip_tf.text_parser import (
     UnsupportedTextualConstructError,
