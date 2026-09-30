@@ -740,6 +740,7 @@ def _parse_textpart(
     layer: Layer,
     lang: _Lang,
     edition_key: str,
+    leading_start: int | None = None,
 ) -> None:
     _validate_attrs(element, source_file=builder.identity.source_file)
     if element.attrib.get("type") != "textpart":
@@ -748,7 +749,7 @@ def _parse_textpart(
         )
     part_lang = _child_lang(element, lang)
     key = builder.node_key(element)
-    start = len(builder.signs)
+    start = len(builder.signs) if leading_start is None else leading_start
     state = _TextPartState(key=key, layer=layer, line_start=start)
 
     if element.text and element.text.strip():
@@ -794,6 +795,43 @@ def _parse_textpart(
     )
 
 
+def _parse_edition_boundary_lb(
+    builder: _Builder,
+    element: ET.Element,
+    *,
+    layer: Layer,
+    lang: _Lang,
+    edition_key: str,
+) -> int:
+    _validate_attrs(element, source_file=builder.identity.source_file)
+    child_lang = _child_lang(element, lang)
+    key = builder.node_key(element)
+    start = len(builder.signs)
+    builder.add_sign(
+        glyph="",
+        layer=layer,
+        lang=child_lang,
+        role="both",
+        synthetic_kind="line_break",
+    )
+    features = _mapped_features(
+        element,
+        layer=layer,
+        lang=child_lang,
+        source_key=builder.source_key(element),
+    )
+    features["kind"] = "line_break"
+    builder.add_node(
+        key=key,
+        node_type=NodeType.MARKUP,
+        start=start,
+        features=features,
+        source_id=element.attrib.get(XML_ID),
+        parent=edition_key,
+    )
+    return start
+
+
 def _native_layer(element: ET.Element) -> Layer | None:
     if _local(element.tag) != "div":
         return None
@@ -830,6 +868,7 @@ def _parse_edition(
                 f"{builder.identity.source_file}: edition mixes explicit textparts "
                 "with direct textual content"
             )
+        pending_boundary_start: int | None = None
         for child in children:
             name = _local(child.tag)
             if child in explicit_parts:
@@ -839,7 +878,19 @@ def _parse_edition(
                     layer=layer,
                     lang=edition_lang,
                     edition_key=key,
+                    leading_start=pending_boundary_start,
                 )
+                pending_boundary_start = None
+            elif name == "lb":
+                boundary_start = _parse_edition_boundary_lb(
+                    builder,
+                    child,
+                    layer=layer,
+                    lang=edition_lang,
+                    edition_key=key,
+                )
+                if pending_boundary_start is None:
+                    pending_boundary_start = boundary_start
             else:
                 raise UnsupportedTextualConstructError(
                     f"{builder.identity.source_file}: edition mixes explicit textparts "
@@ -850,6 +901,11 @@ def _parse_edition(
                     f"{builder.identity.source_file}: edition has direct text outside "
                     "explicit textparts"
                 )
+        if pending_boundary_start is not None:
+            raise UnsupportedTextualConstructError(
+                f"{builder.identity.source_file}: trailing edition-level lb has no "
+                "following textpart"
+            )
     else:
         implicit_key = builder.derived_key("textpart", f"{key}:implicit")
         implicit_start = len(builder.signs)
