@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from iip_tf.ir import IRNode, InscriptionIR, Layer, NodeType
+from iip_tf.ir import InscriptionIR, IRNode, Layer, NodeType
 from iip_tf.text_parser import (
     UnsupportedTextualConstructError,
     parse_epidoc_file,
