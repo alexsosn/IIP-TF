@@ -183,3 +183,58 @@ def test_ambiguous_projection_fails_closed(tmp_path: Path) -> None:
 
     with pytest.raises(SegmentationProjectionError, match="ambiguous"):
         parse_epidoc_file(path, source_revision="deadbeef")
+
+
+def test_projection_identity_ignores_upstream_reading_wrapper_changes(tmp_path: Path) -> None:
+    path = _write(
+        tmp_path,
+        "roles.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="roles">
+          <text><body>
+            <div type="edition" subtype="transcription">
+              <p><choice><orig>ὑ</orig><reg>ὁ</reg></choice>
+                 <unclear>ν</unclear><supplied reason="lost">έκταρος</supplied></p>
+            </div>
+            <div type="edition" subtype="transcription_segmented">
+              <p><w xml:id="roles-1" xml:lang="grc">ὑ</w>
+                 <w xml:id="roles-2" xml:lang="grc">
+                   <supplied reason="lost">νέκταρος</supplied>
+                 </w></p>
+            </div>
+          </body></text>
+        </TEI>""",
+    )
+
+    ir = parse_epidoc_file(path, source_revision="deadbeef")
+    words = _nodes(ir, "word")
+
+    assert [node.feature("token_id") for node in words] == ["roles-1", "roles-2"]
+    first = words[0]
+    assert [ir.sign(key).glyph for key in first.sign_keys] == ["ὑ"]
+
+
+def test_empty_segmented_inline_markup_is_preserved_as_zero_span_annotation(
+    tmp_path: Path,
+) -> None:
+    path = _write(
+        tmp_path,
+        "empty-markup.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="empty-markup">
+          <text><body>
+            <div type="edition" subtype="transcription"><p>AB</p></div>
+            <div type="edition" subtype="transcription_segmented">
+              <p><w xml:id="empty-markup-1" xml:lang="grc">A<unclear/>B</w></p>
+            </div>
+          </body></text>
+        </TEI>""",
+    )
+
+    ir = parse_epidoc_file(path, source_revision="deadbeef")
+    annotation = next(
+        node
+        for node in _nodes(ir, "markup")
+        if node.feature("annotation_source") == "transcription_segmented"
+        and node.feature("kind") == "unclear"
+    )
+
+    assert annotation.sign_keys == ()
