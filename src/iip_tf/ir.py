@@ -26,6 +26,14 @@ class NodeType(StrEnum):
     LINE = "line"
     MARKUP = "markup"
     ENTITY = "entity"
+    BIBL = "bibl"
+    BIBL_SCOPE = "bibl_scope"
+    HAND = "hand"
+    DECORATION = "decoration"
+    IMAGE = "image"
+    REVISION = "revision"
+    DIMENSION = "dimension"
+    FACSIMILE_SURFACE = "facsimile_surface"
 
 
 class EdgeType(StrEnum):
