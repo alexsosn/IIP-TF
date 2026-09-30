@@ -15,6 +15,9 @@ repeatable/structured metadata as native nodes:
 - direct `image` children of the inscription when `graphic` is directly under `facsimile`;
 - `revision`.
 
+`facsimile_surface` nodes may nest through `parent` edges when the source contains nested
+`surface` elements; this is already allowed by schema 0.1 edge semantics and must not be flattened.
+
 Metadata nodes reuse a primary/technical sign anchor only because Text-Fabric requires an
 oslot anchor. Semantic ownership is explicit with `in_inscription`; direct nested source
 structure also uses `parent`.
@@ -51,8 +54,10 @@ Measured source paths:
 Raw values remain strings. Lossless integer derivatives may be additional features; they never
 replace source strings.
 
-If a scalar path yields multiple distinct non-empty values in one record, parsing fails with a
-cardinality diagnostic instead of choosing first/last.
+If a controlled/scalar metadata path yields multiple distinct non-empty values in one record, parsing fails with a
+cardinality diagnostic instead of choosing first/last. Ordered prose fragments from repeated
+`support/p` are the measured exception: schema 0.1 models `support_note` as one scalar, so their
+source order and paragraph boundaries are preserved deterministically with a blank-line separator.
 
 ## Dimensions
 
