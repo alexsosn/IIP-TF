@@ -51,7 +51,8 @@ def test_scalar_metadata_and_dimensions_are_preserved_without_overwriting(tmp_pa
     </physDesc>
     <history>
       <origin>
-        <date period="period:roman" notBefore="-0020" notAfter="0070" precision="low">20 BCE to 70 CE</date>
+        <date period="period:roman" notBefore="-0020" notAfter="0070"
+              precision="low">20 BCE to 70 CE</date>
         <placeName>
           <region cert="high">Judaea</region>
           <settlement ref="pleiades:1" cert="medium">Jerusalem<geo>31.7 35.2</geo></settlement>
@@ -365,7 +366,9 @@ def test_unknown_child_inside_mapped_metadata_scope_fails_closed(tmp_path: Path)
         tmp_path,
         "unknown-child.xml",
         """<TEI xmlns="http://www.tei-c.org/ns/1.0"><teiHeader><fileDesc><sourceDesc><msDesc>
-          <physDesc><handDesc><handNote ana="#engraved"><foo>lost structure</foo></handNote></handDesc></physDesc>
+          <physDesc><handDesc><handNote ana="#engraved">
+            <foo>lost structure</foo>
+          </handNote></handDesc></physDesc>
         </msDesc></sourceDesc></fileDesc></teiHeader>
         <text><body><div type="edition" subtype="transcription"><p>A</p></div></body></text>
         </TEI>""",
