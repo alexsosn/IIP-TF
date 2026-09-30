@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from types import MappingProxyType
 from typing import TypeAlias
 
 FeatureValue: TypeAlias = str | int
 
 
-class Layer(str, Enum):
+class Layer(StrEnum):
     TRANSCRIPTION = "transcription"
     DIPLOMATIC = "diplomatic"
     TRANSLATION = "translation"
@@ -18,7 +18,7 @@ class Layer(str, Enum):
     ANCHOR = "anchor"
 
 
-class NodeType(str, Enum):
+class NodeType(StrEnum):
     INSCRIPTION = "inscription"
     EDITION = "edition"
     TEXTPART = "textpart"
@@ -28,7 +28,7 @@ class NodeType(str, Enum):
     ENTITY = "entity"
 
 
-class EdgeType(str, Enum):
+class EdgeType(StrEnum):
     PARENT = "parent"
     IN_INSCRIPTION = "in_inscription"
     CORRESPONDS_TO = "corresponds_to"
