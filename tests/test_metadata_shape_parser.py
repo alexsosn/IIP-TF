@@ -128,7 +128,9 @@ def test_surface_depth_beyond_frozen_contract_fails_closed(tmp_path: Path) -> No
     path = tmp_path / "deep.xml"
     path.write_text(
         """<TEI xmlns="http://www.tei-c.org/ns/1.0">
-  <facsimile><surface><surface><surface><graphic url="x.jpg"/></surface></surface></surface></facsimile>
+  <facsimile>
+    <surface><surface><surface><graphic url="x.jpg"/></surface></surface></surface>
+  </facsimile>
   <text><body><div type="edition" subtype="transcription"><p>A</p></div></body></text>
 </TEI>""",
         encoding="utf-8",
