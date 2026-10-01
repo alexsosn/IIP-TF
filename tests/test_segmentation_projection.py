@@ -402,3 +402,53 @@ def test_projection_prefers_exact_reading_role_over_both_wildcard(
 
     assert len(word.sign_keys) == 1
     assert ir.sign(word.sign_keys[0]).reading_role == "normalized"
+
+
+def test_unique_exact_content_projects_across_stale_reading_role(
+    tmp_path: Path,
+) -> None:
+    path = _write(
+        tmp_path,
+        "role-drift.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="role-drift">
+          <text><body>
+            <div type="edition" subtype="transcription">
+              <p><del rend="erasure"><supplied reason="lost">AB</supplied></del></p>
+            </div>
+            <div type="edition" subtype="transcription_segmented">
+              <p><w xml:id="role-drift-1" xml:lang="grc">
+                <supplied reason="lost">AB</supplied>
+              </w></p>
+            </div>
+          </body></text>
+        </TEI>""",
+    )
+
+    ir = parse_epidoc_file(path, source_revision="deadbeef")
+    word = _nodes(ir, "word")[0]
+
+    assert word.feature("token_id") == "role-drift-1"
+    assert "".join(ir.sign(key).glyph for key in word.sign_keys) == "AB"
+
+
+def test_cross_role_fallback_does_not_beat_exact_role_match(tmp_path: Path) -> None:
+    path = _write(
+        tmp_path,
+        "role-drift-preference.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="role-drift-preference">
+          <text><body>
+            <div type="edition" subtype="transcription">
+              <p><orig>A</orig><reg>A</reg></p>
+            </div>
+            <div type="edition" subtype="transcription_segmented">
+              <p><orig xml:id="role-drift-preference-1" xml:lang="grc">A</orig></p>
+            </div>
+          </body></text>
+        </TEI>""",
+    )
+
+    ir = parse_epidoc_file(path, source_revision="deadbeef")
+    word = _nodes(ir, "word")[0]
+
+    assert len(word.sign_keys) == 1
+    assert ir.sign(word.sign_keys[0]).reading_role == "source"
