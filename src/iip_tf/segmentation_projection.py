@@ -337,10 +337,6 @@ def _token_spec(
         end = len(atoms)
         if semantic:
             assert key is not None
-            if end <= start:
-                raise SegmentationProjectionError(
-                    f"{record_id}: segmented markup {name!r} has no projection atoms"
-                )
             features = _annotation_features(
                 element,
                 source_key=(
@@ -391,6 +387,14 @@ def _primary_atoms(ir: InscriptionIR, *, primary_layer: str) -> tuple[_PrimaryAt
     return tuple(atoms)
 
 
+def _atom_matches(primary: Atom, segmented: Atom) -> bool:
+    if primary[:2] != segmented[:2]:
+        return False
+    primary_role = primary[2]
+    segmented_role = segmented[2]
+    return segmented_role == "both" or primary_role == segmented_role
+
+
 def _matches(
     primary: tuple[_PrimaryAtom, ...],
     signature: tuple[Atom, ...],
@@ -401,8 +405,14 @@ def _matches(
     return tuple(
         (start, start + width)
         for start in range(0, len(primary) - width + 1)
-        if tuple(atom.signature for atom in primary[start : start + width])
-        == signature
+        if all(
+            _atom_matches(primary_atom.signature, segmented_atom)
+            for primary_atom, segmented_atom in zip(
+                primary[start : start + width],
+                signature,
+                strict=True,
+            )
+        )
     )
 
 
@@ -733,13 +743,16 @@ def enrich_segmentation(
 
         primary_slice = primary[start:end]
         for annotation in spec.annotations:
-            ann_first = primary_slice[annotation.start].sign_index
-            ann_last = primary_slice[annotation.end - 1].sign_index
-            ann_sign_keys = tuple(
-                sign.key
-                for sign in ir.signs[ann_first : ann_last + 1]
-                if sign.layer.value == primary_layer
-            )
+            if annotation.start == annotation.end:
+                ann_sign_keys: tuple[str, ...] = ()
+            else:
+                ann_first = primary_slice[annotation.start].sign_index
+                ann_last = primary_slice[annotation.end - 1].sign_index
+                ann_sign_keys = tuple(
+                    sign.key
+                    for sign in ir.signs[ann_first : ann_last + 1]
+                    if sign.layer.value == primary_layer
+                )
             if annotation.key in existing_keys:
                 raise SegmentationProjectionError(
                     f"{record_id}: duplicate projected annotation key "
