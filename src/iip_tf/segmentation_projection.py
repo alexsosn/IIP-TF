@@ -132,7 +132,8 @@ class SegmentationProjectionError(ValueError):
 @dataclass(frozen=True)
 class _PrimaryAtom:
     signature: Atom
-    sign_index: int
+    sign_start: int
+    sign_end: int
 
 
 @dataclass(frozen=True)
@@ -320,6 +321,8 @@ def _token_spec(
             atoms.append(("event", "figure", current_role))
         elif name in _EVENT_KIND:
             atoms.append(("event", _EVENT_KIND[name], current_role))
+        elif name == "g" and element.attrib.get("ref"):
+            atoms.append(("glyph", element.attrib["ref"], current_role))
         elif name == "g" and not (
             (element.text and element.text.strip()) or list(element)
         ):
@@ -421,14 +424,66 @@ def _primary_atoms(
         primary_layer=primary_layer,
     )
     scope = set(paragraph.sign_keys)
+    index_by_key = {sign.key: index for index, sign in enumerate(ir.signs)}
+
+    glyph_ranges: dict[int, tuple[int, str]] = {}
+    for node in ir.nodes:
+        if (
+            node.node_type != NodeType.MARKUP
+            or node.feature("kind") != "glyph"
+            or not isinstance(node.feature("ref"), str)
+            or not node.sign_keys
+        ):
+            continue
+        if not set(node.sign_keys) <= scope:
+            continue
+        indices = sorted(index_by_key[key] for key in node.sign_keys)
+        if indices != list(range(indices[0], indices[-1] + 1)):
+            raise SegmentationProjectionError(
+                f"{ir.identity.inscription_id}: non-contiguous glyph source span"
+            )
+        if indices[0] in glyph_ranges:
+            raise SegmentationProjectionError(
+                f"{ir.identity.inscription_id}: overlapping glyph source spans"
+            )
+        glyph_ranges[indices[0]] = (
+            indices[-1],
+            str(node.feature("ref")),
+        )
+
     atoms: list[_PrimaryAtom] = []
+    skip_until = -1
     for index, sign in enumerate(ir.signs):
+        if index <= skip_until:
+            continue
         if sign.key not in scope:
             continue
         if sign.layer.value != primary_layer:
             raise SegmentationProjectionError(
                 f"{ir.identity.inscription_id}: paragraph crosses primary text layers"
             )
+
+        glyph_range = glyph_ranges.get(index)
+        if glyph_range is not None:
+            glyph_end, glyph_ref = glyph_range
+            roles = {
+                ir.signs[item].reading_role
+                for item in range(index, glyph_end + 1)
+            }
+            if len(roles) != 1:
+                raise SegmentationProjectionError(
+                    f"{ir.identity.inscription_id}: glyph span crosses reading roles"
+                )
+            atoms.append(
+                _PrimaryAtom(
+                    signature=("glyph", glyph_ref, sign.reading_role),
+                    sign_start=index,
+                    sign_end=glyph_end,
+                )
+            )
+            skip_until = glyph_end
+            continue
+
         if sign.synthetic_kind == "line_break":
             continue
         if sign.synthetic_kind is not None:
@@ -439,7 +494,13 @@ def _primary_atoms(
             )
         else:
             signature = ("char", sign.glyph, sign.reading_role)
-        atoms.append(_PrimaryAtom(signature=signature, sign_index=index))
+        atoms.append(
+            _PrimaryAtom(
+                signature=signature,
+                sign_start=index,
+                sign_end=index,
+            )
+        )
     return tuple(atoms)
 
 
@@ -767,8 +828,8 @@ def enrich_segmentation(
     selected_candidate_key = candidate_keys[resolution.selected_index]
 
     for spec, (start, end) in zip(specs, embedding, strict=True):
-        first_sign = primary[start].sign_index
-        last_sign = primary[end - 1].sign_index
+        first_sign = primary[start].sign_start
+        last_sign = primary[end - 1].sign_end
         sign_keys = tuple(
             sign.key
             for sign in ir.signs[first_sign : last_sign + 1]
@@ -814,8 +875,8 @@ def enrich_segmentation(
             if annotation.start == annotation.end:
                 ann_sign_keys: tuple[str, ...] = ()
             else:
-                ann_first = primary_slice[annotation.start].sign_index
-                ann_last = primary_slice[annotation.end - 1].sign_index
+                ann_first = primary_slice[annotation.start].sign_start
+                ann_last = primary_slice[annotation.end - 1].sign_end
                 ann_sign_keys = tuple(
                     sign.key
                     for sign in ir.signs[ann_first : ann_last + 1]
