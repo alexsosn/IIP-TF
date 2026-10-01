@@ -134,7 +134,9 @@ features and preserves spellings such as `unknown` or non-canonical source value
 One-to-one language, classification, origin, and provenance values live on `inscription`.
 Audited certainty/precision on those scalar claims remains path-specific: `genre_cert` stores `msItem@cert`, `date_precision` stores origin `date@precision`, `region_cert` stores origin `region@cert`, and `settlement_cert` stores origin `settlement@cert`. These are raw source strings and are not collapsed into the generic textual/editorial `cert` feature.
 Repeatable/structured data become native nodes: `bibl`, `bibl_scope`, `hand`,
-`dimension`, `decoration`, `facsimile_surface`, `image`, and `revision`.
+`dimension`, `support_note`, `decoration`, `facsimile_surface`, `image`, and `revision`.
+The pinned corpus contains repeatable support paragraphs in four records, so each non-empty
+direct `support/p` is a `support_note` node rather than a delimiter-joined inscription scalar.
 Translation/reference spans such as `persName`, `rs`, `name`,
 `placeName`, and `date` become structured `entity` nodes.
 
@@ -145,7 +147,8 @@ dimension records, and hand-letter dimensions survive unchanged.
 
 Facsimile `surface` grouping is preserved with `facsimile_surface` nodes. Child graphics
 become `image` nodes parented to the surface; graphics directly under `facsimile` belong
-directly to the inscription. URLs, descriptions, notes, and credits are kept. Image binaries
+directly to the inscription. Nested facsimile surfaces preserve their direct surface parent;
+the pinned source has one depth-2 case (`mgha0001`). URLs, descriptions, notes, and credits are kept. Image binaries
 are not copied into the corpus because IIP does not establish one uniform redistribution right
 for every image.
 
