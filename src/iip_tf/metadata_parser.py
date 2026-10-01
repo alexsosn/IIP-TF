@@ -136,10 +136,6 @@ def _scalar(name: str, values: list[str]) -> str | None:
     return distinct[0] if distinct else None
 
 
-def _ordered_prose(values: list[str]) -> str | None:
-    return "\n\n".join(values) if values else None
-
-
 def _int_derivative(value: str | None) -> int | None:
     if value is None or re.fullmatch(r"[+-]?\d+", value) is None:
         return None
@@ -325,20 +321,6 @@ def _scalar_metadata(root: ET.Element) -> dict[str, str | int]:
             [*_values(support_descs, "ana"), *_values(supports, "ana")],
         ),
     )
-    support_notes = [
-        child
-        for support in supports
-        for child in list(support)
-        if _local(child.tag) == "p"
-    ]
-    _append_feature(
-        features,
-        "support_note",
-        _ordered_prose(
-            [value for element in support_notes if (value := _text(element))]
-        ),
-    )
-
     conditions = root.findall(".//tei:supportDesc/tei:condition", _NS)
     for element in conditions:
         _validate_attrs(element)
@@ -602,27 +584,46 @@ def enrich_metadata(ir: InscriptionIR, root: ET.Element) -> InscriptionIR:
         existing_keys.add(key)
         return key
 
-    # Physical dimensions attached directly to the inscription.
-    dimensions = root.findall(
-        ".//tei:objectDesc/tei:supportDesc/tei:support/tei:dimensions", _NS
-    )
-    for element in dimensions:
-        key = key_for(element)
-        node = _make_node(
-            key=key,
-            node_type=NodeType.DIMENSION,
-            anchor=anchor,
-            features=_dimension_features(
-                element,
-                source_key=key,
-            ),
-        )
-        _add_owned(
-            nodes=nodes,
-            edges=edges,
-            node=node,
-            inscription_key=inscription_key,
-        )
+    # Physical support children in source order.
+    for support in root.findall(
+        ".//tei:objectDesc/tei:supportDesc/tei:support", _NS
+    ):
+        for element in list(support):
+            name = _local(element.tag)
+            if name == "p":
+                note = _text(element)
+                if note is None:
+                    continue
+                key = key_for(element)
+                node = _make_node(
+                    key=key,
+                    node_type=NodeType.SUPPORT_NOTE,
+                    anchor=anchor,
+                    features={"source_key": key, "note": note},
+                )
+                _add_owned(
+                    nodes=nodes,
+                    edges=edges,
+                    node=node,
+                    inscription_key=inscription_key,
+                )
+            elif name == "dimensions":
+                key = key_for(element)
+                node = _make_node(
+                    key=key,
+                    node_type=NodeType.DIMENSION,
+                    anchor=anchor,
+                    features=_dimension_features(
+                        element,
+                        source_key=key,
+                    ),
+                )
+                _add_owned(
+                    nodes=nodes,
+                    edges=edges,
+                    node=node,
+                    inscription_key=inscription_key,
+                )
 
     # Hand records and their dimensions.
     for hand_desc in root.findall(".//tei:physDesc/tei:handDesc", _NS):
@@ -853,7 +854,16 @@ def enrich_metadata(ir: InscriptionIR, root: ET.Element) -> InscriptionIR:
             parent=parent_key,
         )
 
-    def add_surface(surface: ET.Element, *, parent_key: str) -> None:
+    def add_surface(
+        surface: ET.Element,
+        *,
+        parent_key: str,
+        depth: int,
+    ) -> None:
+        if depth > 2:
+            raise MetadataParseError(
+                f"surface depth {depth} exceeds frozen schema maximum 2"
+            )
         _validate_attrs(surface)
         allowed_surface = {"desc", "graphic", "note", "surface"}
         unknown = [
@@ -928,7 +938,7 @@ def enrich_metadata(ir: InscriptionIR, root: ET.Element) -> InscriptionIR:
                     credit_role=credit_role,
                 )
             elif name == "surface":
-                add_surface(item, parent_key=surface_key)
+                add_surface(item, parent_key=surface_key, depth=depth + 1)
 
     for facsimile in root.findall(".//tei:facsimile", _NS):
         _validate_attrs(facsimile)
@@ -937,7 +947,7 @@ def enrich_metadata(ir: InscriptionIR, root: ET.Element) -> InscriptionIR:
             if name == "graphic":
                 add_image(child, parent_key=inscription_key)
             elif name == "surface":
-                add_surface(child, parent_key=inscription_key)
+                add_surface(child, parent_key=inscription_key, depth=1)
             else:
                 raise MetadataParseError(
                     f"facsimile: unsupported child {name!r}"
