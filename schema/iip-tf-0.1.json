@@ -120,6 +120,7 @@
     "paragraph",
     "bibl_scope",
     "dimension",
+    "support_note",
     "facsimile_surface"
   ],
   "node_type_contract": {
@@ -154,7 +155,8 @@
     },
     "bibl_scope": "One source biblScope child; repeatable and parented to a bibl node.",
     "dimension": "One source dimensions element; repeatable and usable for object/surface or hand/letter dimensions without flattening ranges.",
-    "facsimile_surface": "One source facsimile/surface grouping node carrying shared description/note context for child image nodes."
+    "support_note": "One non-empty direct support/p source paragraph; repeatable and parented to the inscription.",
+    "facsimile_surface": "One source facsimile/surface grouping node; top-level surfaces belong to the inscription and nested surfaces retain surface parentage."
   },
   "features": {
     "slot": [
@@ -239,7 +241,6 @@
       "geo",
       "provenance_place",
       "origin_note",
-      "support_note",
       "condition_note",
       "layout_note",
       "section_part",
@@ -628,7 +629,6 @@
       "geo",
       "provenance_place",
       "origin_note",
-      "support_note",
       "condition_note",
       "layout_note"
     ],
@@ -640,6 +640,7 @@
       "revision",
       "bibl_scope",
       "dimension",
+      "support_note",
       "facsimile_surface"
     ],
     "source_values_retained": true,
@@ -735,11 +736,21 @@
       ]
     },
     "facsimile_surface": {
-      "parent_type": "inscription",
+      "parent_types": [
+        "inscription",
+        "facsimile_surface"
+      ],
       "features": [
         "source_id",
         "source_key",
         "description",
+        "note"
+      ]
+    },
+    "support_note": {
+      "parent_type": "inscription",
+      "features": [
+        "source_key",
         "note"
       ]
     }
