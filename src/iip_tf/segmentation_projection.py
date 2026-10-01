@@ -15,7 +15,7 @@ XML_NS: Final = "http://www.w3.org/XML/1998/namespace"
 XML_ID: Final = f"{{{XML_NS}}}id"
 XML_LANG: Final = f"{{{XML_NS}}}lang"
 
-Atom: TypeAlias = tuple[str, str, str]
+Atom: TypeAlias = tuple[str, str, str, str | None]
 
 _TOKEN_TAGS: Final = {"w", "num", "orig"}
 _ROLE: Final = {
@@ -229,7 +229,7 @@ def _append_text(atoms: list[Atom], text: str | None, *, role: str) -> None:
         return
     for char in text:
         if not char.isspace():
-            atoms.append(("char", char, role))
+            atoms.append(("char", char, role, None))
 
 
 def _annotation_features(
@@ -318,15 +318,14 @@ def _token_spec(
         start = len(atoms)
 
         if name == "figure":
-            atoms.append(("event", "figure", current_role))
+            atoms.append(("event", "figure", current_role, None))
         elif name in _EVENT_KIND:
-            atoms.append(("event", _EVENT_KIND[name], current_role))
-        elif name == "g" and element.attrib.get("ref"):
-            atoms.append(("glyph", element.attrib["ref"], current_role))
-        elif name == "g" and not (
-            (element.text and element.text.strip()) or list(element)
-        ):
-            atoms.append(("event", "glyph_ref", current_role))
+            atoms.append(("event", _EVENT_KIND[name], current_role, None))
+        elif name == "g":
+            display = "".join(element.itertext()).strip()
+            atoms.append(
+                ("glyph", display, current_role, element.attrib.get("ref"))
+            )
         else:
             _append_text(atoms, element.text, role=current_role)
             for child in list(element):
@@ -431,7 +430,6 @@ def _primary_atoms(
         if (
             node.node_type != NodeType.MARKUP
             or node.feature("kind") != "glyph"
-            or not isinstance(node.feature("ref"), str)
             or not node.sign_keys
         ):
             continue
@@ -446,9 +444,10 @@ def _primary_atoms(
             raise SegmentationProjectionError(
                 f"{ir.identity.inscription_id}: overlapping glyph source spans"
             )
+        ref = node.feature("ref")
         glyph_ranges[indices[0]] = (
             indices[-1],
-            str(node.feature("ref")),
+            ref if isinstance(ref, str) else "",
         )
 
     atoms: list[_PrimaryAtom] = []
@@ -474,9 +473,18 @@ def _primary_atoms(
                 raise SegmentationProjectionError(
                     f"{ir.identity.inscription_id}: glyph span crosses reading roles"
                 )
+            display = "".join(
+                ir.signs[item].glyph
+                for item in range(index, glyph_end + 1)
+            )
             atoms.append(
                 _PrimaryAtom(
-                    signature=("glyph", glyph_ref, sign.reading_role),
+                    signature=(
+                        "glyph",
+                        display,
+                        sign.reading_role,
+                        glyph_ref or None,
+                    ),
                     sign_start=index,
                     sign_end=glyph_end,
                 )
@@ -491,9 +499,10 @@ def _primary_atoms(
                 "event",
                 sign.synthetic_kind,
                 sign.reading_role,
+                None,
             )
         else:
-            signature = ("char", sign.glyph, sign.reading_role)
+            signature = ("char", sign.glyph, sign.reading_role, None)
         atoms.append(
             _PrimaryAtom(
                 signature=signature,
@@ -505,15 +514,33 @@ def _primary_atoms(
 
 
 def _atom_matches(primary: Atom, segmented: Atom) -> bool:
-    if primary[:2] != segmented[:2]:
-        return False
     primary_role = primary[2]
     segmented_role = segmented[2]
-    return (
+    role_matches = (
         primary_role == segmented_role
         or primary_role == "both"
         or segmented_role == "both"
     )
+    if not role_matches:
+        return False
+
+    primary_kind, primary_value, _, primary_ref = primary
+    segmented_kind, segmented_value, _, segmented_ref = segmented
+
+    if segmented_ref is not None:
+        return primary_kind == "glyph" and primary_ref == segmented_ref
+
+    if segmented_kind == "glyph":
+        if primary_kind == "glyph":
+            return not segmented_value or primary_value == segmented_value
+        return bool(segmented_value) and (
+            primary_kind == "char" and primary_value == segmented_value
+        )
+
+    if primary_kind == "glyph" and segmented_kind == "char":
+        return bool(primary_value) and primary_value == segmented_value
+
+    return primary_kind == segmented_kind and primary_value == segmented_value
 
 
 def _matches(
