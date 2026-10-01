@@ -141,3 +141,21 @@ Release-blocking:
 - unsupported segmented inline element/attribute.
 
 No raw XML or guessed fallback is emitted.
+
+## Full-source RED: first failure classes
+
+The first integrated pinned-source run parsed 5,475/5,535 records and exposed 60 projection
+failures. Two classes are already explained by the upstream segmentation transform and have
+focused RED fixtures:
+
+1. **Removed reading wrappers.** The segmentation prototype can leave a glyph as ordinary token
+   text even when the source transcription places the same glyph under source/normalized reading
+   markup. A segmented atom with reading role `both` therefore carries no claim that the source
+   atom also has role `both`; it may match the same glyph/event in any primary reading role.
+   An explicitly source/normalized segmented atom remains strict.
+2. **Empty inline markup.** Real segmented files contain empty editorial elements such as
+   `<unclear/>`, `<abbr/>`, `<supplied/>`, `<ex/>`, `<choice/>`, and `<del/>`.
+   These carry source provenance but no alignment atom. They are preserved as zero-span
+   annotation IR nodes rather than made into text or treated as a projection failure.
+
+The remaining failures are kept release-blocking pending further corpus-level classification.
