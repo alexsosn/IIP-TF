@@ -697,13 +697,13 @@ def _unique_embedding(
         result.append((start, end))
         if token_index == len(tokens) - 1:
             break
-        next_index = best_next[token_index][current]
-        if next_index is None:
+        selected_index = best_next[token_index][current]
+        if selected_index is None:
             raise SegmentationProjectionError(
                 f"{record_id}: ambiguous projection while reconstructing "
                 "minimum-cost token sequence"
             )
-        current = next_index
+        current = selected_index
     return tuple(result)
 
 def _word_text(token: ET.Element) -> str:
