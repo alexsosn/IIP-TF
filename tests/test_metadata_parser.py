@@ -328,10 +328,13 @@ def test_support_note_preserves_multiple_source_paragraphs_in_order(tmp_path: Pa
 
     ir = parse_epidoc_file(path, source_revision="deadbeef")
     inscription = _nodes(ir, "inscription")[0]
+    notes = _nodes(ir, "support_note")
 
-    assert inscription.feature("support_note") == (
-        "First support paragraph.\n\nSecond support paragraph."
-    )
+    assert inscription.feature("support_note") is None
+    assert [node.feature("note") for node in notes] == [
+        "First support paragraph.",
+        "Second support paragraph.",
+    ]
 
 
 def test_nested_facsimile_surfaces_preserve_parent_hierarchy(tmp_path: Path) -> None:
