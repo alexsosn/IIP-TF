@@ -360,8 +360,32 @@ def _token_spec(
     visit(token, role=root_role, parent_key=None, token_root=True)
     if not atoms:
         token_id = token.attrib.get(XML_ID, "<missing>")
-        raise SegmentationProjectionError(
-            f"{record_id}: selected token {token_id!r} has no projection atoms"
+        top_level = [
+            (index, annotation)
+            for index, annotation in enumerate(annotations)
+            if annotation.parent_key is None
+        ]
+        if len(annotations) != 1 or len(top_level) != 1:
+            raise SegmentationProjectionError(
+                f"{record_id}: zero-atom token {token_id!r} has no unique annotation target"
+            )
+        index, annotation = top_level[0]
+        features = dict(annotation.features)
+        features["token_id"] = token_id
+        features["token_kind"] = root_name
+        features["candidate_index"] = candidate_index
+        lang = token.attrib.get(XML_LANG)
+        if lang:
+            features["lang"] = lang.strip()
+            features["lang_source"] = "transcription_segmented"
+        if "value" in token.attrib:
+            features["value"] = token.attrib["value"]
+        annotations[index] = _AnnotationSpec(
+            key=annotation.key,
+            start=annotation.start,
+            end=annotation.end,
+            features=tuple(sorted(features.items())),
+            parent_key=annotation.parent_key,
         )
     return _TokenSpec(
         element=token,
@@ -851,10 +875,64 @@ def enrich_segmentation(
         primary_layer=primary_layer,
         target=target,
     )
-    embedding = _unique_embedding(primary, specs, record_id=record_id)
+    projectable_specs = tuple(spec for spec in specs if spec.atoms)
+    embedding = _unique_embedding(
+        primary,
+        projectable_specs,
+        record_id=record_id,
+    )
     selected_candidate_key = candidate_keys[resolution.selected_index]
+    embedding_index = 0
 
-    for spec, (start, end) in zip(specs, embedding, strict=True):
+    def emit_annotations(
+        spec: _TokenSpec,
+        primary_slice: tuple[_PrimaryAtom, ...] | None,
+    ) -> None:
+        for annotation in spec.annotations:
+            if annotation.start == annotation.end:
+                ann_sign_keys: tuple[str, ...] = ()
+            else:
+                if primary_slice is None:
+                    raise SegmentationProjectionError(
+                        f"{record_id}: non-empty annotation in zero-atom token"
+                    )
+                ann_first = primary_slice[annotation.start].sign_start
+                ann_last = primary_slice[annotation.end - 1].sign_end
+                ann_sign_keys = tuple(
+                    sign.key
+                    for sign in ir.signs[ann_first : ann_last + 1]
+                    if sign.layer.value == primary_layer
+                )
+            if annotation.key in existing_keys:
+                raise SegmentationProjectionError(
+                    f"{record_id}: duplicate projected annotation key "
+                    f"{annotation.key!r}"
+                )
+            existing_keys.add(annotation.key)
+            nodes.append(
+                IRNode(
+                    key=annotation.key,
+                    node_type=NodeType.MARKUP,
+                    sign_keys=ann_sign_keys,
+                    features=annotation.features,
+                )
+            )
+            if annotation.parent_key is not None:
+                edges.append(
+                    IREdge(
+                        EdgeType.PARENT,
+                        annotation.key,
+                        annotation.parent_key,
+                    )
+                )
+
+    for spec in specs:
+        if not spec.atoms:
+            emit_annotations(spec, None)
+            continue
+
+        start, end = embedding[embedding_index]
+        embedding_index += 1
         first_sign = primary[start].sign_start
         last_sign = primary[end - 1].sign_end
         sign_keys = tuple(
@@ -896,41 +974,12 @@ def enrich_segmentation(
         edges.append(
             IREdge(EdgeType.TOKEN_FROM, word_key, selected_candidate_key)
         )
+        emit_annotations(spec, primary[start:end])
 
-        primary_slice = primary[start:end]
-        for annotation in spec.annotations:
-            if annotation.start == annotation.end:
-                ann_sign_keys: tuple[str, ...] = ()
-            else:
-                ann_first = primary_slice[annotation.start].sign_start
-                ann_last = primary_slice[annotation.end - 1].sign_end
-                ann_sign_keys = tuple(
-                    sign.key
-                    for sign in ir.signs[ann_first : ann_last + 1]
-                    if sign.layer.value == primary_layer
-                )
-            if annotation.key in existing_keys:
-                raise SegmentationProjectionError(
-                    f"{record_id}: duplicate projected annotation key "
-                    f"{annotation.key!r}"
-                )
-            existing_keys.add(annotation.key)
-            nodes.append(
-                IRNode(
-                    key=annotation.key,
-                    node_type=NodeType.MARKUP,
-                    sign_keys=ann_sign_keys,
-                    features=annotation.features,
-                )
-            )
-            if annotation.parent_key is not None:
-                edges.append(
-                    IREdge(
-                        EdgeType.PARENT,
-                        annotation.key,
-                        annotation.parent_key,
-                    )
-                )
+    if embedding_index != len(embedding):
+        raise SegmentationProjectionError(
+            f"{record_id}: internal projection accounting mismatch"
+        )
 
     return InscriptionIR(
         identity=ir.identity,
