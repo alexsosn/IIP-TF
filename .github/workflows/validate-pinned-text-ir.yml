@@ -60,4 +60,5 @@ jobs:
             --expect-node-count facsimile_surface=5667 \
             --expect-node-count image=6738 \
             --expect-node-count revision=18690 \
-            --expect-node-count dimension=8658
+            --expect-node-count dimension=8658 \
+            --expect-node-count support_note=1516
