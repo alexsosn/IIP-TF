@@ -152,6 +152,14 @@ class _TokenSpec:
     annotations: tuple[_AnnotationSpec, ...]
 
 
+@dataclass(frozen=True)
+class _TokenMatch:
+    start: int
+    end: int
+    cost: int
+    positions: tuple[int, ...]
+
+
 def _local(name: str) -> str:
     if name.startswith("{"):
         return name.split("}", 1)[1]
@@ -581,30 +589,54 @@ def _atom_match_cost(primary: Atom, segmented: Atom) -> int | None:
 def _matches(
     primary: tuple[_PrimaryAtom, ...],
     signature: tuple[Atom, ...],
-) -> tuple[tuple[int, int, int], ...]:
-    width = len(signature)
-    if width == 0:
+) -> tuple[_TokenMatch, ...]:
+    if not signature:
         return ()
 
-    matches: list[tuple[int, int, int]] = []
-    for start in range(0, len(primary) - width + 1):
-        costs = [
-            _atom_match_cost(primary_atom.signature, segmented_atom)
-            for primary_atom, segmented_atom in zip(
-                primary[start : start + width],
-                signature,
-                strict=True,
-            )
-        ]
-        if any(cost is None for cost in costs):
+    matches: list[_TokenMatch] = []
+    for start, primary_atom in enumerate(primary):
+        first_cost = _atom_match_cost(primary_atom.signature, signature[0])
+        if first_cost is None:
             continue
-        matches.append(
-            (
-                start,
-                start + width,
-                sum(cost for cost in costs if cost is not None),
+
+        states: list[tuple[int, int, tuple[int, ...]]] = [
+            (start, first_cost, (start,))
+        ]
+        for segmented_atom in signature[1:]:
+            next_states: list[tuple[int, int, tuple[int, ...]]] = []
+            for current, accumulated, positions in states:
+                candidate = current + 1
+                skipped_cost = 0
+                while candidate < len(primary):
+                    match_cost = _atom_match_cost(
+                        primary[candidate].signature,
+                        segmented_atom,
+                    )
+                    if match_cost is not None:
+                        next_states.append(
+                            (
+                                candidate,
+                                accumulated + skipped_cost + match_cost,
+                                (*positions, candidate),
+                            )
+                        )
+                    if primary[candidate].signature[0] != "glyph":
+                        break
+                    skipped_cost += 3
+                    candidate += 1
+            states = next_states
+            if not states:
+                break
+
+        for end_position, cost, positions in states:
+            matches.append(
+                _TokenMatch(
+                    start=start,
+                    end=end_position + 1,
+                    cost=cost,
+                    positions=positions,
+                )
             )
-        )
     return tuple(matches)
 
 
@@ -613,7 +645,7 @@ def _unique_embedding(
     tokens: tuple[_TokenSpec, ...],
     *,
     record_id: str,
-) -> tuple[tuple[int, int], ...]:
+) -> tuple[_TokenMatch, ...]:
     if not tokens:
         return ()
 
@@ -635,23 +667,23 @@ def _unique_embedding(
         [None for _ in matches] for matches in choices
     ]
 
-    for match_index, (_, _, local_cost) in enumerate(choices[-1]):
-        best_cost[-1][match_index] = local_cost
+    for match_index, match in enumerate(choices[-1]):
+        best_cost[-1][match_index] = match.cost
         best_count[-1][match_index] = 1
 
     for token_index in range(len(tokens) - 2, -1, -1):
         next_matches = choices[token_index + 1]
-        for match_index, (_, end, local_cost) in enumerate(choices[token_index]):
+        for match_index, match in enumerate(choices[token_index]):
             minimum: int | None = None
             count = 0
             selected_next: int | None = None
-            for next_index, (next_start, _, _) in enumerate(next_matches):
-                if next_start < end:
+            for next_index, next_match in enumerate(next_matches):
+                if next_match.start < match.end:
                     continue
                 suffix_cost = best_cost[token_index + 1][next_index]
                 if suffix_cost is None:
                     continue
-                candidate = local_cost + suffix_cost
+                candidate = match.cost + suffix_cost
                 if minimum is None or candidate < minimum:
                     minimum = candidate
                     count = best_count[token_index + 1][next_index]
@@ -691,10 +723,9 @@ def _unique_embedding(
         )
 
     current = best_starts[0]
-    result: list[tuple[int, int]] = []
+    result: list[_TokenMatch] = []
     for token_index, token_matches in enumerate(choices):
-        start, end, _ = token_matches[current]
-        result.append((start, end))
+        result.append(token_matches[current])
         if token_index == len(tokens) - 1:
             break
         selected_index = best_next[token_index][current]
@@ -941,18 +972,20 @@ def enrich_segmentation(
 
     def emit_annotations(
         spec: _TokenSpec,
-        primary_slice: tuple[_PrimaryAtom, ...] | None,
+        match: _TokenMatch | None,
     ) -> None:
         for annotation in spec.annotations:
             if annotation.start == annotation.end:
                 ann_sign_keys: tuple[str, ...] = ()
             else:
-                if primary_slice is None:
+                if match is None:
                     raise SegmentationProjectionError(
                         f"{record_id}: non-empty annotation in zero-atom token"
                     )
-                ann_first = primary_slice[annotation.start].sign_start
-                ann_last = primary_slice[annotation.end - 1].sign_end
+                ann_first_atom = match.positions[annotation.start]
+                ann_last_atom = match.positions[annotation.end - 1]
+                ann_first = primary[ann_first_atom].sign_start
+                ann_last = primary[ann_last_atom].sign_end
                 ann_sign_keys = tuple(
                     sign.key
                     for sign in ir.signs[ann_first : ann_last + 1]
@@ -986,10 +1019,10 @@ def enrich_segmentation(
             emit_annotations(spec, None)
             continue
 
-        start, end = embedding[embedding_index]
+        match = embedding[embedding_index]
         embedding_index += 1
-        first_sign = primary[start].sign_start
-        last_sign = primary[end - 1].sign_end
+        first_sign = primary[match.start].sign_start
+        last_sign = primary[match.end - 1].sign_end
         sign_keys = tuple(
             sign.key
             for sign in ir.signs[first_sign : last_sign + 1]
@@ -1029,7 +1062,7 @@ def enrich_segmentation(
         edges.append(
             IREdge(EdgeType.TOKEN_FROM, word_key, selected_candidate_key)
         )
-        emit_annotations(spec, primary[start:end])
+        emit_annotations(spec, match)
 
     if embedding_index != len(embedding):
         raise SegmentationProjectionError(
