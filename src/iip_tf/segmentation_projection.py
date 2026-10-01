@@ -368,11 +368,67 @@ def _token_spec(
     )
 
 
-def _primary_atoms(ir: InscriptionIR, *, primary_layer: str) -> tuple[_PrimaryAtom, ...]:
+def _first_primary_paragraph(
+    ir: InscriptionIR,
+    *,
+    target: IRNode,
+    primary_layer: str,
+) -> IRNode:
+    parent_of = {
+        edge.source: edge.target
+        for edge in ir.edges
+        if edge.edge_type == EdgeType.PARENT
+    }
+
+    def belongs_to_target(node: IRNode) -> bool:
+        current = node.key
+        seen: set[str] = set()
+        while current in parent_of:
+            if current in seen:
+                raise SegmentationProjectionError(
+                    f"{ir.identity.inscription_id}: parent cycle in textual IR"
+                )
+            seen.add(current)
+            current = parent_of[current]
+            if current == target.key:
+                return True
+        return False
+
+    paragraphs = [
+        node
+        for node in ir.nodes
+        if node.node_type == NodeType.PARAGRAPH
+        and node.feature("layer") == primary_layer
+        and node.feature("kind") == "p"
+        and belongs_to_target(node)
+    ]
+    if not paragraphs:
+        raise SegmentationProjectionError(
+            f"{ir.identity.inscription_id}: selected segmentation has no source paragraph"
+        )
+    return paragraphs[0]
+
+
+def _primary_atoms(
+    ir: InscriptionIR,
+    *,
+    primary_layer: str,
+    target: IRNode,
+) -> tuple[_PrimaryAtom, ...]:
+    paragraph = _first_primary_paragraph(
+        ir,
+        target=target,
+        primary_layer=primary_layer,
+    )
+    scope = set(paragraph.sign_keys)
     atoms: list[_PrimaryAtom] = []
     for index, sign in enumerate(ir.signs):
-        if sign.layer.value != primary_layer:
+        if sign.key not in scope:
             continue
+        if sign.layer.value != primary_layer:
+            raise SegmentationProjectionError(
+                f"{ir.identity.inscription_id}: paragraph crosses primary text layers"
+            )
         if sign.synthetic_kind == "line_break":
             continue
         if sign.synthetic_kind is not None:
@@ -698,7 +754,15 @@ def enrich_segmentation(
         )
         for token in token_elements
     )
-    primary = _primary_atoms(ir, primary_layer=primary_layer)
+    if target is None:
+        raise SegmentationProjectionError(
+            f"{record_id}: selected segmentation has no target source edition"
+        )
+    primary = _primary_atoms(
+        ir,
+        primary_layer=primary_layer,
+        target=target,
+    )
     embedding = _unique_embedding(primary, specs, record_id=record_id)
     selected_candidate_key = candidate_keys[resolution.selected_index]
 
