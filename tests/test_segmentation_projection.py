@@ -270,3 +270,51 @@ def test_projection_scope_is_first_primary_paragraph_from_upstream_pipeline(
     assert len(paragraphs) == 2
     assert word.sign_keys == paragraphs[0].sign_keys
     assert word.sign_keys != paragraphs[1].sign_keys
+
+
+def test_glyph_ref_disambiguates_repeated_zero_width_glyph_events(tmp_path: Path) -> None:
+    path = _write(
+        tmp_path,
+        "glyph-ref.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="glyph-ref">
+          <text><body>
+            <div type="edition" subtype="transcription">
+              <p><g ref="one-stroke"/> <g ref="two-strokes"/></p>
+            </div>
+            <div type="edition" subtype="transcription_segmented">
+              <p><w xml:id="glyph-ref-1" xml:lang="arc"><g ref="two-strokes"/></w></p>
+            </div>
+          </body></text>
+        </TEI>""",
+    )
+
+    ir = parse_epidoc_file(path, source_revision="deadbeef")
+    word = _nodes(ir, "word")[0]
+
+    assert len(word.sign_keys) == 1
+    glyph = ir.sign(word.sign_keys[0])
+    assert glyph.synthetic_kind == "glyph_ref"
+    assert word.feature("token_id") == "glyph-ref-1"
+
+
+def test_glyph_ref_projects_across_removed_display_glyph_text(tmp_path: Path) -> None:
+    path = _write(
+        tmp_path,
+        "glyph-display.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="glyph-display">
+          <text><body>
+            <div type="edition" subtype="transcription">
+              <p><orig><g ref="horizontal-stroke">_</g>c</orig></p>
+            </div>
+            <div type="edition" subtype="transcription_segmented">
+              <p><orig xml:id="glyph-display-1" xml:lang="la"><g ref="horizontal-stroke"/>c</orig></p>
+            </div>
+          </body></text>
+        </TEI>""",
+    )
+
+    ir = parse_epidoc_file(path, source_revision="deadbeef")
+    word = _nodes(ir, "word")[0]
+
+    assert word.feature("token_id") == "glyph-display-1"
+    assert [ir.sign(key).glyph for key in word.sign_keys if ir.sign(key).glyph] == ["_", "c"]
