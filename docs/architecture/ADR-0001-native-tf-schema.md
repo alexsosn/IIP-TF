@@ -147,7 +147,7 @@ dimension records, and hand-letter dimensions survive unchanged.
 
 Facsimile `surface` grouping is preserved with `facsimile_surface` nodes. Child graphics
 become `image` nodes parented to the surface; graphics directly under `facsimile` belong
-directly to the inscription. Nested facsimile surfaces preserve their direct surface parent;
+directly to the inscription. nested facsimile surfaces preserve their direct surface parent;
 the pinned source has one depth-2 case (`mgha0001`). URLs, descriptions, notes, and credits are kept. Image binaries
 are not copied into the corpus because IIP does not establish one uniform redistribution right
 for every image.
