@@ -375,3 +375,30 @@ def test_ambiguous_zero_atom_token_shape_fails_closed(tmp_path: Path) -> None:
 
     with pytest.raises(SegmentationProjectionError, match="zero-atom token"):
         parse_epidoc_file(path, source_revision="deadbeef")
+
+
+def test_projection_prefers_exact_reading_role_over_both_wildcard(
+    tmp_path: Path,
+) -> None:
+    path = _write(
+        tmp_path,
+        "role-preference.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="role-preference">
+          <text><body>
+            <div type="edition" subtype="transcription">
+              <p><g ref="one-stroke"/> <supplied reason="lost"><g ref="one-stroke"/></supplied></p>
+            </div>
+            <div type="edition" subtype="transcription_segmented">
+              <p><w xml:id="role-preference-1" xml:lang="arc">
+                <supplied reason="lost"><g ref="one-stroke"/></supplied>
+              </w></p>
+            </div>
+          </body></text>
+        </TEI>""",
+    )
+
+    ir = parse_epidoc_file(path, source_revision="deadbeef")
+    word = _nodes(ir, "word")[0]
+
+    assert len(word.sign_keys) == 1
+    assert ir.sign(word.sign_keys[0]).reading_role == "normalized"
