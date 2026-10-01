@@ -318,3 +318,60 @@ def test_glyph_ref_projects_across_removed_display_glyph_text(tmp_path: Path) ->
 
     assert word.feature("token_id") == "glyph-display-1"
     assert [ir.sign(key).glyph for key in word.sign_keys if ir.sign(key).glyph] == ["_", "c"]
+
+
+def test_zero_atom_token_preserves_token_identity_on_zero_span_annotation(
+    tmp_path: Path,
+) -> None:
+    path = _write(
+        tmp_path,
+        "zero-token.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="zero-token">
+          <text><body>
+            <div type="edition" subtype="transcription"><p>A<unclear/>B</p></div>
+            <div type="edition" subtype="transcription_segmented">
+              <p><w xml:id="zero-token-1" xml:lang="grc">A</w>
+                 <w xml:id="zero-token-2" xml:lang="grc"><unclear/></w>
+                 <w xml:id="zero-token-3" xml:lang="grc">B</w></p>
+            </div>
+          </body></text>
+        </TEI>""",
+    )
+
+    ir = parse_epidoc_file(path, source_revision="deadbeef")
+    words = _nodes(ir, "word")
+    assert [node.feature("token_id") for node in words] == [
+        "zero-token-1",
+        "zero-token-3",
+    ]
+
+    annotation = next(
+        node
+        for node in _nodes(ir, "markup")
+        if node.feature("annotation_source") == "transcription_segmented"
+        and node.feature("token_id") == "zero-token-2"
+    )
+    assert annotation.sign_keys == ()
+    assert annotation.feature("token_kind") == "w"
+    assert annotation.feature("lang") == "grc"
+    assert annotation.feature("lang_source") == "transcription_segmented"
+
+
+def test_ambiguous_zero_atom_token_shape_fails_closed(tmp_path: Path) -> None:
+    path = _write(
+        tmp_path,
+        "zero-token-ambiguous.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="zero-token-ambiguous">
+          <text><body>
+            <div type="edition" subtype="transcription"><p>AB</p></div>
+            <div type="edition" subtype="transcription_segmented">
+              <p><w xml:id="zero-token-ambiguous-1" xml:lang="grc">
+                <unclear/><supplied reason="lost"/>
+              </w></p>
+            </div>
+          </body></text>
+        </TEI>""",
+    )
+
+    with pytest.raises(SegmentationProjectionError, match="zero-atom token"):
+        parse_epidoc_file(path, source_revision="deadbeef")
