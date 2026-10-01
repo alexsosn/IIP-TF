@@ -28,6 +28,7 @@ sign slot with no fabricated glyph.
 | `bibl_scope` | Repeatable `biblScope` child |
 | `hand` | Writing technique record |
 | `dimension` | Repeatable physical or letter-dimension record |
+| `support_note` | One non-empty direct `support/p` physical-support note |
 | `decoration` | Decoration record |
 | `facsimile_surface` | Source facsimile surface/caption grouping |
 | `image` | Graphic URL/credit metadata, never image bytes |
@@ -121,8 +122,9 @@ slots with `annotation_source=transcription_segmented`. This includes the audite
 
 Scalar record features include unique file-stem `inscription_id`, raw (non-unique) `iip_id` and
 `xml_id`, `source_file`, `primary_layer`, language declarations, genre/religion,
-object/material/condition, layout, dimensions, origin date/place, Pleiades/PeriodO references,
-coordinates, locus, provenance, and physical/origin notes.
+object/material/condition, layout, origin date/place, Pleiades/PeriodO references,
+coordinates, locus, provenance, and scalar condition/layout/origin notes. Repeatable physical
+support paragraphs are not collapsed into an inscription scalar.
 
 `genre_cert`, `date_precision`, `region_cert`, and `settlement_cert` preserve audited raw
 certainty/precision qualifiers for their specific metadata paths rather than sharing a generic
@@ -134,8 +136,9 @@ certainty/precision qualifiers for their specific metadata paths rather than sha
 - `bibl_scope`: one repeatable scope child with text/unit/n.
 - `hand`: technique and note; child `dimension` nodes hold letter dimensions.
 - `dimension`: raw string-valued surface/letter dimensions including axis-specific min/max ranges.
+- `support_note`: one `support_note` node per non-empty direct `support/p`, preserving repeated source paragraphs independently.
 - `decoration`: type, description, locus.
-- `facsimile_surface`: shared surface description/note context.
+- `facsimile_surface`: shared surface description/note context; nested `facsimile_surface` nodes preserve source surface hierarchy.
 - `image`: URL, description, note, credit/role; parented to a surface when present; no binary payload.
 - `revision`: when/custom-when, who, description.
 
