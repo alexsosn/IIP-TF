@@ -537,55 +537,75 @@ def _primary_atoms(
     return tuple(atoms)
 
 
-def _atom_matches(primary: Atom, segmented: Atom) -> bool:
+def _atom_match_cost(primary: Atom, segmented: Atom) -> int | None:
     primary_role = primary[2]
     segmented_role = segmented[2]
-    role_matches = (
-        primary_role == segmented_role
-        or primary_role == "both"
-        or segmented_role == "both"
-    )
-    if not role_matches:
-        return False
+    if primary_role == segmented_role:
+        role_cost = 0
+    elif primary_role == "both" or segmented_role == "both":
+        role_cost = 1
+    else:
+        return None
 
     primary_kind, primary_value, _, primary_ref = primary
     segmented_kind, segmented_value, _, segmented_ref = segmented
 
     if segmented_ref is not None:
-        return primary_kind == "glyph" and primary_ref == segmented_ref
+        if primary_kind != "glyph" or primary_ref != segmented_ref:
+            return None
+        return role_cost
 
     if segmented_kind == "glyph":
         if primary_kind == "glyph":
-            return not segmented_value or primary_value == segmented_value
-        return bool(segmented_value) and (
-            primary_kind == "char" and primary_value == segmented_value
-        )
+            if segmented_value and primary_value != segmented_value:
+                return None
+            return role_cost + 1
+        if (
+            segmented_value
+            and primary_kind == "char"
+            and primary_value == segmented_value
+        ):
+            return role_cost + 2
+        return None
 
     if primary_kind == "glyph" and segmented_kind == "char":
-        return bool(primary_value) and primary_value == segmented_value
+        if primary_value and primary_value == segmented_value:
+            return role_cost + 2
+        return None
 
-    return primary_kind == segmented_kind and primary_value == segmented_value
+    if primary_kind != segmented_kind or primary_value != segmented_value:
+        return None
+    return role_cost
 
 
 def _matches(
     primary: tuple[_PrimaryAtom, ...],
     signature: tuple[Atom, ...],
-) -> tuple[tuple[int, int], ...]:
+) -> tuple[tuple[int, int, int], ...]:
     width = len(signature)
     if width == 0:
         return ()
-    return tuple(
-        (start, start + width)
-        for start in range(0, len(primary) - width + 1)
-        if all(
-            _atom_matches(primary_atom.signature, segmented_atom)
+
+    matches: list[tuple[int, int, int]] = []
+    for start in range(0, len(primary) - width + 1):
+        costs = [
+            _atom_match_cost(primary_atom.signature, segmented_atom)
             for primary_atom, segmented_atom in zip(
                 primary[start : start + width],
                 signature,
                 strict=True,
             )
+        ]
+        if any(cost is None for cost in costs):
+            continue
+        matches.append(
+            (
+                start,
+                start + width,
+                sum(cost for cost in costs if cost is not None),
+            )
         )
-    )
+    return tuple(matches)
 
 
 def _unique_embedding(
@@ -596,6 +616,7 @@ def _unique_embedding(
 ) -> tuple[tuple[int, int], ...]:
     if not tokens:
         return ()
+
     choices = tuple(_matches(primary, token.atoms) for token in tokens)
     if any(not matches for matches in choices):
         missing = next(index for index, matches in enumerate(choices) if not matches)
@@ -604,52 +625,86 @@ def _unique_embedding(
             f"{record_id}: no projection for token {token_id!r}"
         )
 
-    suffix_counts: list[list[int]] = [
+    best_cost: list[list[int | None]] = [
+        [None for _ in matches] for matches in choices
+    ]
+    best_count: list[list[int]] = [
         [0 for _ in matches] for matches in choices
     ]
-    suffix_counts[-1] = [1 for _ in choices[-1]]
+    best_next: list[list[int | None]] = [
+        [None for _ in matches] for matches in choices
+    ]
+
+    for match_index, (_, _, local_cost) in enumerate(choices[-1]):
+        best_cost[-1][match_index] = local_cost
+        best_count[-1][match_index] = 1
+
     for token_index in range(len(tokens) - 2, -1, -1):
         next_matches = choices[token_index + 1]
-        next_counts = suffix_counts[token_index + 1]
-        for match_index, (_, end) in enumerate(choices[token_index]):
+        for match_index, (_, end, local_cost) in enumerate(choices[token_index]):
+            minimum: int | None = None
             count = 0
-            for next_index, (next_start, _) in enumerate(next_matches):
+            selected_next: int | None = None
+            for next_index, (next_start, _, _) in enumerate(next_matches):
                 if next_start < end:
                     continue
-                count += next_counts[next_index]
-                if count >= 2:
-                    count = 2
-                    break
-            suffix_counts[token_index][match_index] = count
+                suffix_cost = best_cost[token_index + 1][next_index]
+                if suffix_cost is None:
+                    continue
+                candidate = local_cost + suffix_cost
+                if minimum is None or candidate < minimum:
+                    minimum = candidate
+                    count = best_count[token_index + 1][next_index]
+                    selected_next = next_index
+                elif candidate == minimum:
+                    count = min(
+                        2,
+                        count + best_count[token_index + 1][next_index],
+                    )
+                    selected_next = None
+            best_cost[token_index][match_index] = minimum
+            best_count[token_index][match_index] = min(2, count)
+            if count == 1:
+                best_next[token_index][match_index] = selected_next
 
-    total = min(2, sum(suffix_counts[0]))
-    if total == 0:
+    complete = [
+        (index, cost)
+        for index, cost in enumerate(best_cost[0])
+        if cost is not None and best_count[0][index] > 0
+    ]
+    if not complete:
         raise SegmentationProjectionError(
             f"{record_id}: no complete monotonic token projection"
         )
-    if total > 1:
+
+    minimum_cost = min(cost for _, cost in complete)
+    best_starts = [
+        index for index, cost in complete if cost == minimum_cost
+    ]
+    total_best = min(
+        2,
+        sum(best_count[0][index] for index in best_starts),
+    )
+    if total_best > 1:
         raise SegmentationProjectionError(
-            f"{record_id}: ambiguous complete monotonic token projection"
+            f"{record_id}: ambiguous minimum-cost monotonic token projection"
         )
 
+    current = best_starts[0]
     result: list[tuple[int, int]] = []
-    minimum_start = 0
     for token_index, token_matches in enumerate(choices):
-        viable = [
-            match
-            for match_index, match in enumerate(token_matches)
-            if match[0] >= minimum_start
-            and suffix_counts[token_index][match_index] > 0
-        ]
-        if len(viable) != 1:
+        start, end, _ = token_matches[current]
+        result.append((start, end))
+        if token_index == len(tokens) - 1:
+            break
+        next_index = best_next[token_index][current]
+        if next_index is None:
             raise SegmentationProjectionError(
-                f"{record_id}: ambiguous projection while reconstructing token sequence"
+                f"{record_id}: ambiguous projection while reconstructing "
+                "minimum-cost token sequence"
             )
-        selected = viable[0]
-        result.append(selected)
-        minimum_start = selected[1]
+        current = next_index
     return tuple(result)
-
 
 def _word_text(token: ET.Element) -> str:
     def collect(
