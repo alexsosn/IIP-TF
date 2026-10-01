@@ -238,3 +238,35 @@ def test_empty_segmented_inline_markup_is_preserved_as_zero_span_annotation(
     )
 
     assert annotation.sign_keys == ()
+
+
+def test_projection_scope_is_first_primary_paragraph_from_upstream_pipeline(
+    tmp_path: Path,
+) -> None:
+    path = _write(
+        tmp_path,
+        "first-paragraph.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="first-paragraph">
+          <text><body>
+            <div type="edition" subtype="transcription">
+              <p>A</p>
+              <p>A</p>
+            </div>
+            <div type="edition" subtype="transcription_segmented">
+              <p><w xml:id="first-paragraph-1" xml:lang="grc">A</w></p>
+            </div>
+          </body></text>
+        </TEI>""",
+    )
+
+    ir = parse_epidoc_file(path, source_revision="deadbeef")
+    word = _nodes(ir, "word")[0]
+    paragraphs = [
+        node
+        for node in _nodes(ir, "paragraph")
+        if node.feature("layer") == "transcription"
+    ]
+
+    assert len(paragraphs) == 2
+    assert word.sign_keys == paragraphs[0].sign_keys
+    assert word.sign_keys != paragraphs[1].sign_keys
