@@ -23,6 +23,7 @@ from iip_tf.ir import (
     SourceIdentity,
     SourceProvenance,
 )
+from iip_tf.metadata_parser import enrich_metadata
 from iip_tf.source_repair import SourceConflictError, repair_source_file
 
 TEI_NS: Final = "http://www.tei-c.org/ns/1.0"
@@ -197,6 +198,7 @@ class TextDirectoryValidation:
     skipped_test: int
     repaired: int
     failures: tuple[str, ...]
+    node_counts: tuple[tuple[str, int], ...]
 
 
 @dataclass
@@ -1080,7 +1082,7 @@ def parse_epidoc_file(path: Path, *, source_revision: str) -> InscriptionIR:
         features=inscription_features,
     )
     builder.finalize_corresp()
-    return builder.freeze()
+    return enrich_metadata(builder.freeze(), root)
 
 
 def validate_text_directory(
@@ -1095,6 +1097,7 @@ def validate_text_directory(
     repaired_count = 0
     skipped = 0
     failures: list[str] = []
+    node_counts: Counter[str] = Counter()
     for path in paths:
         if "test" in path.name.lower():
             skipped += 1
@@ -1105,6 +1108,7 @@ def validate_text_directory(
             failures.append(f"{path.name}: {exc}")
             continue
         parsed += 1
+        node_counts.update(node.node_type.value for node in ir.nodes)
         if ir.provenance.repaired:
             repaired_count += 1
 
@@ -1114,6 +1118,7 @@ def validate_text_directory(
         skipped_test=skipped,
         repaired=repaired_count,
         failures=tuple(failures),
+        node_counts=tuple(sorted(node_counts.items())),
     )
 
 
@@ -1125,6 +1130,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("source_dir", type=Path)
     parser.add_argument("--revision", required=True)
     parser.add_argument("--expect-parsed", type=int)
+    parser.add_argument(
+        "--expect-node-count",
+        action="append",
+        default=[],
+        metavar="TYPE=COUNT",
+    )
     return parser
 
 
@@ -1136,6 +1147,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 1
     if args.expect_parsed is not None and report.parsed != args.expect_parsed:
         return 1
+    observed = dict(report.node_counts)
+    for spec in args.expect_node_count:
+        if "=" not in spec:
+            return 1
+        node_type, raw_count = spec.split("=", 1)
+        try:
+            expected = int(raw_count)
+        except ValueError:
+            return 1
+        if observed.get(node_type, 0) != expected:
+            return 1
     return 0
 
 
