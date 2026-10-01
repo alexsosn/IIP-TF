@@ -392,7 +392,11 @@ def _atom_matches(primary: Atom, segmented: Atom) -> bool:
         return False
     primary_role = primary[2]
     segmented_role = segmented[2]
-    return segmented_role == "both" or primary_role == segmented_role
+    return (
+        primary_role == segmented_role
+        or primary_role == "both"
+        or segmented_role == "both"
+    )
 
 
 def _matches(
