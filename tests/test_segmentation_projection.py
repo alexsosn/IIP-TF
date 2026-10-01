@@ -452,3 +452,50 @@ def test_cross_role_fallback_does_not_beat_exact_role_match(tmp_path: Path) -> N
 
     assert len(word.sign_keys) == 1
     assert ir.sign(word.sign_keys[0]).reading_role == "source"
+
+
+def test_projection_can_skip_primary_glyph_inside_token_span(tmp_path: Path) -> None:
+    path = _write(
+        tmp_path,
+        "internal-glyph-omission.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="internal-glyph-omission">
+          <text><body>
+            <div type="edition" subtype="transcription">
+              <p>A<g ref="word-dot">·</g>B</p>
+            </div>
+            <div type="edition" subtype="transcription_segmented">
+              <p><w xml:id="internal-glyph-omission-1" xml:lang="grc">AB</w></p>
+            </div>
+          </body></text>
+        </TEI>""",
+    )
+
+    ir = parse_epidoc_file(path, source_revision="deadbeef")
+    word = _nodes(ir, "word")[0]
+
+    assert word.feature("token_id") == "internal-glyph-omission-1"
+    assert "".join(ir.sign(key).glyph for key in word.sign_keys) == "A·B"
+
+
+def test_projection_does_not_absorb_leading_or_trailing_omitted_glyph(
+    tmp_path: Path,
+) -> None:
+    path = _write(
+        tmp_path,
+        "edge-glyph-omission.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="edge-glyph-omission">
+          <text><body>
+            <div type="edition" subtype="transcription">
+              <p><g ref="cross">+</g>AB<g ref="cross">+</g></p>
+            </div>
+            <div type="edition" subtype="transcription_segmented">
+              <p><w xml:id="edge-glyph-omission-1" xml:lang="grc">AB</w></p>
+            </div>
+          </body></text>
+        </TEI>""",
+    )
+
+    ir = parse_epidoc_file(path, source_revision="deadbeef")
+    word = _nodes(ir, "word")[0]
+
+    assert "".join(ir.sign(key).glyph for key in word.sign_keys) == "AB"
