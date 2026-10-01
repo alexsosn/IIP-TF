@@ -545,7 +545,7 @@ def _atom_match_cost(primary: Atom, segmented: Atom) -> int | None:
     elif primary_role == "both" or segmented_role == "both":
         role_cost = 1
     else:
-        return None
+        role_cost = 4
 
     primary_kind, primary_value, _, primary_ref = primary
     segmented_kind, segmented_value, _, segmented_ref = segmented
