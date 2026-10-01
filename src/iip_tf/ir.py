@@ -33,6 +33,7 @@ class NodeType(StrEnum):
     IMAGE = "image"
     REVISION = "revision"
     DIMENSION = "dimension"
+    SUPPORT_NOTE = "support_note"
     FACSIMILE_SURFACE = "facsimile_surface"
 
 
