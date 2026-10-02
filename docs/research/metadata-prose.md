@@ -74,3 +74,18 @@ Everything else is leaf text. A future source revision adding semantics to these
 closed until researched rather than silently disappearing through `itertext()`.
 
 This hardening changes no current TF node model or pinned-source values.
+
+
+## Namespace boundary
+
+Adversarial review found that a local-name-only allowlist is insufficient: an unresearched
+namespace can otherwise alias an allowed TEI element or attribute name.
+
+Metadata validation therefore treats namespaces as semantic:
+
+- element names are accepted as TEI names only when their namespace is the TEI namespace;
+- the XML namespace is recognized explicitly for supported `xml:id` / `xml:lang` attributes;
+- any other namespaced attribute or element fails closed instead of being reduced to its local
+  name.
+
+The pinned source adds no additional metadata namespaces, so this changes no current values.
