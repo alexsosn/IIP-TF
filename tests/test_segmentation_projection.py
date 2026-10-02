@@ -499,3 +499,100 @@ def test_projection_does_not_absorb_leading_or_trailing_omitted_glyph(
     word = _nodes(ir, "word")[0]
 
     assert "".join(ir.sign(key).glyph for key in word.sign_keys) == "AB"
+
+
+def test_post_segmentation_diacritic_edit_projects_with_explicit_drift_status(
+    tmp_path: Path,
+) -> None:
+    path = _write(
+        tmp_path,
+        "diacritic-drift.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="diacritic-drift">
+          <text><body>
+            <div type="edition" subtype="transcription">
+              <p><supplied reason="lost">Ἀγαθῇ</supplied> τέλος</p>
+            </div>
+            <div type="edition" subtype="transcription_segmented" change="c2021-06-16">
+              <p><w xml:id="diacritic-drift-1" xml:lang="grc"><supplied reason="lost">Ἀγαθῆι</supplied></w>
+                 <w xml:id="diacritic-drift-2" xml:lang="grc">τέλος</w></p>
+            </div>
+          </body></text>
+        </TEI>""",
+    )
+
+    ir = parse_epidoc_file(path, source_revision="deadbeef")
+    word = next(node for node in _nodes(ir, "word") if node.feature("token_id") == "diacritic-drift-1")
+
+    assert word.feature("segmentation_status") == "projected_with_source_drift"
+    assert word.feature("word_text") == "Ἀγαθῆι"
+    assert ir.text(word.sign_keys) == "Ἀγαθῇ"
+
+
+def test_post_segmentation_case_edit_projects_with_explicit_drift_status(
+    tmp_path: Path,
+) -> None:
+    path = _write(
+        tmp_path,
+        "case-drift.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="case-drift">
+          <text><body>
+            <div type="edition" subtype="transcription"><p><orig>Θν</orig> τέλος</p></div>
+            <div type="edition" subtype="transcription_segmented" change="c2021-06-16">
+              <p><orig xml:id="case-drift-1" xml:lang="grc">ΘΝ</orig>
+                 <w xml:id="case-drift-2" xml:lang="grc">τέλος</w></p>
+            </div>
+          </body></text>
+        </TEI>""",
+    )
+
+    ir = parse_epidoc_file(path, source_revision="deadbeef")
+    word = next(node for node in _nodes(ir, "word") if node.feature("token_id") == "case-drift-1")
+
+    assert word.feature("segmentation_status") == "projected_with_source_drift"
+    assert ir.text(word.sign_keys) == "Θν"
+
+
+def test_post_segmentation_inserted_primary_character_can_be_uniquely_bridged(
+    tmp_path: Path,
+) -> None:
+    path = _write(
+        tmp_path,
+        "inserted-primary.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="inserted-primary">
+          <text><body>
+            <div type="edition" subtype="transcription">
+              <p>αβγδε τέλος</p>
+            </div>
+            <div type="edition" subtype="transcription_segmented" change="c2021-06-16">
+              <p><w xml:id="inserted-primary-1" xml:lang="grc">αβδε</w>
+                 <w xml:id="inserted-primary-2" xml:lang="grc">τέλος</w></p>
+            </div>
+          </body></text>
+        </TEI>""",
+    )
+
+    ir = parse_epidoc_file(path, source_revision="deadbeef")
+    word = next(node for node in _nodes(ir, "word") if node.feature("token_id") == "inserted-primary-1")
+
+    assert word.feature("segmentation_status") == "projected_with_source_drift"
+    assert ir.text(word.sign_keys) == "αβγδε"
+
+
+def test_source_drift_does_not_choose_between_equal_minimum_substitutions(
+    tmp_path: Path,
+) -> None:
+    path = _write(
+        tmp_path,
+        "drift-ambiguous.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="drift-ambiguous">
+          <text><body>
+            <div type="edition" subtype="transcription"><p>ABX ABY</p></div>
+            <div type="edition" subtype="transcription_segmented" change="c2021-06-16">
+              <p><w xml:id="drift-ambiguous-1" xml:lang="grc">ABZ</w></p>
+            </div>
+          </body></text>
+        </TEI>""",
+    )
+
+    with pytest.raises(SegmentationProjectionError, match="ambiguous"):
+        parse_epidoc_file(path, source_revision="deadbeef")
