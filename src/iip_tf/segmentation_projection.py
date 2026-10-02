@@ -589,7 +589,16 @@ def _atom_match_cost(primary: Atom, segmented: Atom) -> int | None:
             return role_cost + 2
         return None
 
-    if primary_kind != segmented_kind or primary_value != segmented_value:
+    if primary_kind != segmented_kind:
+        return None
+    if primary_kind == "char":
+        if unicodedata.normalize("NFD", primary_value) != unicodedata.normalize(
+            "NFD",
+            segmented_value,
+        ):
+            return None
+        return role_cost
+    if primary_value != segmented_value:
         return None
     return role_cost
 
