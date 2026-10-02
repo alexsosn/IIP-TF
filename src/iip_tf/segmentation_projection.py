@@ -626,6 +626,22 @@ def _atom_alignment_cost(primary: Atom, segmented: Atom) -> tuple[int, int] | No
     return None
 
 
+def _anchored_atom_alignment_cost(
+    primary: Atom,
+    segmented: Atom,
+) -> tuple[int, int] | None:
+    aligned = _atom_alignment_cost(primary, segmented)
+    if aligned is None:
+        return None
+    if aligned[1] == 0:
+        return aligned
+    if primary[0] != "char" or segmented[0] != "char":
+        return None
+    if _char_drift_cost(primary[1], segmented[1]) >= _GENERIC_SUBSTITUTION_COST:
+        return None
+    return aligned
+
+
 def _matches(
     primary: tuple[_PrimaryAtom, ...],
     signature: tuple[Atom, ...],
@@ -635,7 +651,10 @@ def _matches(
 
     matches: list[_TokenMatch] = []
     for start, primary_atom in enumerate(primary):
-        first = _atom_alignment_cost(primary_atom.signature, signature[0])
+        first = _anchored_atom_alignment_cost(
+            primary_atom.signature,
+            signature[0],
+        )
         if first is None:
             continue
         first_cost, first_drift = first
