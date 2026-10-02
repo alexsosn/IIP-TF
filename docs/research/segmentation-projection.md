@@ -181,12 +181,19 @@ Additional measured source behaviors:
   Their commit history documents spelling/diacritic/case changes, inserted source characters,
   or an editorial-tree rewrite after the c2021 segmentation run.
 
-For the documented stale-snapshot cases the projector permits a narrowly bounded edit model:
-at most two character-level source-drift edits inside a token, only after a token start has been
-anchored by exact/case/diacritic evidence. Case/diacritic-equivalent substitutions cost less than
-generic substitutions; inserted/deleted current-source characters cost more. Semantic events and
-glyph refs remain strict. The complete token sequence must still have exactly one global
-minimum-cost monotonic embedding. Equal-cost alternatives remain release-blocking.
+For the documented stale-snapshot cases in the audited pinned Brown revision, the projector
+permits a narrowly bounded edit model: at most two character-level source-drift edits inside a
+token, only after a token start has been anchored by exact/case/diacritic evidence.
+Case/diacritic-equivalent substitutions cost less than generic substitutions; inserted/deleted
+current-source characters cost more. Semantic events and glyph refs remain strict. The complete
+token sequence must still have exactly one global minimum-cost monotonic embedding. Equal-cost
+alternatives remain release-blocking.
+
+This drift exception is revision-scoped: it is enabled only for pinned revision
+`0b7dc8358ccdfd0c9391f049da4839fbd91c26e5`, whose stale snapshots were audited against source
+history. For any other revision, exact/role/glyph/Unicode-canonical projection remains available,
+but character substitution/insertion/deletion is disabled and a mismatch fails closed until that
+revision is researched.
 
 A word touched by this bounded edit model receives
 `segmentation_status=projected_with_source_drift`. Its `word_text` remains the raw segmented
