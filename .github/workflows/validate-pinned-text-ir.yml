@@ -15,6 +15,7 @@ on:
       - "tests/test_segmentation_projection.py"
       - "schema/iip-tf-0.1.json"
       - ".github/workflows/validate-pinned-text-ir.yml"
+      - "scripts/research_issue43_zero_spans.py"
   push:
     branches: [main]
     paths:
@@ -70,3 +71,7 @@ jobs:
             --expect-node-count revision=18690 \
             --expect-node-count dimension=8658 \
             --expect-node-count support_note=1516
+      - name: Research #43 empty-span inventory
+        run: |
+          python scripts/research_issue43_zero_spans.py upstream-iip/epidoc-files \
+            --revision 0b7dc8358ccdfd0c9391f049da4839fbd91c26e5
