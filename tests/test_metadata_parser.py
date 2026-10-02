@@ -386,10 +386,26 @@ def test_unknown_child_inside_mapped_metadata_scope_fails_closed(tmp_path: Path)
 @pytest.mark.parametrize(
     "fragment",
     [
-        '<physDesc><objectDesc><supportDesc><support><p bogus="x">note</p></support></supportDesc></objectDesc></physDesc>',
-        '<physDesc><objectDesc><supportDesc><condition><p bogus="x">note</p></condition></supportDesc></objectDesc></physDesc>',
-        '<physDesc><objectDesc><layoutDesc><layout><p bogus="x">note</p></layout></layoutDesc></objectDesc></physDesc>',
-        '<physDesc><handDesc><handNote><p bogus="x">note</p></handNote></handDesc></physDesc>',
+        (
+            '<physDesc><objectDesc><supportDesc><support>'
+            '<p bogus="x">note</p>'
+            '</support></supportDesc></objectDesc></physDesc>'
+        ),
+        (
+            '<physDesc><objectDesc><supportDesc><condition>'
+            '<p bogus="x">note</p>'
+            '</condition></supportDesc></objectDesc></physDesc>'
+        ),
+        (
+            '<physDesc><objectDesc><layoutDesc><layout>'
+            '<p bogus="x">note</p>'
+            '</layout></layoutDesc></objectDesc></physDesc>'
+        ),
+        (
+            '<physDesc><handDesc><handNote>'
+            '<p bogus="x">note</p>'
+            '</handNote></handDesc></physDesc>'
+        ),
         '<history><origin><p bogus="x">note</p></origin></history>',
     ],
     ids=["support", "condition", "layout", "hand", "origin"],
