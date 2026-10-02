@@ -72,16 +72,34 @@ def _local(name: str) -> str:
     return name
 
 
+def _metadata_element_name(name: str) -> str:
+    if not name.startswith("{"):
+        return name
+    namespace, local = name[1:].split("}", 1)
+    if namespace != TEI_NS:
+        raise MetadataParseError(
+            f"{local}: unresearched namespace {namespace!r}"
+        )
+    return local
+
+
 def _attr_name(name: str) -> str:
     if name == XML_ID:
         return "xml:id"
     if name == XML_LANG:
         return "xml:lang"
-    return _local(name)
+    if name.startswith("{"):
+        namespace, local = name[1:].split("}", 1)
+        if namespace == XML_NS:
+            return f"xml:{local}"
+        raise MetadataParseError(
+            f"{local}: unresearched namespace {namespace!r}"
+        )
+    return name
 
 
 def _validate_attrs(element: ET.Element) -> None:
-    name = _local(element.tag)
+    name = _metadata_element_name(element.tag)
     allowed = _METADATA_ATTRS.get(name)
     if allowed is None:
         raise MetadataParseError(f"unsupported mapped metadata element {name!r}")
@@ -92,11 +110,15 @@ def _validate_attrs(element: ET.Element) -> None:
 
 
 def _validate_children(element: ET.Element, allowed: set[str]) -> None:
-    name = _local(element.tag)
-    unknown = [
-        _local(child.tag)
+    name = _metadata_element_name(element.tag)
+    child_names = [
+        _metadata_element_name(child.tag)
         for child in list(element)
-        if _local(child.tag) not in allowed
+    ]
+    unknown = [
+        child_name
+        for child_name in child_names
+        if child_name not in allowed
     ]
     if unknown:
         raise MetadataParseError(
