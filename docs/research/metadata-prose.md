@@ -1,35 +1,76 @@
-# Research — mapped metadata prose semantics
+# Research — fail-closed text-valued metadata semantics
 
 Issue: #38.
 
-Pinned Brown IIP revision: `0b7dc8358ccdfd0c9391f049da4839fbd91c26e5`.
+Pinned Brown IIP revision:
 
-`scripts/research_issue38.py` scans all 5,535 non-test records after #15 source preflight. It measures the five metadata prose paths currently consumed via `itertext()` without path-specific validation.
+`0b7dc8358ccdfd0c9391f049da4839fbd91c26e5`
 
-## Results
+The audit in `scripts/research_issue38.py` runs after #15 source preflight and scans all
+**5,535 non-test records**. It covers every metadata path whose visible value is currently
+obtained from element text rather than from a mapped attribute.
 
-| Path | Records | `p` elements | Attributes on `p` | Nested elements |
+## Metadata prose paragraphs
+
+The five prose paths contain **22,975** `p` elements:
+
+| Path | Records | Elements | Attributes | Children |
 |---|---:|---:|---|---|
-| `support/p` | 2,580 | 2,585 | none | one `foreign` |
+| `support/p` | 2,580 | 2,585 | none | one `foreign` in one record |
 | `condition/p` | 5,530 | 5,530 | none | none |
 | `layout/p` | 5,535 | 5,535 | none | none |
 | `origin/p` | 5,369 | 5,369 | none | none |
 | `handNote/p` | 3,955 | 3,956 | none | none |
 
-Total audited prose `p` elements: **22,975**. No path has a source attribute on `p`.
+The sole nested support case is `akld0007.xml`:
 
-The sole nested case is `akld0007.xml`:
+`<p>This is more <foreign>information</foreign> about the support</p>`
 
-`<support><p>This is more <foreign>information</foreign> about the support</p> ...`.
+The `foreign` wrapper has no attributes and no children. It is therefore an audited transparent
+wrapper for support-note text, not a general metadata-inline vocabulary.
 
-The `foreign` element has no attributes and no nested children. Its visible text is already part of the support-note prose. No other metadata prose path contains inline markup in the pinned corpus.
+## Other text-valued metadata
 
-## Parser consequence
+The expanded audit found these source shapes:
 
-- Metadata prose `p` has an empty allowed-attribute set.
-- `condition/p`, `layout/p`, `origin/p`, and `handNote/p` allow no child elements.
-- `support/p` allows only the audited transparent `foreign` wrapper.
-- The audited `foreign` wrapper has an empty allowed-attribute set and no child elements.
-- Any future attribute or other nested element is an unresearched semantic change and must fail closed rather than disappear through `itertext()`.
+- dimensions: `height` 5,324, `width` 5,252, `depth` 4,978; only the already-mapped
+  `atLeast`/`atMost` attributes occur; no children;
+- origin `date`: 5,533; mapped `notBefore`, `notAfter`, `period`, and rare
+  `precision`; no children;
+- origin `region`: 5,535; only two `cert` attributes; no children;
+- origin `geogName`: 5,534, always mapped `type`; no children;
+- origin `geogFeat`: 4,360, always mapped `type`; no children;
+- settlement `geo`: 470, no attributes or children;
+- provenance `placeName`: 5,535, no attributes or children;
+- `biblScope`: 7,598; only mapped `unit` and `n`; no children;
+- decoration `ab` and `locus`: 7,995 each, no attributes or children;
+- facsimile `note`: 57, no attributes or children;
+- revision `change`: 18,690; only mapped `when`, `when-custom`, and `who`; no children.
 
-This is a validation hardening only: it does not change the frozen TF node model or current pinned-source values/counts.
+Facsimile descriptions are the other audited nested exception:
+
+- 5,644 `desc` elements in 5,514 records;
+- no attributes on `desc`;
+- exactly 97 descendant/direct-child `persName` elements in 59 records;
+- every such `persName` has the mapped `role` attribute and no children.
+
+Thus `desc > persName@role` is the only source-supported nested facsimile text shape.
+
+## Parser contract
+
+All mapped metadata text extraction is fail-closed:
+
+1. validate the text-bearing element's attributes against its audited allowlist;
+2. reject unmeasured child elements;
+3. validate attributes and childlessness of any explicitly allowed transparent child;
+4. only then normalize visible text.
+
+The only transparent nested forms in schema 0.1 are:
+
+- `support/p > foreign`, with no attributes or children;
+- `surface/desc > persName@role`, with no nested children.
+
+Everything else is leaf text. A future source revision adding semantics to these paths must fail
+closed until researched rather than silently disappearing through `itertext()`.
+
+This hardening changes no current TF node model or pinned-source values.
