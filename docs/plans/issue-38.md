@@ -1,24 +1,43 @@
-# Issue #38 plan — fail closed on metadata prose semantics
+# Issue #38 plan — fail closed on text-valued metadata semantics
 
 ## Research gate
 
-Full pinned-source path audit is recorded in `docs/research/metadata-prose.md` and reproducible with `scripts/research_issue38.py`.
+`docs/research/metadata-prose.md` and `scripts/research_issue38.py` cover every metadata path
+whose value is derived from element text, across all 5,535 non-test pinned records.
 
-## RED
+## RED gates
 
-Before production changes, tests require:
+RED tests are committed before each production broadening.
 
-- unknown attributes on each mapped prose `p` path to fail;
-- an unsupported nested semantic element in metadata prose to fail;
-- `foreign@xml:lang` in support prose to fail because the only audited wrapper has no attributes;
-- the exact audited `support/p > foreign` shape to continue producing the same support-note text.
+First RED slice:
+- unknown attributes on support/condition/layout/origin/hand prose `p`;
+- unsupported nested prose semantics;
+- unresearched attributes on the sole audited support `foreign` wrapper.
+
+Second RED slice, triggered by adversarial review:
+- unsupported children in dimensions, origin date/region, bibliography scope, and revision change;
+- unresearched provenance/decorative attributes;
+- unknown facsimile-description child;
+- nested content inside the audited credit `persName`;
+- preserve the valid `desc > persName role=...` credit shape.
 
 ## GREEN
 
-Add one metadata-prose extraction helper that validates the element before returning normalized prose. Use it at every current support/condition/layout/origin/hand prose call site. Keep the allowlist path-specific: `foreign` is transparent only under support prose.
+Use one validated metadata-text extractor. The extractor validates the current element, checks a
+path-specific direct-child allowlist, validates any allowed transparent child, requires it to be
+childless, then returns normalized text.
 
-## Verification / review
+Only two paths permit children:
+- support `p`: `foreign`;
+- facsimile `desc`: `persName`.
 
-- Ruff, strict MyPy, Pytest green;
-- pinned canonical IR remains 5,535/5,535 with frozen node counts and 39,472 segmented token identities;
-- exact-head logically independent adversarial review checks that no `itertext()` metadata prose escape hatch remains.
+All other audited text-valued metadata elements are leaf nodes.
+
+## Verification
+
+- Ruff and strict MyPy green;
+- all focused tests green;
+- pinned full-source canonical IR remains 5,535/5,535 with frozen node/token counts;
+- research workflow remains reproducible;
+- exact-head logically independent adversarial review checks for any remaining raw `itertext()`
+  call site reachable from mapped metadata.
