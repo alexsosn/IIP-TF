@@ -20,6 +20,23 @@ TARGETS: Final = {
     "layout_p": ".//tei:objectDesc/tei:layoutDesc/tei:layout/tei:p",
     "origin_p": ".//tei:history/tei:origin/tei:p",
     "hand_p": ".//tei:physDesc/tei:handDesc/tei:handNote/tei:p",
+    "dimension_height": ".//tei:dimensions/tei:height",
+    "dimension_width": ".//tei:dimensions/tei:width",
+    "dimension_depth": ".//tei:dimensions/tei:depth",
+    "origin_date": ".//tei:history/tei:origin/tei:date",
+    "origin_region": ".//tei:history/tei:origin/tei:placeName/tei:region",
+    "origin_geog_name": ".//tei:history/tei:origin/tei:placeName/tei:geogName",
+    "origin_geog_feat": ".//tei:history/tei:origin/tei:placeName/tei:geogFeat",
+    "origin_geo": ".//tei:history/tei:origin/tei:placeName/tei:geo",
+    "settlement_geo": ".//tei:history/tei:origin/tei:placeName/tei:settlement/tei:geo",
+    "provenance_place": ".//tei:history/tei:provenance/tei:placeName",
+    "bibl_scope": ".//tei:div[@type='bibliography']/tei:listBibl/tei:bibl/tei:biblScope",
+    "decoration_ab": ".//tei:physDesc/tei:decoDesc/tei:decoNote/tei:ab",
+    "decoration_locus": ".//tei:physDesc/tei:decoDesc/tei:decoNote/tei:locus",
+    "facsimile_desc": ".//tei:surface/tei:desc",
+    "facsimile_note": ".//tei:surface/tei:note",
+    "image_credit_name": ".//tei:surface/tei:desc/tei:persName",
+    "revision_change": ".//tei:teiHeader/tei:revisionDesc/tei:change",
 }
 
 
