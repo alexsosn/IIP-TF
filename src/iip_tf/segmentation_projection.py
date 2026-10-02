@@ -157,7 +157,8 @@ class _TokenMatch:
     start: int
     end: int
     cost: int
-    positions: tuple[int, ...]
+    drift_edits: int
+    positions: tuple[int | None, ...]
 
 
 def _local(name: str) -> str:
@@ -545,15 +546,20 @@ def _primary_atoms(
     return tuple(atoms)
 
 
-def _atom_match_cost(primary: Atom, segmented: Atom) -> int | None:
-    primary_role = primary[2]
-    segmented_role = segmented[2]
+_SOURCE_DRIFT_COST: Final = 12
+_MAX_SOURCE_DRIFT_EDITS: Final = 2
+
+
+def _role_match_cost(primary_role: str, segmented_role: str) -> int:
     if primary_role == segmented_role:
-        role_cost = 0
-    elif primary_role == "both" or segmented_role == "both":
-        role_cost = 1
-    else:
-        role_cost = 4
+        return 0
+    if primary_role == "both" or segmented_role == "both":
+        return 1
+    return 4
+
+
+def _atom_match_cost(primary: Atom, segmented: Atom) -> int | None:
+    role_cost = _role_match_cost(primary[2], segmented[2])
 
     primary_kind, primary_value, _, primary_ref = primary
     segmented_kind, segmented_value, _, segmented_ref = segmented
@@ -586,6 +592,19 @@ def _atom_match_cost(primary: Atom, segmented: Atom) -> int | None:
     return role_cost
 
 
+def _atom_alignment_cost(primary: Atom, segmented: Atom) -> tuple[int, int] | None:
+    exact = _atom_match_cost(primary, segmented)
+    if exact is not None:
+        return exact, 0
+
+    if primary[0] == "char" and segmented[0] == "char":
+        return (
+            _SOURCE_DRIFT_COST + _role_match_cost(primary[2], segmented[2]),
+            1,
+        )
+    return None
+
+
 def _matches(
     primary: tuple[_PrimaryAtom, ...],
     signature: tuple[Atom, ...],
@@ -595,45 +614,81 @@ def _matches(
 
     matches: list[_TokenMatch] = []
     for start, primary_atom in enumerate(primary):
-        first_cost = _atom_match_cost(primary_atom.signature, signature[0])
-        if first_cost is None:
+        first = _atom_alignment_cost(primary_atom.signature, signature[0])
+        if first is None:
+            continue
+        first_cost, first_drift = first
+        if first_drift > _MAX_SOURCE_DRIFT_EDITS:
             continue
 
-        states: list[tuple[int, int, tuple[int, ...]]] = [
-            (start, first_cost, (start,))
+        states: list[tuple[int, int, int, tuple[int | None, ...]]] = [
+            (start, first_cost, first_drift, (start,))
         ]
         for segmented_atom in signature[1:]:
-            next_states: list[tuple[int, int, tuple[int, ...]]] = []
-            for current, accumulated, positions in states:
+            next_states: list[
+                tuple[int, int, int, tuple[int | None, ...]]
+            ] = []
+            for current, accumulated, drift_edits, positions in states:
+                if (
+                    segmented_atom[0] == "char"
+                    and drift_edits < _MAX_SOURCE_DRIFT_EDITS
+                ):
+                    next_states.append(
+                        (
+                            current,
+                            accumulated + _SOURCE_DRIFT_COST,
+                            drift_edits + 1,
+                            (*positions, None),
+                        )
+                    )
+
                 candidate = current + 1
                 skipped_cost = 0
+                skipped_drift = 0
                 while candidate < len(primary):
-                    match_cost = _atom_match_cost(
+                    aligned = _atom_alignment_cost(
                         primary[candidate].signature,
                         segmented_atom,
                     )
-                    if match_cost is not None:
-                        next_states.append(
-                            (
-                                candidate,
-                                accumulated + skipped_cost + match_cost,
-                                (*positions, candidate),
+                    if aligned is not None:
+                        match_cost, match_drift = aligned
+                        total_drift = drift_edits + skipped_drift + match_drift
+                        if total_drift <= _MAX_SOURCE_DRIFT_EDITS:
+                            next_states.append(
+                                (
+                                    candidate,
+                                    accumulated
+                                    + skipped_cost
+                                    + match_cost,
+                                    total_drift,
+                                    (*positions, candidate),
+                                )
                             )
-                        )
-                    if primary[candidate].signature[0] != "glyph":
+
+                    candidate_kind = primary[candidate].signature[0]
+                    if candidate_kind == "glyph":
+                        skipped_cost += 3
+                    elif (
+                        candidate_kind == "char"
+                        and drift_edits + skipped_drift
+                        < _MAX_SOURCE_DRIFT_EDITS
+                    ):
+                        skipped_cost += _SOURCE_DRIFT_COST
+                        skipped_drift += 1
+                    else:
                         break
-                    skipped_cost += 3
                     candidate += 1
             states = next_states
             if not states:
                 break
 
-        for end_position, cost, positions in states:
+        for end_position, cost, drift_edits, positions in states:
             matches.append(
                 _TokenMatch(
                     start=start,
                     end=end_position + 1,
                     cost=cost,
+                    drift_edits=drift_edits,
                     positions=positions,
                 )
             )
@@ -982,15 +1037,23 @@ def enrich_segmentation(
                     raise SegmentationProjectionError(
                         f"{record_id}: non-empty annotation in zero-atom token"
                     )
-                ann_first_atom = match.positions[annotation.start]
-                ann_last_atom = match.positions[annotation.end - 1]
-                ann_first = primary[ann_first_atom].sign_start
-                ann_last = primary[ann_last_atom].sign_end
-                ann_sign_keys = tuple(
-                    sign.key
-                    for sign in ir.signs[ann_first : ann_last + 1]
-                    if sign.layer.value == primary_layer
-                )
+                mapped_positions = [
+                    position
+                    for position in match.positions[
+                        annotation.start : annotation.end
+                    ]
+                    if position is not None
+                ]
+                if not mapped_positions:
+                    ann_sign_keys = ()
+                else:
+                    ann_first = primary[mapped_positions[0]].sign_start
+                    ann_last = primary[mapped_positions[-1]].sign_end
+                    ann_sign_keys = tuple(
+                        sign.key
+                        for sign in ir.signs[ann_first : ann_last + 1]
+                        if sign.layer.value == primary_layer
+                    )
             if annotation.key in existing_keys:
                 raise SegmentationProjectionError(
                     f"{record_id}: duplicate projected annotation key "
@@ -1042,7 +1105,11 @@ def enrich_segmentation(
             "token_kind": _local(token.tag),
             "token_id": token_id,
             "word_text": _word_text(token),
-            "segmentation_status": "projected",
+            "segmentation_status": (
+                "projected_with_source_drift"
+                if match.drift_edits
+                else "projected"
+            ),
             "candidate_index": resolution.selected_index,
         }
         lang = token.attrib.get(XML_LANG)
