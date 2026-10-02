@@ -159,3 +159,68 @@ focused RED fixtures:
    annotation IR nodes rather than made into text or treated as a projection failure.
 
 The remaining failures are kept release-blocking pending further corpus-level classification.
+
+
+## Full-source closure
+
+The whole-corpus RED/fix loop reduced the initial 60 release-blocking projection failures to
+zero without introducing a first-match or whitespace-tokenization fallback.
+
+Additional measured source behaviors:
+
+- the upstream segmentation program always starts from the first descendant `p` of the
+  normalized transcription; projection therefore uses the first primary paragraph rather than
+  the complete edition;
+- repeated text requires global minimum-cost monotonic projection, not greedy matching;
+- `g@ref` is part of glyph identity;
+- selected zero-atom token roots keep token identity on their sole zero-span segmented markup
+  annotation rather than creating a fake word node;
+- Unicode canonically equivalent Greek code points (for example oxia/tonos encodings) are exact
+  textual identity, not editorial drift;
+- seven pinned records contain segmented snapshots that predate later transcription edits.
+  Their commit history documents spelling/diacritic/case changes, inserted source characters,
+  or an editorial-tree rewrite after the c2021 segmentation run.
+
+For the documented stale-snapshot cases the projector permits a narrowly bounded edit model:
+at most two character-level source-drift edits inside a token, only after a token start has been
+anchored by exact/case/diacritic evidence. Case/diacritic-equivalent substitutions cost less than
+generic substitutions; inserted/deleted current-source characters cost more. Semantic events and
+glyph refs remain strict. The complete token sequence must still have exactly one global
+minimum-cost monotonic embedding. Equal-cost alternatives remain release-blocking.
+
+A word touched by this bounded edit model receives
+`segmentation_status=projected_with_source_drift`. Its `word_text` remains the raw segmented
+snapshot while its sign span points to the current primary source text, so the source disagreement
+is visible rather than silently normalized.
+
+### Repaired-source accounting
+
+The original audit counts exclude the seven malformed XML files because they could not be parsed
+before #15. Those seven repaired records contribute:
+
+- **7** additional segmented-edition candidates;
+- **49** additional selected token roots.
+
+Consequently the full parser, after #15 preflight, has the following frozen invariants:
+
+- **5,167** `segmentation` provenance nodes;
+- **39,472** selected segmented token identities;
+- **39,463** `word` nodes;
+- **9** zero-atom token identities preserved as segmented markup rather than fake words.
+
+Thus every selected token root has a native IR identity even when it has no projectable textual
+atoms.
+
+### Final pinned-source result
+
+On the pinned Brown revision after #15 preflight:
+
+- 5,536 XML files accounted;
+- 1 test file skipped;
+- 5,535/5,535 non-test records parsed;
+- 7 repaired files consumed;
+- 0 projection failures.
+
+The anchored-start bounded matcher reduced the whole-corpus parse step from roughly 140 seconds
+during the unrestricted drift experiment to roughly 61 seconds on the GitHub runner while also
+narrowing the fuzzy search surface.
