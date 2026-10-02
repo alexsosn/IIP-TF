@@ -599,12 +599,13 @@ def _char_drift_cost(primary_value: str, segmented_value: str) -> int:
         return 4
 
     def base(value: str) -> str:
-        decomposed = unicodedata.normalize("NFD", value.casefold())
-        return "".join(
+        decomposed = unicodedata.normalize("NFD", value)
+        unmarked = "".join(
             char
             for char in decomposed
             if unicodedata.category(char) != "Mn"
         )
+        return unmarked.casefold()
 
     if base(primary_value) == base(segmented_value):
         return 6
