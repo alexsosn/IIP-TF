@@ -36,11 +36,12 @@ TFF may be consulted as implementation/reference material. In particular:
 
 ## Rationale
 
-TFF 1.0.8's generic TEI conventions conflict with ADR-0001 in several
+TFF 1.0.8's generic conversion conventions conflict with ADR-0001 in several
 independent ways:
 
-1. Its supported slot granularities are `word`, `token`, and `char`;
-   IIP-TF requires `sign` slots whose population excludes ordinary whitespace
+1. Its built-in TEI slot populations are `word`, `token`, and `char`
+   (the NLP path begins from character slots); IIP-TF requires `sign` slots
+   whose population excludes ordinary whitespace
    and includes typed zero-width source events.
 2. Its vanilla walk creates a TF node named after nearly every TEI element.
    IIP-TF maps source syntax into a small semantic vocabulary such as
@@ -56,6 +57,10 @@ independent ways:
 6. IIP words come from audited `transcription_segmented` candidates and
    deterministic projection to the chosen primary layer. Generic tokenization
    or treating segmented XML as another text layer is not equivalent.
+7. The alternative generic `tff.convert.xml` path explicitly warns that its
+   conversion conflates namespaces. Its extension point for non-generic graph
+   semantics is a replacement `convertTaskCustom`; using that for IIP-TF would
+   mean supplying our own conversion director around `tf.convert.walker.CV`.
 
 The TFF hook surface is powerful, but restoring these invariants through hooks
 would reproduce the current IIP-specific semantic parser inside a stateful TF
