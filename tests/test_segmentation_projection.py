@@ -617,3 +617,26 @@ def test_source_drift_does_not_use_generic_first_character_substitution(
 
     with pytest.raises(SegmentationProjectionError, match="no projection"):
         parse_epidoc_file(path, source_revision="deadbeef")
+
+
+def test_unicode_canonically_equivalent_greek_is_not_source_drift(
+    tmp_path: Path,
+) -> None:
+    path = _write(
+        tmp_path,
+        "canonical-equivalence.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="canonical-equivalence">
+          <text><body>
+            <div type="edition" subtype="transcription"><p>όρος</p></div>
+            <div type="edition" subtype="transcription_segmented" change="c2021-06-16">
+              <p><w xml:id="canonical-equivalence-1" xml:lang="grc">όρος</w></p>
+            </div>
+          </body></text>
+        </TEI>""",
+    )
+
+    ir = parse_epidoc_file(path, source_revision="deadbeef")
+    word = next(node for node in _nodes(ir, "word"))
+
+    assert word.feature("segmentation_status") == "projected"
+    assert ir.text(word.sign_keys) == "όρος"
