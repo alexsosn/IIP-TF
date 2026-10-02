@@ -380,3 +380,92 @@ def test_unknown_child_inside_mapped_metadata_scope_fails_closed(tmp_path: Path)
 
     with pytest.raises(ValueError, match="handNote.*foo"):
         parse_epidoc_file(path, source_revision="deadbeef")
+
+
+
+@pytest.mark.parametrize(
+    "fragment",
+    [
+        '<physDesc><objectDesc><supportDesc><support><p bogus="x">note</p></support></supportDesc></objectDesc></physDesc>',
+        '<physDesc><objectDesc><supportDesc><condition><p bogus="x">note</p></condition></supportDesc></objectDesc></physDesc>',
+        '<physDesc><objectDesc><layoutDesc><layout><p bogus="x">note</p></layout></layoutDesc></objectDesc></physDesc>',
+        '<physDesc><handDesc><handNote><p bogus="x">note</p></handNote></handDesc></physDesc>',
+        '<history><origin><p bogus="x">note</p></origin></history>',
+    ],
+    ids=["support", "condition", "layout", "hand", "origin"],
+)
+def test_mapped_metadata_prose_attributes_fail_closed(
+    tmp_path: Path,
+    fragment: str,
+) -> None:
+    path = _write(
+        tmp_path,
+        "metadata-prose-attr.xml",
+        f"""<TEI xmlns="http://www.tei-c.org/ns/1.0">
+          <teiHeader><fileDesc><sourceDesc><msDesc>{fragment}</msDesc></sourceDesc></fileDesc></teiHeader>
+          <text><body><div type="edition" subtype="transcription"><p>A</p></div></body></text>
+        </TEI>""",
+    )
+
+    with pytest.raises(ValueError, match="p@bogus"):
+        parse_epidoc_file(path, source_revision="deadbeef")
+
+
+def test_unknown_nested_metadata_prose_semantics_fail_closed(tmp_path: Path) -> None:
+    path = _write(
+        tmp_path,
+        "metadata-prose-child.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0">
+          <teiHeader><fileDesc><sourceDesc><msDesc>
+            <physDesc><objectDesc><supportDesc><support>
+              <p>before <persName>someone</persName> after</p>
+            </support></supportDesc></objectDesc></physDesc>
+          </msDesc></sourceDesc></fileDesc></teiHeader>
+          <text><body><div type="edition" subtype="transcription"><p>A</p></div></body></text>
+        </TEI>""",
+    )
+
+    with pytest.raises(ValueError, match="p.*persName"):
+        parse_epidoc_file(path, source_revision="deadbeef")
+
+
+def test_audited_support_foreign_wrapper_is_transparent_and_preserved(
+    tmp_path: Path,
+) -> None:
+    path = _write(
+        tmp_path,
+        "support-foreign.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0">
+          <teiHeader><fileDesc><sourceDesc><msDesc>
+            <physDesc><objectDesc><supportDesc><support>
+              <p>This is more <foreign>information</foreign> about the support</p>
+            </support></supportDesc></objectDesc></physDesc>
+          </msDesc></sourceDesc></fileDesc></teiHeader>
+          <text><body><div type="edition" subtype="transcription"><p>A</p></div></body></text>
+        </TEI>""",
+    )
+
+    ir = parse_epidoc_file(path, source_revision="deadbeef")
+    note = _nodes(ir, "support_note")[0]
+
+    assert note.feature("note") == "This is more information about the support"
+
+
+def test_support_foreign_attributes_are_unresearched_and_fail_closed(
+    tmp_path: Path,
+) -> None:
+    path = _write(
+        tmp_path,
+        "support-foreign-attr.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0">
+          <teiHeader><fileDesc><sourceDesc><msDesc>
+            <physDesc><objectDesc><supportDesc><support>
+              <p>more <foreign xml:lang="la">information</foreign></p>
+            </support></supportDesc></objectDesc></physDesc>
+          </msDesc></sourceDesc></fileDesc></teiHeader>
+          <text><body><div type="edition" subtype="transcription"><p>A</p></div></body></text>
+        </TEI>""",
+    )
+
+    with pytest.raises(ValueError, match="foreign@xml:lang"):
+        parse_epidoc_file(path, source_revision="deadbeef")
