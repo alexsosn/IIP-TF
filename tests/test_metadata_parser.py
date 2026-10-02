@@ -485,3 +485,168 @@ def test_support_foreign_attributes_are_unresearched_and_fail_closed(
 
     with pytest.raises(ValueError, match="foreign@xml:lang"):
         parse_epidoc_file(path, source_revision="deadbeef")
+
+
+
+@pytest.mark.parametrize(
+    ("fragment", "message"),
+    [
+        (
+            (
+                '<physDesc><objectDesc><supportDesc><support>'
+                '<dimensions><height>1<foo>x</foo></height></dimensions>'
+                '</support></supportDesc></objectDesc></physDesc>'
+            ),
+            "height.*foo",
+        ),
+        (
+            (
+                '<history><origin>'
+                '<date notBefore="1">first<foo>x</foo></date>'
+                '</origin></history>'
+            ),
+            "date.*foo",
+        ),
+        (
+            (
+                '<history><origin><placeName>'
+                '<region>Judaea<foo>x</foo></region>'
+                '</placeName></origin></history>'
+            ),
+            "region.*foo",
+        ),
+        (
+            (
+                '<history><provenance>'
+                '<placeName bogus="x">Museum</placeName>'
+                '</provenance></history>'
+            ),
+            "placeName@bogus",
+        ),
+        (
+            (
+                '<div type="bibliography"><listBibl><bibl xml:id="b1">'
+                '<biblScope unit="page">1<foo>x</foo></biblScope>'
+                '</bibl></listBibl></div>'
+            ),
+            "biblScope.*foo",
+        ),
+        (
+            (
+                '<physDesc><decoDesc><decoNote>'
+                '<ab bogus="x">rosette</ab><locus>front</locus>'
+                '</decoNote></decoDesc></physDesc>'
+            ),
+            "ab@bogus",
+        ),
+        (
+            (
+                '<revisionDesc>'
+                '<change when="2020-01-01">edit<foo>x</foo></change>'
+                '</revisionDesc>'
+            ),
+            "change.*foo",
+        ),
+    ],
+    ids=[
+        "dimension",
+        "origin-date",
+        "region",
+        "provenance",
+        "bibliography",
+        "decoration",
+        "revision",
+    ],
+)
+def test_other_text_valued_metadata_semantics_fail_closed(
+    tmp_path: Path,
+    fragment: str,
+    message: str,
+) -> None:
+    if fragment.startswith("<revisionDesc"):
+        header = (
+            "<teiHeader><fileDesc><sourceDesc><msDesc/>"
+            "</sourceDesc></fileDesc>"
+            f"{fragment}</teiHeader>"
+        )
+        back = ""
+    elif fragment.startswith('<div type="bibliography"'):
+        header = (
+            "<teiHeader><fileDesc><sourceDesc><msDesc/>"
+            "</sourceDesc></fileDesc></teiHeader>"
+        )
+        back = f"<back>{fragment}</back>"
+    else:
+        header = (
+            "<teiHeader><fileDesc><sourceDesc><msDesc>"
+            f"{fragment}"
+            "</msDesc></sourceDesc></fileDesc></teiHeader>"
+        )
+        back = ""
+
+    path = _write(
+        tmp_path,
+        "metadata-text-semantics.xml",
+        (
+            '<TEI xmlns="http://www.tei-c.org/ns/1.0">'
+            f"{header}"
+            '<text><body><div type="edition" subtype="transcription">'
+            "<p>A</p></div></body>"
+            f"{back}</text></TEI>"
+        ),
+    )
+
+    with pytest.raises(ValueError, match=message):
+        parse_epidoc_file(path, source_revision="deadbeef")
+
+
+def test_facsimile_desc_rejects_unknown_child_but_keeps_audited_credit_shape(
+    tmp_path: Path,
+) -> None:
+    bad = _write(
+        tmp_path,
+        "facsimile-desc-bad.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0">
+          <facsimile><surface>
+            <desc>Front <foo>unmapped</foo></desc>
+            <graphic url="front.jpg"/>
+          </surface></facsimile>
+          <text><body><div type="edition" subtype="transcription"><p>A</p></div></body></text>
+        </TEI>""",
+    )
+
+    with pytest.raises(ValueError, match="desc.*foo"):
+        parse_epidoc_file(bad, source_revision="deadbeef")
+
+    good = _write(
+        tmp_path,
+        "facsimile-desc-good.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0">
+          <facsimile><surface>
+            <desc>Front <persName role="Credit">Zev Radovan</persName></desc>
+            <graphic url="front.jpg"/>
+          </surface></facsimile>
+          <text><body><div type="edition" subtype="transcription"><p>A</p></div></body></text>
+        </TEI>""",
+    )
+
+    ir = parse_epidoc_file(good, source_revision="deadbeef")
+    image = next(node for node in _nodes(ir, "image") if node.feature("url") == "front.jpg")
+    assert image.feature("credit") == "Zev Radovan"
+
+
+def test_facsimile_credit_name_children_fail_closed(tmp_path: Path) -> None:
+    path = _write(
+        tmp_path,
+        "facsimile-credit-child.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0">
+          <facsimile><surface>
+            <desc><persName role="Credit">Zev <foo>R.</foo></persName></desc>
+            <graphic url="front.jpg"/>
+          </surface></facsimile>
+          <text><body><div type="edition" subtype="transcription"><p>A</p></div></body></text>
+        </TEI>""",
+    )
+
+    with pytest.raises(ValueError, match="persName.*foo"):
+        parse_epidoc_file(path, source_revision="deadbeef")
