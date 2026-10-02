@@ -1,0 +1,35 @@
+name: Research metadata prose shapes
+
+on:
+  pull_request:
+    paths:
+      - "scripts/research_issue38.py"
+      - ".github/workflows/research-issue38.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Fetch pinned Brown IIP source
+        env:
+          IIP_REVISION: 0b7dc8358ccdfd0c9391f049da4839fbd91c26e5
+        run: |
+          set -euo pipefail
+          mkdir -p upstream-iip
+          curl --fail --location --retry 3 \
+            "https://codeload.github.com/Brown-University-Library/iip-texts/tar.gz/${IIP_REVISION}" \
+            | tar -xz --strip-components=1 -C upstream-iip
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install
+        run: python -m pip install -e '.[dev]'
+      - name: Audit metadata prose attributes and children
+        run: python scripts/research_issue38.py upstream-iip/epidoc-files
