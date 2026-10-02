@@ -74,7 +74,9 @@ def _local(name: str) -> str:
 
 def _metadata_element_name(name: str) -> str:
     if not name.startswith("{"):
-        return name
+        raise MetadataParseError(
+            f"{name}: unresearched namespace {''!r}"
+        )
     namespace, local = name[1:].split("}", 1)
     if namespace != TEI_NS:
         raise MetadataParseError(
