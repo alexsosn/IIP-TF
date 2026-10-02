@@ -8,8 +8,10 @@ The research gate rejects TFF as a production parser/converter dependency before
 an implementation/performance spike. The incompatibilities are semantic, not
 micro-performance issues: vanilla TFF creates TEI-element node types, offers
 word/token/char slot populations rather than IIP's sign/event contract, strips
-XML namespaces during its walk, treats teiHeader as corpus text, and can continue
-after malformed XML is skipped.
+XML namespaces during its TEI walk, treats teiHeader as corpus text, and can continue
+after malformed XML is skipped. The generic XML converter does not avoid the
+boundary: it warns about namespace conflation and requires a full replacement
+`convertTaskCustom` for corpus-specific graph semantics.
 
 A full TFF benchmark would first require reimplementing IIP-TF's frozen semantic
 pipeline as custom TFF hooks. That would be migration work before the candidate
