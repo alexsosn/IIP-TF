@@ -10,6 +10,7 @@ from typing import Final, TypeAlias
 
 from iip_tf.ir import EdgeType, InscriptionIR, IREdge, IRNode, NodeType
 from iip_tf.segmentation import SegmentationResolution, resolve_segmented_root
+from iip_tf.source_repair import PINNED_IIP_REVISION
 
 TEI_NS: Final = "http://www.tei-c.org/ns/1.0"
 XML_NS: Final = "http://www.w3.org/XML/1998/namespace"
@@ -621,12 +622,21 @@ def _char_drift_cost(primary_value: str, segmented_value: str) -> int:
     return _GENERIC_SUBSTITUTION_COST
 
 
-def _atom_alignment_cost(primary: Atom, segmented: Atom) -> tuple[int, int] | None:
+def _atom_alignment_cost(
+    primary: Atom,
+    segmented: Atom,
+    *,
+    allow_source_drift: bool,
+) -> tuple[int, int] | None:
     exact = _atom_match_cost(primary, segmented)
     if exact is not None:
         return exact, 0
 
-    if primary[0] == "char" and segmented[0] == "char":
+    if (
+        allow_source_drift
+        and primary[0] == "char"
+        and segmented[0] == "char"
+    ):
         return (
             _char_drift_cost(primary[1], segmented[1])
             + _role_match_cost(primary[2], segmented[2]),
@@ -638,8 +648,14 @@ def _atom_alignment_cost(primary: Atom, segmented: Atom) -> tuple[int, int] | No
 def _anchored_atom_alignment_cost(
     primary: Atom,
     segmented: Atom,
+    *,
+    allow_source_drift: bool,
 ) -> tuple[int, int] | None:
-    aligned = _atom_alignment_cost(primary, segmented)
+    aligned = _atom_alignment_cost(
+        primary,
+        segmented,
+        allow_source_drift=allow_source_drift,
+    )
     if aligned is None:
         return None
     if aligned[1] == 0:
@@ -654,6 +670,8 @@ def _anchored_atom_alignment_cost(
 def _matches(
     primary: tuple[_PrimaryAtom, ...],
     signature: tuple[Atom, ...],
+    *,
+    allow_source_drift: bool,
 ) -> tuple[_TokenMatch, ...]:
     if not signature:
         return ()
@@ -663,6 +681,7 @@ def _matches(
         first = _anchored_atom_alignment_cost(
             primary_atom.signature,
             signature[0],
+            allow_source_drift=allow_source_drift,
         )
         if first is None:
             continue
@@ -679,7 +698,8 @@ def _matches(
             ] = []
             for current, accumulated, drift_edits, positions in states:
                 if (
-                    segmented_atom[0] == "char"
+                    allow_source_drift
+                    and segmented_atom[0] == "char"
                     and drift_edits < _MAX_SOURCE_DRIFT_EDITS
                 ):
                     next_states.append(
@@ -698,6 +718,7 @@ def _matches(
                     aligned = _atom_alignment_cost(
                         primary[candidate].signature,
                         segmented_atom,
+                        allow_source_drift=allow_source_drift,
                     )
                     if aligned is not None:
                         match_cost, match_drift = aligned
@@ -718,7 +739,8 @@ def _matches(
                     if candidate_kind == "glyph":
                         skipped_cost += 3
                     elif (
-                        candidate_kind == "char"
+                        allow_source_drift
+                        and candidate_kind == "char"
                         and drift_edits + skipped_drift
                         < _MAX_SOURCE_DRIFT_EDITS
                     ):
@@ -749,11 +771,19 @@ def _unique_embedding(
     tokens: tuple[_TokenSpec, ...],
     *,
     record_id: str,
+    allow_source_drift: bool,
 ) -> tuple[_TokenMatch, ...]:
     if not tokens:
         return ()
 
-    choices = tuple(_matches(primary, token.atoms) for token in tokens)
+    choices = tuple(
+        _matches(
+            primary,
+            token.atoms,
+            allow_source_drift=allow_source_drift,
+        )
+        for token in tokens
+    )
     if any(not matches for matches in choices):
         missing = next(index for index, matches in enumerate(choices) if not matches)
         token_id = tokens[missing].element.attrib.get(XML_ID, "<missing>")
@@ -1070,6 +1100,7 @@ def enrich_segmentation(
         primary,
         projectable_specs,
         record_id=record_id,
+        allow_source_drift=source_revision == PINNED_IIP_REVISION,
     )
     selected_candidate_key = candidate_keys[resolution.selected_index]
     embedding_index = 0
