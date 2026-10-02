@@ -7,6 +7,7 @@ import pytest
 
 from iip_tf.ir import EdgeType, InscriptionIR, IREdge, IRNode, Layer, NodeType
 from iip_tf.segmentation_projection import SegmentationProjectionError
+from iip_tf.source_repair import PINNED_IIP_REVISION
 from iip_tf.text_parser import parse_epidoc_file, validate_text_directory
 
 
@@ -520,7 +521,7 @@ def test_post_segmentation_diacritic_edit_projects_with_explicit_drift_status(
         </TEI>""",
     )
 
-    ir = parse_epidoc_file(path, source_revision="deadbeef")
+    ir = parse_epidoc_file(path, source_revision=PINNED_IIP_REVISION)
     word = next(node for node in _nodes(ir, "word") if node.feature("token_id") == "diacritic-drift-1")
 
     assert word.feature("segmentation_status") == "projected_with_source_drift"
@@ -545,7 +546,7 @@ def test_post_segmentation_case_edit_projects_with_explicit_drift_status(
         </TEI>""",
     )
 
-    ir = parse_epidoc_file(path, source_revision="deadbeef")
+    ir = parse_epidoc_file(path, source_revision=PINNED_IIP_REVISION)
     word = next(node for node in _nodes(ir, "word") if node.feature("token_id") == "case-drift-1")
 
     assert word.feature("segmentation_status") == "projected_with_source_drift"
@@ -571,7 +572,7 @@ def test_post_segmentation_inserted_primary_character_can_be_uniquely_bridged(
         </TEI>""",
     )
 
-    ir = parse_epidoc_file(path, source_revision="deadbeef")
+    ir = parse_epidoc_file(path, source_revision=PINNED_IIP_REVISION)
     word = next(node for node in _nodes(ir, "word") if node.feature("token_id") == "inserted-primary-1")
 
     assert word.feature("segmentation_status") == "projected_with_source_drift"
@@ -595,7 +596,7 @@ def test_source_drift_does_not_choose_between_equal_minimum_substitutions(
     )
 
     with pytest.raises(SegmentationProjectionError, match="ambiguous"):
-        parse_epidoc_file(path, source_revision="deadbeef")
+        parse_epidoc_file(path, source_revision=PINNED_IIP_REVISION)
 
 
 def test_source_drift_does_not_use_generic_first_character_substitution(
@@ -616,7 +617,30 @@ def test_source_drift_does_not_use_generic_first_character_substitution(
     )
 
     with pytest.raises(SegmentationProjectionError, match="no projection"):
-        parse_epidoc_file(path, source_revision="deadbeef")
+        parse_epidoc_file(path, source_revision=PINNED_IIP_REVISION)
+
+
+def test_source_drift_is_rejected_for_unresearched_future_revision(
+    tmp_path: Path,
+) -> None:
+    path = _write(
+        tmp_path,
+        "future-drift.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="future-drift">
+          <text><body>
+            <div type="edition" subtype="transcription">
+              <p><supplied reason="lost">Ἀγαθῇ</supplied> τέλος</p>
+            </div>
+            <div type="edition" subtype="transcription_segmented" change="c2021-06-16">
+              <p><w xml:id="future-drift-1" xml:lang="grc"><supplied reason="lost">Ἀγαθῆι</supplied></w>
+                 <w xml:id="future-drift-2" xml:lang="grc">τέλος</w></p>
+            </div>
+          </body></text>
+        </TEI>""",
+    )
+
+    with pytest.raises(SegmentationProjectionError, match="no projection"):
+        parse_epidoc_file(path, source_revision="future-revision")
 
 
 def test_unicode_canonically_equivalent_greek_is_not_source_drift(
