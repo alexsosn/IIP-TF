@@ -57,6 +57,8 @@ _METADATA_ATTRS: Final[dict[str, frozenset[str]]] = {
     "change": frozenset({"when", "when-custom", "who", "xml:id"}),
     "p": frozenset(),
     "foreign": frozenset(),
+    "ab": frozenset(),
+    "locus": frozenset(),
 }
 
 
@@ -109,7 +111,7 @@ def _text(element: ET.Element | None) -> str | None:
     return value or None
 
 
-def _metadata_prose_text(
+def _metadata_text(
     element: ET.Element,
     *,
     allowed_children: set[str] | None = None,
@@ -241,7 +243,7 @@ def _dimension_features(
                 f"dimensions: unsupported child {name!r}"
             )
         _validate_attrs(child)
-        _append_feature(features, name, _text(child))
+        _append_feature(features, name, _metadata_text(child))
         _append_feature(features, f"{name}_min", child.attrib.get("atLeast"))
         _append_feature(features, f"{name}_max", child.attrib.get("atMost"))
     return features
@@ -363,7 +365,7 @@ def _scalar_metadata(root: ET.Element) -> dict[str, str | int]:
             [
                 value
                 for element in condition_notes
-                if (value := _metadata_prose_text(element))
+                if (value := _metadata_text(element))
             ],
         ),
     )
@@ -400,7 +402,7 @@ def _scalar_metadata(root: ET.Element) -> dict[str, str | int]:
             [
                 value
                 for element in layout_notes
-                if (value := _metadata_prose_text(element))
+                if (value := _metadata_text(element))
             ],
         ),
     )
@@ -428,7 +430,10 @@ def _scalar_metadata(root: ET.Element) -> dict[str, str | int]:
     _append_feature(
         features,
         "date_text",
-        _scalar("date_text", [value for e in origin_dates if (value := _text(e))]),
+        _scalar(
+            "date_text",
+            [value for e in origin_dates if (value := _metadata_text(e))],
+        ),
     )
     _append_feature(
         features,
@@ -508,7 +513,10 @@ def _scalar_metadata(root: ET.Element) -> dict[str, str | int]:
     _append_feature(
         features,
         "region",
-        _scalar("region", [value for e in regions if (value := _text(e))]),
+        _scalar(
+            "region",
+            [value for e in regions if (value := _metadata_text(e))],
+        ),
     )
     _append_feature(
         features,
@@ -536,17 +544,26 @@ def _scalar_metadata(root: ET.Element) -> dict[str, str | int]:
     _append_feature(
         features,
         "site",
-        _scalar("site", [value for e in geog_names if (value := _text(e))]),
+        _scalar(
+            "site",
+            [value for e in geog_names if (value := _metadata_text(e))],
+        ),
     )
     _append_feature(
         features,
         "locus",
-        _scalar("locus", [value for e in geog_feats if (value := _text(e))]),
+        _scalar(
+            "locus",
+            [value for e in geog_feats if (value := _metadata_text(e))],
+        ),
     )
     _append_feature(
         features,
         "geo",
-        _scalar("geo", [value for e in geos if (value := _text(e))]),
+        _scalar(
+            "geo",
+            [value for e in geos if (value := _metadata_text(e))],
+        ),
     )
     origin_notes = [
         child
@@ -562,7 +579,7 @@ def _scalar_metadata(root: ET.Element) -> dict[str, str | int]:
             [
                 value
                 for element in origin_notes
-                if (value := _metadata_prose_text(element))
+                if (value := _metadata_text(element))
             ],
         ),
     )
@@ -575,7 +592,11 @@ def _scalar_metadata(root: ET.Element) -> dict[str, str | int]:
         "provenance_place",
         _scalar(
             "provenance_place",
-            [value for element in provenance_places if (value := _text(element))],
+            [
+                value
+                for element in provenance_places
+                if (value := _metadata_text(element))
+            ],
         ),
     )
     return features
@@ -622,7 +643,7 @@ def enrich_metadata(ir: InscriptionIR, root: ET.Element) -> InscriptionIR:
         for element in list(support):
             name = _local(element.tag)
             if name == "p":
-                note = _metadata_prose_text(
+                note = _metadata_text(
                     element,
                     allowed_children={"foreign"},
                 )
@@ -683,7 +704,7 @@ def enrich_metadata(ir: InscriptionIR, root: ET.Element) -> InscriptionIR:
                 [
                     value
                     for element in hand_paragraphs
-                    if (value := _metadata_prose_text(element))
+                    if (value := _metadata_text(element))
                 ],
             ),
         )
@@ -787,7 +808,7 @@ def enrich_metadata(ir: InscriptionIR, root: ET.Element) -> InscriptionIR:
             scope_key = key_for(scope)
             scope_features: dict[str, str | int] = {"source_key": scope_key}
             _append_feature(scope_features, "source_id", scope.attrib.get(XML_ID))
-            _append_feature(scope_features, "scope", _text(scope))
+            _append_feature(scope_features, "scope", _metadata_text(scope))
             _append_feature(scope_features, "scope_unit", scope.attrib.get("unit"))
             _append_feature(scope_features, "scope_n", scope.attrib.get("n"))
             scope_node = _make_node(
@@ -828,7 +849,7 @@ def enrich_metadata(ir: InscriptionIR, root: ET.Element) -> InscriptionIR:
             value
             for child in list(deco)
             if _local(child.tag) == "ab"
-            and (value := _text(child))
+            and (value := _metadata_text(child))
         ]
         loci = [
             value
@@ -924,11 +945,24 @@ def enrich_metadata(ir: InscriptionIR, root: ET.Element) -> InscriptionIR:
             _validate_attrs(item)
         description = _scalar(
             "facsimile surface description",
-            [value for item in descriptions if (value := _text(item))],
+            [
+                value
+                for item in descriptions
+                if (
+                    value := _metadata_text(
+                        item,
+                        allowed_children={"persName"},
+                    )
+                )
+            ],
         )
         note = _scalar(
             "facsimile surface note",
-            [value for item in notes if (value := _text(item))],
+            [
+                value
+                for item in notes
+                if (value := _metadata_text(item))
+            ],
         )
         surface_features: dict[str, str | int] = {"source_key": surface_key}
         _append_feature(surface_features, "source_id", surface.attrib.get(XML_ID))
@@ -957,7 +991,11 @@ def enrich_metadata(ir: InscriptionIR, root: ET.Element) -> InscriptionIR:
                         credit_elements.append(descendant)
         credit = _scalar(
             "image credit",
-            [value for item in credit_elements if (value := _text(item))],
+            [
+                value
+                for item in credit_elements
+                if (value := _metadata_text(item))
+            ],
         )
         credit_role = _scalar(
             "image credit role",
@@ -1010,7 +1048,11 @@ def enrich_metadata(ir: InscriptionIR, root: ET.Element) -> InscriptionIR:
                 revision_features, "when_custom", change.attrib.get("when-custom")
             )
             _append_feature(revision_features, "who", change.attrib.get("who"))
-            _append_feature(revision_features, "description", _text(change))
+            _append_feature(
+                revision_features,
+                "description",
+                _metadata_text(change),
+            )
             node = _make_node(
                 key=key,
                 node_type=NodeType.REVISION,
