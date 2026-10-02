@@ -7,7 +7,8 @@ Research date: 2026-10-03.
 ## Scope
 
 This evaluates whether `annotation/text-fabric-factory` (TFF), especially
-`tff.convert.tei`, should replace or sit inside IIP-TF's pinned-source
+`tff.convert.tei` and the lower-level generic `tff.convert.xml`, should replace
+or sit inside IIP-TF's pinned-source
 EpiDoc -> canonical IR -> native Text-Fabric pipeline.
 
 The decision is constrained by ADR-0001/schema 0.1. IIP-TF must keep a
@@ -30,7 +31,7 @@ Pinned TFF source for this evaluation:
 - direct dependency: `text-fabric` without an upper bound in TFF 1.0.8
 - GitHub Releases: none; PyPI exposes 1.0.0 and 1.0.8
 
-The package is installable alongside IIP-TF's Python floor. The dependency
+TFF's Python requirement is compatible with IIP-TF's Python floor. The dependency
 surface is nevertheless wider than IIP-TF's current direct use of
 `text-fabric>=13.1,<14`: TFF adds a second release/pinning boundary and its
 setup metadata does not constrain the Text-Fabric major version.
@@ -74,9 +75,10 @@ which conflict with that contract.
 
 #### 1. Slot model
 
-TFF `granularity` supports only `word`, `token`, or `char`. In char
+TFF's built-in slot populations are `word`, `token`, or `char`. In char
 mode, all characters are slots; in token/word modes TFF derives tokens/words
-from text itself.
+from text itself. The documented `granularity: False` NLP path still starts
+from a preliminary character-based dataset before an external NLP pipeline.
 
 That is not IIP-TF's `sign` model. IIP-TF needs visible code-point slots but
 moves ordinary whitespace into rendering separators and injects typed
@@ -156,7 +158,28 @@ IIP-specific `@corresp` relations and never lets derived identities overwrite
 raw source values. TFF's generic relation handling is useful reference code,
 but it does not replace this contract.
 
-#### 7. Generated app/docs
+#### 7. Generic `tff.convert.xml` path
+
+The generic XML converter does not provide a cleaner semantic frontend for IIP.
+Its own documentation presents it primarily as a demonstration rather than the
+production TEI converter, says it has no schema knowledge, and condenses
+whitespace generically. Its `checkTask` documentation explicitly warns that
+conversion constructs node types and attributes without taking namespaces into
+account, even though XML parsing itself is namespace-aware.
+
+It does expose `convertTaskCustom`, documented as a replacement for the whole
+conversion task. The implementation dispatches either TFF's default XML
+converter or the supplied replacement:
+
+`(convertTaskDefault(etree) if convertTaskCustom is None else convertTaskCustom)(self)`.
+
+For IIP-TF, using that escape hatch would mean supplying our own conversion
+director and semantic graph construction. TFF would then mainly provide
+repository-layout/task/app scaffolding around `tf.convert.walker.CV`, which
+IIP-TF can already use directly through its Text-Fabric dependency. This does
+not justify moving the canonical IR boundary behind TFF.
+
+#### 8. Generated app/docs
 
 TFF can generate a TF app and transcription documentation. IIP-TF does plan a
 standard TF app, so this is the clearest reusable idea.
@@ -272,7 +295,7 @@ benchmark. #41 therefore deliberately stops before that sunk-cost experiment.
 
 **Use text-fabric-factory as implementation/reference material only; do not add
 it as an IIP-TF production dependency and do not replace the canonical parser
-or IR boundary with `tff.convert.tei`.**
+or IR boundary with either TFF's TEI converter or its generic XML converter.**
 
 For the native writer (#5), evaluate the already-available
 `tf.convert.walker.CV` directly against the IR writer requirements. For the
