@@ -125,7 +125,8 @@ def audit(source_dir: Path) -> dict[str, object]:
                 "descendant_attributes": dict(
                     sorted(descendant_attrs[label].items())
                 ),
-                "files_with_attributes": sorted(files_with_attrs[label]),
+                "files_with_attributes_count": len(files_with_attrs[label]),
+                "files_with_children_count": len(files_with_children[label]),
                 "files_with_children": sorted(files_with_children[label]),
             }
             for label in TARGETS
