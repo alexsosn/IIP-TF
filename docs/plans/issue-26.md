@@ -34,13 +34,18 @@ Commit RED tests before production projection code for:
 
 ## Expected full-source invariants
 
-- segmentation candidate nodes: 5,160;
-- selected token roots / word nodes: 39,423, provided every selected token projects;
-- suppressed candidates: exactly 3;
+The audit-only counts exclude the seven malformed files repaired by #15. The end-to-end parser
+therefore freezes the repaired-source invariants:
+
+- segmentation candidate/provenance nodes: 5,167;
+- selected token identities: 39,472;
+- word nodes: 39,463;
+- zero-atom token identities represented as markup: 9;
+- suppressed duplicate candidates: exactly 3;
 - no guessed words in records without selected segmentation.
 
-If the 39,423 projection expectation fails, inspect the source cases and add research/RED before
-changing the algorithm.
+Any mismatch in these invariants blocks release and requires source research plus a RED fixture
+before changing the algorithm.
 
 ## Review
 
