@@ -13,6 +13,7 @@ from iip_tf.ir import EdgeType, InscriptionIR, IREdge, IRNode, NodeType
 TEI_NS: Final = "http://www.tei-c.org/ns/1.0"
 XML_NS: Final = "http://www.w3.org/XML/1998/namespace"
 XML_ID: Final = f"{{{XML_NS}}}id"
+XML_LANG: Final = f"{{{XML_NS}}}lang"
 _NS: Final = {"tei": TEI_NS}
 
 _METADATA_ATTRS: Final[dict[str, frozenset[str]]] = {
@@ -54,6 +55,8 @@ _METADATA_ATTRS: Final[dict[str, frozenset[str]]] = {
     "note": frozenset(),
     "revisionDesc": frozenset(),
     "change": frozenset({"when", "when-custom", "who", "xml:id"}),
+    "p": frozenset(),
+    "foreign": frozenset(),
 }
 
 
@@ -70,6 +73,8 @@ def _local(name: str) -> str:
 def _attr_name(name: str) -> str:
     if name == XML_ID:
         return "xml:id"
+    if name == XML_LANG:
+        return "xml:lang"
     return _local(name)
 
 
@@ -102,6 +107,20 @@ def _text(element: ET.Element | None) -> str | None:
         return None
     value = " ".join("".join(element.itertext()).split())
     return value or None
+
+
+def _metadata_prose_text(
+    element: ET.Element,
+    *,
+    allowed_children: set[str] | None = None,
+) -> str | None:
+    _validate_attrs(element)
+    allowed = set() if allowed_children is None else allowed_children
+    _validate_children(element, allowed)
+    for child in list(element):
+        _validate_attrs(child)
+        _validate_children(child, set())
+    return _text(element)
 
 
 def _direct_text(element: ET.Element) -> str | None:
@@ -341,7 +360,11 @@ def _scalar_metadata(root: ET.Element) -> dict[str, str | int]:
         "condition_note",
         _scalar(
             "condition_note",
-            [value for element in condition_notes if (value := _text(element))],
+            [
+                value
+                for element in condition_notes
+                if (value := _metadata_prose_text(element))
+            ],
         ),
     )
 
@@ -374,7 +397,11 @@ def _scalar_metadata(root: ET.Element) -> dict[str, str | int]:
         "layout_note",
         _scalar(
             "layout_note",
-            [value for element in layout_notes if (value := _text(element))],
+            [
+                value
+                for element in layout_notes
+                if (value := _metadata_prose_text(element))
+            ],
         ),
     )
 
@@ -532,7 +559,11 @@ def _scalar_metadata(root: ET.Element) -> dict[str, str | int]:
         "origin_note",
         _scalar(
             "origin_note",
-            [value for element in origin_notes if (value := _text(element))],
+            [
+                value
+                for element in origin_notes
+                if (value := _metadata_prose_text(element))
+            ],
         ),
     )
 
@@ -591,7 +622,10 @@ def enrich_metadata(ir: InscriptionIR, root: ET.Element) -> InscriptionIR:
         for element in list(support):
             name = _local(element.tag)
             if name == "p":
-                note = _text(element)
+                note = _metadata_prose_text(
+                    element,
+                    allowed_children={"foreign"},
+                )
                 if note is None:
                     continue
                 key = key_for(element)
@@ -646,7 +680,11 @@ def enrich_metadata(ir: InscriptionIR, root: ET.Element) -> InscriptionIR:
             "note",
             _scalar(
                 "hand note",
-                [value for e in hand_paragraphs if (value := _text(e))],
+                [
+                    value
+                    for element in hand_paragraphs
+                    if (value := _metadata_prose_text(element))
+                ],
             ),
         )
         hand_node = _make_node(
