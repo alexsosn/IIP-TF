@@ -85,7 +85,10 @@ Metadata validation therefore treats namespaces as semantic:
 
 - element names are accepted as TEI names only when their namespace is the TEI namespace;
 - the XML namespace is recognized explicitly for supported `xml:id` / `xml:lang` attributes;
-- any other namespaced attribute or element fails closed instead of being reduced to its local
-  name.
+- elements outside the TEI namespace, including explicitly unnamespaced descendants, fail
+  closed instead of being reduced to an allowed local name;
+- attributes in namespaces other than the XML namespace fail closed instead of being reduced to
+  an allowed local name. Ordinary unqualified TEI attributes remain matched by their audited
+  names.
 
 The pinned source adds no additional metadata namespaces, so this changes no current values.
