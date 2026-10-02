@@ -650,3 +650,38 @@ def test_facsimile_credit_name_children_fail_closed(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="persName.*foo"):
         parse_epidoc_file(path, source_revision="deadbeef")
+
+
+
+def test_foreign_namespace_cannot_alias_allowed_metadata_child(tmp_path: Path) -> None:
+    path = _write(
+        tmp_path,
+        "foreign-namespace-child.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xmlns:x="urn:unresearched">
+          <facsimile><surface>
+            <desc>Front <x:persName role="Credit">Someone</x:persName></desc>
+            <graphic url="front.jpg"/>
+          </surface></facsimile>
+          <text><body><div type="edition" subtype="transcription"><p>A</p></div></body></text>
+        </TEI>""",
+    )
+
+    with pytest.raises(ValueError, match="unresearched namespace"):
+        parse_epidoc_file(path, source_revision="deadbeef")
+
+
+def test_foreign_namespace_cannot_alias_allowed_metadata_attribute(tmp_path: Path) -> None:
+    path = _write(
+        tmp_path,
+        "foreign-namespace-attribute.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xmlns:x="urn:unresearched">
+          <facsimile><surface>
+            <desc><persName role="Credit" x:role="Other">Someone</persName></desc>
+            <graphic url="front.jpg"/>
+          </surface></facsimile>
+          <text><body><div type="edition" subtype="transcription"><p>A</p></div></body></text>
+        </TEI>""",
+    )
+
+    with pytest.raises(ValueError, match="unresearched namespace"):
+        parse_epidoc_file(path, source_revision="deadbeef")
