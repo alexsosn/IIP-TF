@@ -58,6 +58,9 @@ jobs:
           python -m iip_tf.text_parser upstream-iip/epidoc-files \
             --revision 0b7dc8358ccdfd0c9391f049da4839fbd91c26e5 \
             --expect-parsed 5535 \
+            --expect-segmented-token-identities 39472 \
+            --expect-node-count segmentation=5167 \
+            --expect-node-count word=39463 \
             --expect-node-count bibl=7596 \
             --expect-node-count bibl_scope=7598 \
             --expect-node-count hand=5535 \
