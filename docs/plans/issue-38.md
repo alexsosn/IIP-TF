@@ -40,4 +40,6 @@ All other audited text-valued metadata elements are leaf nodes.
 - pinned full-source canonical IR remains 5,535/5,535 with frozen node/token counts;
 - research workflow remains reproducible;
 - exact-head logically independent adversarial review checks for any remaining raw `itertext()`
-  call site reachable from mapped metadata.
+  call site reachable from mapped metadata;
+- namespace-alias RED tests prove that foreign element/attribute namespaces cannot impersonate
+  allowed TEI/XML local names.
