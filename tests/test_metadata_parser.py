@@ -685,3 +685,21 @@ def test_foreign_namespace_cannot_alias_allowed_metadata_attribute(tmp_path: Pat
 
     with pytest.raises(ValueError, match="unresearched namespace"):
         parse_epidoc_file(path, source_revision="deadbeef")
+
+
+
+def test_no_namespace_cannot_alias_allowed_metadata_child(tmp_path: Path) -> None:
+    path = _write(
+        tmp_path,
+        "no-namespace-child.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0">
+          <facsimile><surface>
+            <desc>Front <persName xmlns="" role="Credit">Someone</persName></desc>
+            <graphic url="front.jpg"/>
+          </surface></facsimile>
+          <text><body><div type="edition" subtype="transcription"><p>A</p></div></body></text>
+        </TEI>""",
+    )
+
+    with pytest.raises(ValueError, match="unresearched namespace"):
+        parse_epidoc_file(path, source_revision="deadbeef")
