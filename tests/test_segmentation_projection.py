@@ -7,7 +7,7 @@ import pytest
 
 from iip_tf.ir import EdgeType, InscriptionIR, IREdge, IRNode, Layer, NodeType
 from iip_tf.segmentation_projection import SegmentationProjectionError
-from iip_tf.text_parser import parse_epidoc_file
+from iip_tf.text_parser import parse_epidoc_file, validate_text_directory
 
 
 def _write(path: Path, name: str, text: str) -> Path:
@@ -640,3 +640,26 @@ def test_unicode_canonically_equivalent_greek_is_not_source_drift(
 
     assert word.feature("segmentation_status") == "projected"
     assert ir.text(word.sign_keys) == "όρος"
+
+
+def test_directory_accounting_counts_word_and_zero_atom_token_identities(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path,
+        "token-identities.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="token-identities">
+          <text><body>
+            <div type="edition" subtype="transcription"><p>A</p></div>
+            <div type="edition" subtype="transcription_segmented">
+              <p><w xml:id="token-identities-1" xml:lang="grc">A</w>
+                 <w xml:id="token-identities-2" xml:lang="grc"><unclear/></w></p>
+            </div>
+          </body></text>
+        </TEI>""",
+    )
+
+    report = validate_text_directory(tmp_path, source_revision="deadbeef")
+
+    assert report.segmented_token_identities == 2
+    assert dict(report.node_counts)["word"] == 1
