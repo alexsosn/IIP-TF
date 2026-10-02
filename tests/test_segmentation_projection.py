@@ -596,3 +596,24 @@ def test_source_drift_does_not_choose_between_equal_minimum_substitutions(
 
     with pytest.raises(SegmentationProjectionError, match="ambiguous"):
         parse_epidoc_file(path, source_revision="deadbeef")
+
+
+def test_source_drift_does_not_use_generic_first_character_substitution(
+    tmp_path: Path,
+) -> None:
+    path = _write(
+        tmp_path,
+        "unanchored-drift.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="unanchored-drift">
+          <text><body>
+            <div type="edition" subtype="transcription"><p>ABC stable</p></div>
+            <div type="edition" subtype="transcription_segmented" change="c2021-06-16">
+              <p><w xml:id="unanchored-drift-1" xml:lang="grc">ZBC</w>
+                 <w xml:id="unanchored-drift-2" xml:lang="grc">stable</w></p>
+            </div>
+          </body></text>
+        </TEI>""",
+    )
+
+    with pytest.raises(SegmentationProjectionError, match="no projection"):
+        parse_epidoc_file(path, source_revision="deadbeef")
