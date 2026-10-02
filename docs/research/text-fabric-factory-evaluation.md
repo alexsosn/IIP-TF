@@ -30,8 +30,11 @@ Pinned TFF source for this evaluation:
 - package status: Beta
 - direct dependency: `text-fabric` without an upper bound in TFF 1.0.8
 - GitHub Releases: none; PyPI exposes 1.0.0 and 1.0.8
+- latest repository commit observed: `bae4a39d...` on 2025-12-04
 
-TFF's Python requirement is compatible with IIP-TF's Python floor. The dependency
+As of this research date (2026-10-03), the package/repository evidence therefore
+shows no release or commit newer than 2025-12-04. That is a maturity/pinning
+signal, not evidence that the project is abandoned. TFF's Python requirement is compatible with IIP-TF's Python floor. The dependency
 surface is nevertheless wider than IIP-TF's current direct use of
 `text-fabric>=13.1,<14`: TFF adds a second release/pinning boundary and its
 setup metadata does not constrain the Text-Fabric major version.
@@ -188,6 +191,34 @@ It is not a reason to adopt the TEI converter. App generation is downstream of
 the semantic corpus. We can inspect/reuse the conventions later in #8 without
 making TFF a conversion dependency.
 
+## Compatibility matrix
+
+| Requirement / capability | TFF evidence | IIP-TF fit | Decision |
+| --- | --- | --- | --- |
+| MIT software licence | TFF 1.0.8 declares MIT | Compatible | No licence blocker |
+| Python floor | TFF requires Python >=3.9; IIP-TF >=3.11 | Compatible at metadata level | No reason to add dependency |
+| Text-Fabric dependency | TFF depends on `text-fabric` without a major-version ceiling | Adds a second compatibility/pinning surface beside IIP-TF's `>=13.1,<14` | Prefer direct TF dependency |
+| Sign-slot population | Built-in TEI modes use word/token/char slots; NLP mode starts from chars | Incompatible with audited visible-sign + synthetic-event population | Keep IIP parser/IR |
+| Semantic node ontology | Vanilla TEI walk calls `cv.node(tag)` for almost every element | Incompatible with schema 0.1 semantic node types | Do not use primary converter |
+| Namespace identity | TEI hooks receive local names; generic XML conversion warns of namespace conflation | Incompatible with fail-closed QName semantics | Keep namespace-aware local parser |
+| Segmented words | TFF can use XML `w` or derive tokens, but has no IIP duplicate-selection/projection model | Incompatible with authoritative projected `transcription_segmented` semantics | Keep IIP projection |
+| Editorial alternatives / zero-width events | Generic TEI nodes and char/token handling exist | Partial mechanics, wrong graph/slot contract for IIP | Reference only |
+| `teiHeader` metadata | TFF walks header content and marks generated slots as metadata | Incompatible with anchored semantic metadata nodes/features | Keep IIP metadata parser |
+| IDs / refs | Generic XML-id and selected reference handling exists | Partially useful, but does not implement IIP file-scoped identity/corresp policy | Reference only |
+| Malformed pinned source | Transform hook can rewrite text; ordinary parse failures may be skipped | Could re-host the seven repairs, but removes no IIP-specific logic and weakens complete-accounting defaults | Keep repair preflight |
+| Customized TEI schema tooling | TFF has TEI schema analysis and JING/TRANG validation support | Potentially useful optional development tooling | Reuse ideas only unless separately justified |
+| Generic XML escape hatch | `convertTaskCustom` replaces the entire conversion task | Technically capable because IIP would supply its own director | No advantage over direct `tf.convert.walker.CV` |
+| TF app/docs generation | Built-in generated app/documentation support | Useful downstream of corpus semantics | Revisit in #8 |
+| Reproducible Agora materialization | TFF adds its own version/tooling boundary; semantic customization remains local | No demonstrated reduction in build logic | Keep TFF out of production build |
+
+The preliminary #41 hypothesis treated TFF's character granularity and empty-slot
+machinery as sufficient reason for a PoC. Source inspection falsifies that
+specific premise: those mechanics do not suppress the vanilla element-shaped
+graph, do not supply IIP's synthetic-event population, and do not preserve the
+canonical IR boundary. The generic XML escape hatch is effectively a full
+custom converter. A PoC is therefore not needed to answer the architectural
+question.
+
 ## Real IIP cases
 
 ### `idum0375.xml`
@@ -277,8 +308,8 @@ No production dependency is needed for these benefits.
 
 ## Performance decision
 
-A whole-corpus TFF speed/memory bake-off is not decision-relevant after the
-semantic compatibility gate fails. A fast conversion to the wrong graph is not
+A representative-subset or whole-corpus TFF speed/memory bake-off is not
+decision-relevant after the semantic compatibility gate fails. A fast conversion to the wrong graph is not
 an alternative implementation of IIP-TF.
 
 The relevant current baseline remains the exact IIP pipeline. The most expensive
@@ -286,9 +317,9 @@ known stage is segmented projection; after its bounded matching work the pinned
 whole-corpus parse was roughly 61 seconds on the GitHub runner, and the current
 full-source gate completes with zero projection failures.
 
-A TFF performance spike would require first implementing enough custom hooks to
-reproduce the frozen schema, source repair, segmented projection and metadata
-cardinality. That implementation would be the migration itself, not a cheap
+A semantically comparable TFF performance spike would require first implementing
+enough custom hooks or a replacement conversion task to reproduce the frozen
+schema, source repair, segmented projection and metadata cardinality. That implementation would be the migration itself, not a cheap
 benchmark. #41 therefore deliberately stops before that sunk-cost experiment.
 
 ## Decision
