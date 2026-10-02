@@ -855,7 +855,7 @@ def enrich_metadata(ir: InscriptionIR, root: ET.Element) -> InscriptionIR:
             value
             for child in list(deco)
             if _local(child.tag) == "locus"
-            and (value := _text(child))
+            and (value := _metadata_text(child))
         ]
         _append_feature(
             features,
