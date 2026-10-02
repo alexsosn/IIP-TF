@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import unicodedata
 import xml.etree.ElementTree as ET
 from collections import Counter
 from dataclasses import dataclass
@@ -546,7 +547,8 @@ def _primary_atoms(
     return tuple(atoms)
 
 
-_SOURCE_DRIFT_COST: Final = 12
+_GENERIC_SUBSTITUTION_COST: Final = 12
+_SOURCE_INSERT_DELETE_COST: Final = 18
 _MAX_SOURCE_DRIFT_EDITS: Final = 2
 
 
@@ -592,6 +594,23 @@ def _atom_match_cost(primary: Atom, segmented: Atom) -> int | None:
     return role_cost
 
 
+def _char_drift_cost(primary_value: str, segmented_value: str) -> int:
+    if primary_value.casefold() == segmented_value.casefold():
+        return 4
+
+    def base(value: str) -> str:
+        decomposed = unicodedata.normalize("NFD", value.casefold())
+        return "".join(
+            char
+            for char in decomposed
+            if unicodedata.category(char) != "Mn"
+        )
+
+    if base(primary_value) == base(segmented_value):
+        return 6
+    return _GENERIC_SUBSTITUTION_COST
+
+
 def _atom_alignment_cost(primary: Atom, segmented: Atom) -> tuple[int, int] | None:
     exact = _atom_match_cost(primary, segmented)
     if exact is not None:
@@ -599,7 +618,8 @@ def _atom_alignment_cost(primary: Atom, segmented: Atom) -> tuple[int, int] | No
 
     if primary[0] == "char" and segmented[0] == "char":
         return (
-            _SOURCE_DRIFT_COST + _role_match_cost(primary[2], segmented[2]),
+            _char_drift_cost(primary[1], segmented[1])
+            + _role_match_cost(primary[2], segmented[2]),
             1,
         )
     return None
@@ -636,7 +656,7 @@ def _matches(
                     next_states.append(
                         (
                             current,
-                            accumulated + _SOURCE_DRIFT_COST,
+                            accumulated + _SOURCE_INSERT_DELETE_COST,
                             drift_edits + 1,
                             (*positions, None),
                         )
@@ -673,7 +693,7 @@ def _matches(
                         and drift_edits + skipped_drift
                         < _MAX_SOURCE_DRIFT_EDITS
                     ):
-                        skipped_cost += _SOURCE_DRIFT_COST
+                        skipped_cost += _SOURCE_INSERT_DELETE_COST
                         skipped_drift += 1
                     else:
                         break
