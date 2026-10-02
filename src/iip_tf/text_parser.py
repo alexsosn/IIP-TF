@@ -24,6 +24,7 @@ from iip_tf.ir import (
     SourceProvenance,
 )
 from iip_tf.metadata_parser import enrich_metadata
+from iip_tf.segmentation_projection import enrich_segmentation
 from iip_tf.source_repair import SourceConflictError, repair_source_file
 
 TEI_NS: Final = "http://www.tei-c.org/ns/1.0"
@@ -199,6 +200,7 @@ class TextDirectoryValidation:
     repaired: int
     failures: tuple[str, ...]
     node_counts: tuple[tuple[str, int], ...]
+    segmented_token_identities: int
 
 
 @dataclass
@@ -1082,7 +1084,12 @@ def parse_epidoc_file(path: Path, *, source_revision: str) -> InscriptionIR:
         features=inscription_features,
     )
     builder.finalize_corresp()
-    return enrich_metadata(builder.freeze(), root)
+    enriched = enrich_metadata(builder.freeze(), root)
+    return enrich_segmentation(
+        enriched,
+        root,
+        source_revision=source_revision,
+    )
 
 
 def validate_text_directory(
@@ -1098,6 +1105,7 @@ def validate_text_directory(
     skipped = 0
     failures: list[str] = []
     node_counts: Counter[str] = Counter()
+    segmented_token_identities = 0
     for path in paths:
         if "test" in path.name.lower():
             skipped += 1
@@ -1109,6 +1117,16 @@ def validate_text_directory(
             continue
         parsed += 1
         node_counts.update(node.node_type.value for node in ir.nodes)
+        segmented_token_identities += sum(
+            1
+            for node in ir.nodes
+            if node.node_type == NodeType.WORD
+            or (
+                node.node_type == NodeType.MARKUP
+                and node.feature("annotation_source") == "transcription_segmented"
+                and node.feature("token_id") is not None
+            )
+        )
         if ir.provenance.repaired:
             repaired_count += 1
 
@@ -1119,6 +1137,7 @@ def validate_text_directory(
         repaired=repaired_count,
         failures=tuple(failures),
         node_counts=tuple(sorted(node_counts.items())),
+        segmented_token_identities=segmented_token_identities,
     )
 
 
@@ -1136,6 +1155,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=[],
         metavar="TYPE=COUNT",
     )
+    parser.add_argument("--expect-segmented-token-identities", type=int)
     return parser
 
 
@@ -1146,6 +1166,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     if report.failures:
         return 1
     if args.expect_parsed is not None and report.parsed != args.expect_parsed:
+        return 1
+    if (
+        args.expect_segmented_token_identities is not None
+        and report.segmented_token_identities
+        != args.expect_segmented_token_identities
+    ):
         return 1
     observed = dict(report.node_counts)
     for spec in args.expect_node_count:

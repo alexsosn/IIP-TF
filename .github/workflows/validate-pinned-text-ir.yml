@@ -6,10 +6,13 @@ on:
       - "src/iip_tf/ir.py"
       - "src/iip_tf/text_parser.py"
       - "src/iip_tf/metadata_parser.py"
+      - "src/iip_tf/segmentation.py"
+      - "src/iip_tf/segmentation_projection.py"
       - "src/iip_tf/source_repair.py"
       - "tests/test_ir.py"
       - "tests/test_text_parser.py"
       - "tests/test_metadata_parser.py"
+      - "tests/test_segmentation_projection.py"
       - "schema/iip-tf-0.1.json"
       - ".github/workflows/validate-pinned-text-ir.yml"
   push:
@@ -18,6 +21,8 @@ on:
       - "src/iip_tf/ir.py"
       - "src/iip_tf/text_parser.py"
       - "src/iip_tf/metadata_parser.py"
+      - "src/iip_tf/segmentation.py"
+      - "src/iip_tf/segmentation_projection.py"
       - "schema/iip-tf-0.1.json"
       - ".github/workflows/validate-pinned-text-ir.yml"
 
@@ -53,6 +58,9 @@ jobs:
           python -m iip_tf.text_parser upstream-iip/epidoc-files \
             --revision 0b7dc8358ccdfd0c9391f049da4839fbd91c26e5 \
             --expect-parsed 5535 \
+            --expect-segmented-token-identities 39472 \
+            --expect-node-count segmentation=5167 \
+            --expect-node-count word=39463 \
             --expect-node-count bibl=7596 \
             --expect-node-count bibl_scope=7598 \
             --expect-node-count hand=5535 \

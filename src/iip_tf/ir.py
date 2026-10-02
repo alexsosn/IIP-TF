@@ -35,6 +35,8 @@ class NodeType(StrEnum):
     DIMENSION = "dimension"
     SUPPORT_NOTE = "support_note"
     FACSIMILE_SURFACE = "facsimile_surface"
+    WORD = "word"
+    SEGMENTATION = "segmentation"
 
 
 class EdgeType(StrEnum):
@@ -42,6 +44,8 @@ class EdgeType(StrEnum):
     IN_INSCRIPTION = "in_inscription"
     CORRESPONDS_TO = "corresponds_to"
     CITES = "cites"
+    SEGMENTATION_OF = "segmentation_of"
+    TOKEN_FROM = "token_from"
 
 
 @dataclass(frozen=True)
