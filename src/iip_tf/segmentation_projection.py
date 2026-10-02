@@ -712,7 +712,7 @@ def _matches(
                     positions=positions,
                 )
             )
-    return tuple(matches)
+    return tuple(dict.fromkeys(matches))
 
 
 def _unique_embedding(
