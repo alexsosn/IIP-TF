@@ -221,3 +221,47 @@ def test_edition_level_lb_between_explicit_textparts_starts_following_part(
     )
     edition = next(node for node in _nodes(ir, NodeType.EDITION))
     assert IREdge(EdgeType.PARENT, line_break.key, edition.key) in ir.edges
+
+
+def test_empty_inline_markup_preserves_begin_middle_end_boundaries(tmp_path: Path) -> None:
+    path = _write(
+        tmp_path,
+        "points.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="points"><text><body>
+        <div type="edition" subtype="transcription"><p><unclear/>A<supplied reason="lost"/>B<del/></p></div>
+        </body></text></TEI>""",
+    )
+
+    ir = parse_epidoc_file(path, source_revision="deadbeef")
+    points = {
+        node.feature("kind"): node
+        for node in _nodes(ir, NodeType.MARKUP)
+        if node.sign_keys == ()
+    }
+
+    assert points["unclear"].point_index == 0
+    assert points["supplied"].point_index == 1
+    assert points["del"].point_index == 2
+
+
+def test_empty_structural_nodes_are_not_semantic_points(tmp_path: Path) -> None:
+    path = _write(
+        tmp_path,
+        "empty-structures.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="empty-structures"><text><body>
+        <div type="edition" subtype="diplomatic"><p/></div>
+        <div type="edition" subtype="transcription"><p>A</p></div>
+        <div type="commentary"><p/></div>
+        </body></text></TEI>""",
+    )
+
+    ir = parse_epidoc_file(path, source_revision="deadbeef")
+    empty_structures = [
+        node
+        for node in ir.nodes
+        if node.node_type in {NodeType.EDITION, NodeType.PARAGRAPH}
+        and not node.sign_keys
+    ]
+
+    assert empty_structures
+    assert all(node.point_index is None for node in empty_structures)
