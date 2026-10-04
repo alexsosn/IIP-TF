@@ -983,6 +983,8 @@ def _point_range_from_match(
     *,
     start: int,
     end: int,
+    lower_fallback: int,
+    upper_fallback: int,
     record_id: str,
 ) -> tuple[int, int]:
     left_positions = [
@@ -999,22 +1001,13 @@ def _point_range_from_match(
     left = (
         primary[left_positions[-1]].sign_end + 1
         if left_positions
-        else None
+        else lower_fallback
     )
     right = (
         primary[right_positions[0]].sign_start
         if right_positions
-        else None
+        else upper_fallback
     )
-    if left is None and right is None:
-        raise SegmentationProjectionError(
-            f"{record_id}: zero-span point has no mapped neighboring atom"
-        )
-    if left is None:
-        assert right is not None
-        return right, right
-    if right is None:
-        return left, left
     if left > right:
         raise SegmentationProjectionError(
             f"{record_id}: inverted zero-span projection bounds {left}>{right}"
@@ -1023,13 +1016,14 @@ def _point_range_from_match(
 
 
 def _point_features_compatible(annotation: _AnnotationSpec, candidate: IRNode) -> bool:
-    expected = dict(annotation.features)
-    for name, value in expected.items():
-        if name in _POINT_FEATURE_IGNORE or name == "kind":
-            continue
-        if candidate.feature(name) != value:
-            return False
-    return True
+    def semantic(features: dict[str, str | int]) -> dict[str, str | int]:
+        return {
+            name: value
+            for name, value in features.items()
+            if name not in _POINT_FEATURE_IGNORE and name != "kind"
+        }
+
+    return semantic(dict(annotation.features)) == semantic(dict(candidate.features))
 
 
 def enrich_segmentation(
@@ -1257,7 +1251,7 @@ def enrich_segmentation(
             f"within {lower}..{upper}"
         )
 
-    def zero_atom_bounds(spec_index: int) -> tuple[int, int]:
+    def token_neighbor_bounds(spec_index: int) -> tuple[int, int]:
         previous = next(
             (
                 matches_by_spec[index]
@@ -1301,13 +1295,16 @@ def enrich_segmentation(
             if annotation.start == annotation.end:
                 ann_sign_keys: tuple[str, ...] = ()
                 if match is None:
-                    lower, upper = zero_atom_bounds(spec_index)
+                    lower, upper = token_neighbor_bounds(spec_index)
                 else:
+                    token_lower, token_upper = token_neighbor_bounds(spec_index)
                     lower, upper = _point_range_from_match(
                         primary,
                         match,
                         start=annotation.start,
                         end=annotation.end,
+                        lower_fallback=token_lower,
+                        upper_fallback=token_upper,
                         record_id=record_id,
                     )
                 ann_point_index = native_point(
@@ -1329,11 +1326,14 @@ def enrich_segmentation(
                 ]
                 if not mapped_positions:
                     ann_sign_keys = ()
+                    token_lower, token_upper = token_neighbor_bounds(spec_index)
                     lower, upper = _point_range_from_match(
                         primary,
                         match,
                         start=annotation.start,
                         end=annotation.end,
+                        lower_fallback=token_lower,
+                        upper_fallback=token_upper,
                         record_id=record_id,
                     )
                     ann_point_index = native_point(
