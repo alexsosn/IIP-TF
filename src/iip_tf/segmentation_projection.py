@@ -1227,13 +1227,17 @@ def enrich_segmentation(
         upper: int,
     ) -> int:
         kind = dict(annotation.features).get("kind")
-        candidates_for_point = [
+        same_kind = [
             node
             for node in native_points
             if node.feature("kind") == kind
             and node.point_index is not None
             and lower <= node.point_index <= upper
-            and _point_features_compatible(annotation, node)
+        ]
+        candidates_for_point = [
+            node
+            for node in same_kind
+            if _point_features_compatible(annotation, node)
         ]
         if len(candidates_for_point) == 1:
             point = candidates_for_point[0].point_index
@@ -1243,6 +1247,11 @@ def enrich_segmentation(
             raise SegmentationProjectionError(
                 f"{record_id}: ambiguous zero-span point for {kind!r} "
                 f"within {lower}..{upper}"
+            )
+        if same_kind:
+            raise SegmentationProjectionError(
+                f"{record_id}: no unique zero-span point for {kind!r} "
+                f"within {lower}..{upper}: semantic feature mismatch"
             )
         if lower == upper:
             return lower
