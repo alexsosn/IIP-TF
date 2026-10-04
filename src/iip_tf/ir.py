@@ -91,6 +91,7 @@ class IRNode:
     node_type: NodeType
     sign_keys: tuple[str, ...]
     features: tuple[tuple[str, FeatureValue], ...] = ()
+    point_index: int | None = None
 
     def feature(self, name: str) -> FeatureValue | None:
         for feature_name, value in self.features:
@@ -141,6 +142,16 @@ class InscriptionIR:
             missing = set(node.sign_keys) - set(sign_keys)
             if missing:
                 raise ValueError(f"{node.key}: unknown sign keys {sorted(missing)!r}")
+            if node.point_index is not None:
+                if node.sign_keys:
+                    raise ValueError(
+                        f"{node.key}: point_index requires an empty semantic span"
+                    )
+                if not 0 <= node.point_index <= len(self.signs):
+                    raise ValueError(
+                        f"{node.key}: point_index {node.point_index} outside "
+                        f"0..{len(self.signs)}"
+                    )
 
         for edge in self.edges:
             if edge.source not in all_keys or edge.target not in all_keys:

@@ -370,11 +370,18 @@ class _Builder:
         parent: str | None = None,
     ) -> None:
         feature_items = tuple(sorted((features or {}).items()))
+        sign_keys = self.sign_keys(start, end)
+        point_index = (
+            start
+            if not sign_keys and node_type in {NodeType.MARKUP, NodeType.ENTITY}
+            else None
+        )
         node = IRNode(
             key=key,
             node_type=node_type,
-            sign_keys=self.sign_keys(start, end),
+            sign_keys=sign_keys,
             features=feature_items,
+            point_index=point_index,
         )
         self.nodes.append(node)
         if source_id:

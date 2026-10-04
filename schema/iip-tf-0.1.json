@@ -4,7 +4,8 @@
   "evidence": {
     "corpus_audit": "docs/research/iip-corpus-audit.md",
     "duplicate_segmentation_research": "docs/research/segmented-duplicates.md",
-    "pinned_source_revision": "0b7dc8358ccdfd0c9391f049da4839fbd91c26e5"
+    "pinned_source_revision": "0b7dc8358ccdfd0c9391f049da4839fbd91c26e5",
+    "zero_span_research": "docs/research/zero-span-points.md"
   },
   "warp": {
     "slot_type": "sign",
@@ -597,6 +598,15 @@
       "preserve_edition_node": true,
       "anchor_to_inscription_anchor": true,
       "invent_line_nodes": false
+    },
+    "semantic_zero_width_markup": {
+      "canonical_ir_field": "IRNode.point_index",
+      "semantics": "Record-local boundary offset in InscriptionIR.signs; 0 is before the first sign, len(signs) is after the last sign, interior k is between signs[k-1] and signs[k].",
+      "requires_empty_sign_keys": true,
+      "structural_empty_nodes_are_points": false,
+      "segmented_projection": "Preserve a deterministic projected boundary; prefer a unique compatible native empty-markup point inside monotonic token bounds and fail closed on ambiguity.",
+      "creates_text_slots": false,
+      "tf_serialization": "Issue #5 must map the semantic point to a technical adjacent oslots anchor plus an explicit reconstructable point relation; the technical anchor is not the semantic span."
     }
   },
   "metadata_policy": {
