@@ -771,3 +771,81 @@ def test_zero_atom_token_fails_when_multiple_native_points_fit_same_bounds(
 
     with pytest.raises(SegmentationProjectionError, match="ambiguous zero-span point"):
         parse_epidoc_file(path, source_revision="deadbeef")
+
+
+def test_empty_annotation_at_nonempty_token_start_stays_before_omitted_line_break(
+    tmp_path: Path,
+) -> None:
+    path = _write(
+        tmp_path,
+        "point-in-token-before-break.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="point-in-token-before-break">
+          <text><body>
+            <div type="edition" subtype="transcription"><p><unclear/><lb/>A</p></div>
+            <div type="edition" subtype="transcription_segmented">
+              <p><w xml:id="point-in-token-before-break-1" xml:lang="grc"><unclear/>A</w></p>
+            </div>
+          </body></text>
+        </TEI>""",
+    )
+
+    ir = parse_epidoc_file(path, source_revision="deadbeef")
+    point = next(
+        node
+        for node in _nodes(ir, "markup")
+        if node.feature("annotation_source") == "transcription_segmented"
+        and node.feature("kind") == "unclear"
+    )
+
+    assert ir.signs[0].synthetic_kind == "line_break"
+    assert point.point_index == 0
+
+
+def test_empty_annotation_at_nonempty_token_end_stays_after_omitted_gap(
+    tmp_path: Path,
+) -> None:
+    path = _write(
+        tmp_path,
+        "point-in-token-after-gap.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="point-in-token-after-gap">
+          <text><body>
+            <div type="edition" subtype="transcription"><p>A<gap reason="lost" quantity="1" unit="character"/><supplied reason="lost"/></p></div>
+            <div type="edition" subtype="transcription_segmented">
+              <p><w xml:id="point-in-token-after-gap-1" xml:lang="grc">A<supplied reason="lost"/></w></p>
+            </div>
+          </body></text>
+        </TEI>""",
+    )
+
+    ir = parse_epidoc_file(path, source_revision="deadbeef")
+    point = next(
+        node
+        for node in _nodes(ir, "markup")
+        if node.feature("annotation_source") == "transcription_segmented"
+        and node.feature("kind") == "supplied"
+    )
+
+    assert ir.signs[-1].synthetic_kind == "gap"
+    assert point.point_index == len(ir.signs)
+
+
+def test_zero_span_point_matching_rejects_extra_native_semantic_attributes(
+    tmp_path: Path,
+) -> None:
+    path = _write(
+        tmp_path,
+        "point-feature-mismatch.xml",
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="point-feature-mismatch">
+          <text><body>
+            <div type="edition" subtype="transcription"><p>A<unclear reason="damage"/>B</p></div>
+            <div type="edition" subtype="transcription_segmented">
+              <p><w xml:id="point-feature-mismatch-1" xml:lang="grc">A</w>
+                 <w xml:id="point-feature-mismatch-2" xml:lang="grc"><unclear/></w>
+                 <w xml:id="point-feature-mismatch-3" xml:lang="grc">B</w></p>
+            </div>
+          </body></text>
+        </TEI>""",
+    )
+
+    with pytest.raises(SegmentationProjectionError, match="no unique zero-span point"):
+        parse_epidoc_file(path, source_revision="deadbeef")
