@@ -24,6 +24,9 @@ def main() -> int:
     by_layer: Counter[str] = Counter()
     by_annotation_source: Counter[str] = Counter()
     empty_segmented_token_ids: list[str] = []
+    empty_markup_with_point = 0
+    empty_markup_without_point: list[str] = []
+    structural_empty_with_point: list[str] = []
     examples: dict[str, list[dict[str, object]]] = defaultdict(list)
 
     for path in sorted(args.source_dir.glob("*.xml")):
@@ -53,6 +56,14 @@ def main() -> int:
             if annotation_source == "transcription_segmented" and isinstance(token_id, str):
                 empty_segmented_token_ids.append(token_id)
 
+            if node_type == "markup":
+                if node.point_index is None:
+                    empty_markup_without_point.append(node.key)
+                else:
+                    empty_markup_with_point += 1
+            elif node_type in {"edition", "paragraph"} and node.point_index is not None:
+                structural_empty_with_point.append(node.key)
+
             bucket = node_type if not kind else f"{node_type}:{kind}"
             if len(examples[bucket]) < 12:
                 examples[bucket].append(
@@ -75,10 +86,13 @@ def main() -> int:
         "by_annotation_source": dict(sorted(by_annotation_source.items())),
         "empty_segmented_token_identity_count": len(empty_segmented_token_ids),
         "empty_segmented_token_identities": sorted(empty_segmented_token_ids),
+        "empty_markup_with_point": empty_markup_with_point,
+        "empty_markup_without_point": sorted(empty_markup_without_point),
+        "structural_empty_with_point": sorted(structural_empty_with_point),
         "examples": dict(sorted(examples.items())),
     }
     print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
-    return 0
+    return int(bool(empty_markup_without_point or structural_empty_with_point))
 
 
 if __name__ == "__main__":
