@@ -962,6 +962,76 @@ def _technical_anchor(ir: InscriptionIR, *, primary_layer: str) -> str:
     )
 
 
+_POINT_FEATURE_IGNORE: Final = frozenset(
+    {
+        "source_key",
+        "source_id",
+        "annotation_source",
+        "candidate_index",
+        "token_id",
+        "token_kind",
+        "lang",
+        "lang_source",
+        "layer",
+    }
+)
+
+
+def _point_range_from_match(
+    primary: tuple[_PrimaryAtom, ...],
+    match: _TokenMatch,
+    *,
+    start: int,
+    end: int,
+    record_id: str,
+) -> tuple[int, int]:
+    left_positions = [
+        position
+        for position in match.positions[:start]
+        if position is not None
+    ]
+    right_positions = [
+        position
+        for position in match.positions[end:]
+        if position is not None
+    ]
+
+    left = (
+        primary[left_positions[-1]].sign_end + 1
+        if left_positions
+        else None
+    )
+    right = (
+        primary[right_positions[0]].sign_start
+        if right_positions
+        else None
+    )
+    if left is None and right is None:
+        raise SegmentationProjectionError(
+            f"{record_id}: zero-span point has no mapped neighboring atom"
+        )
+    if left is None:
+        assert right is not None
+        return right, right
+    if right is None:
+        return left, left
+    if left > right:
+        raise SegmentationProjectionError(
+            f"{record_id}: inverted zero-span projection bounds {left}>{right}"
+        )
+    return left, right
+
+
+def _point_features_compatible(annotation: _AnnotationSpec, candidate: IRNode) -> bool:
+    expected = dict(annotation.features)
+    for name, value in expected.items():
+        if name in _POINT_FEATURE_IGNORE or name == "kind":
+            continue
+        if candidate.feature(name) != value:
+            return False
+    return True
+
+
 def enrich_segmentation(
     ir: InscriptionIR,
     root: ET.Element,
@@ -1090,6 +1160,11 @@ def enrich_segmentation(
         raise SegmentationProjectionError(
             f"{record_id}: selected segmentation has no target source edition"
         )
+    paragraph = _first_primary_paragraph(
+        ir,
+        target=target,
+        primary_layer=primary_layer,
+    )
     primary = _primary_atoms(
         ir,
         primary_layer=primary_layer,
@@ -1103,15 +1178,143 @@ def enrich_segmentation(
         allow_source_drift=source_revision == PINNED_IIP_REVISION,
     )
     selected_candidate_key = candidate_keys[resolution.selected_index]
+
+    matches_by_spec: list[_TokenMatch | None] = []
     embedding_index = 0
+    for spec in specs:
+        if spec.atoms:
+            matches_by_spec.append(embedding[embedding_index])
+            embedding_index += 1
+        else:
+            matches_by_spec.append(None)
+    if embedding_index != len(embedding):
+        raise SegmentationProjectionError(
+            f"{record_id}: internal projection accounting mismatch"
+        )
+
+    parent_of = {
+        edge.source: edge.target
+        for edge in ir.edges
+        if edge.edge_type == EdgeType.PARENT
+    }
+
+    def belongs_to_paragraph(node: IRNode) -> bool:
+        current = node.key
+        seen: set[str] = set()
+        while current in parent_of:
+            if current in seen:
+                raise SegmentationProjectionError(
+                    f"{record_id}: parent cycle while locating zero-span point"
+                )
+            seen.add(current)
+            current = parent_of[current]
+            if current == paragraph.key:
+                return True
+        return False
+
+    native_points = [
+        node
+        for node in ir.nodes
+        if node.node_type == NodeType.MARKUP
+        and node.point_index is not None
+        and node.feature("annotation_source") is None
+        and node.feature("layer") == primary_layer
+        and belongs_to_paragraph(node)
+    ]
+    sign_index = {sign.key: index for index, sign in enumerate(ir.signs)}
+    paragraph_indices = [sign_index[key] for key in paragraph.sign_keys]
+    paragraph_start = min(paragraph_indices)
+    paragraph_end = max(paragraph_indices) + 1
+
+    def native_point(
+        annotation: _AnnotationSpec,
+        *,
+        lower: int,
+        upper: int,
+    ) -> int:
+        kind = dict(annotation.features).get("kind")
+        candidates_for_point = [
+            node
+            for node in native_points
+            if node.feature("kind") == kind
+            and node.point_index is not None
+            and lower <= node.point_index <= upper
+            and _point_features_compatible(annotation, node)
+        ]
+        if len(candidates_for_point) == 1:
+            point = candidates_for_point[0].point_index
+            assert point is not None
+            return point
+        if len(candidates_for_point) > 1:
+            raise SegmentationProjectionError(
+                f"{record_id}: ambiguous zero-span point for {kind!r} "
+                f"within {lower}..{upper}"
+            )
+        if lower == upper:
+            return lower
+        raise SegmentationProjectionError(
+            f"{record_id}: no unique zero-span point for {kind!r} "
+            f"within {lower}..{upper}"
+        )
+
+    def zero_atom_bounds(spec_index: int) -> tuple[int, int]:
+        previous = next(
+            (
+                matches_by_spec[index]
+                for index in range(spec_index - 1, -1, -1)
+                if matches_by_spec[index] is not None
+            ),
+            None,
+        )
+        following = next(
+            (
+                matches_by_spec[index]
+                for index in range(spec_index + 1, len(specs))
+                if matches_by_spec[index] is not None
+            ),
+            None,
+        )
+        lower = (
+            primary[previous.end - 1].sign_end + 1
+            if previous is not None
+            else paragraph_start
+        )
+        upper = (
+            primary[following.start].sign_start
+            if following is not None
+            else paragraph_end
+        )
+        if lower > upper:
+            raise SegmentationProjectionError(
+                f"{record_id}: inverted zero-atom point bounds {lower}>{upper}"
+            )
+        return lower, upper
 
     def emit_annotations(
         spec: _TokenSpec,
         match: _TokenMatch | None,
+        *,
+        spec_index: int,
     ) -> None:
         for annotation in spec.annotations:
+            ann_point_index: int | None = None
             if annotation.start == annotation.end:
                 ann_sign_keys: tuple[str, ...] = ()
+                if match is None:
+                    lower, upper = zero_atom_bounds(spec_index)
+                else:
+                    lower, upper = _point_range_from_match(
+                        primary,
+                        match,
+                        start=annotation.start,
+                        end=annotation.end,
+                        record_id=record_id,
+                    )
+                ann_point_index = native_point(
+                    annotation,
+                    lower=lower,
+                    upper=upper,
+                )
             else:
                 if match is None:
                     raise SegmentationProjectionError(
@@ -1126,6 +1329,18 @@ def enrich_segmentation(
                 ]
                 if not mapped_positions:
                     ann_sign_keys = ()
+                    lower, upper = _point_range_from_match(
+                        primary,
+                        match,
+                        start=annotation.start,
+                        end=annotation.end,
+                        record_id=record_id,
+                    )
+                    ann_point_index = native_point(
+                        annotation,
+                        lower=lower,
+                        upper=upper,
+                    )
                 else:
                     ann_first = primary[mapped_positions[0]].sign_start
                     ann_last = primary[mapped_positions[-1]].sign_end
@@ -1146,6 +1361,7 @@ def enrich_segmentation(
                     node_type=NodeType.MARKUP,
                     sign_keys=ann_sign_keys,
                     features=annotation.features,
+                    point_index=ann_point_index,
                 )
             )
             if annotation.parent_key is not None:
@@ -1157,13 +1373,12 @@ def enrich_segmentation(
                     )
                 )
 
-    for spec in specs:
-        if not spec.atoms:
-            emit_annotations(spec, None)
+    for spec_index, spec in enumerate(specs):
+        match = matches_by_spec[spec_index]
+        if match is None:
+            emit_annotations(spec, None, spec_index=spec_index)
             continue
 
-        match = embedding[embedding_index]
-        embedding_index += 1
         first_sign = primary[match.start].sign_start
         last_sign = primary[match.end - 1].sign_end
         sign_keys = tuple(
@@ -1209,12 +1424,7 @@ def enrich_segmentation(
         edges.append(
             IREdge(EdgeType.TOKEN_FROM, word_key, selected_candidate_key)
         )
-        emit_annotations(spec, match)
-
-    if embedding_index != len(embedding):
-        raise SegmentationProjectionError(
-            f"{record_id}: internal projection accounting mismatch"
-        )
+        emit_annotations(spec, match, spec_index=spec_index)
 
     return InscriptionIR(
         identity=ir.identity,
