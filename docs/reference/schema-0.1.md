@@ -160,9 +160,21 @@ with ref/ana/nymRef/type/role/language/calendar/from/to fields as applicable.
 
 ## Empty and zero-width material
 
-One zero-width source event consumes one synthetic sign regardless of encoded quantity.
+One source-critical zero-width event consumes one synthetic sign regardless of encoded quantity.
 Metadata reuses the first primary anchor where possible; only an inscription with no primary
-source slot gets a technical anchor. Empty editions are retained without invented lines.
+source slot gets a technical anchor. Empty editions and empty paragraph blocks are retained
+without invented text or lines.
+
+Empty inline semantic markup is different from an empty structural container. Its canonical IR
+node has no `sign_keys`, but preserves `point_index`: a record-local boundary offset in
+`InscriptionIR.signs`. Offset 0 is before the first sign; offset `len(signs)` is after the
+last; interior offset `k` is between signs `k-1` and `k`. This also applies when selected
+segmented markup projects to a zero-width point. Ambiguous point projection fails closed.
+
+`point_index` is an IR semantic coordinate, not another text layer or slot. The native TF
+writer must give such a node a technical adjacent `oslots` anchor while retaining an explicit
+before/after relation so the point can be reconstructed. Empty structural nodes use the existing
+inscription-anchor policy and do not acquire point semantics.
 
 ## Record identity
 
