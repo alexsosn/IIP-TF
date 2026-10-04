@@ -71,3 +71,53 @@ def test_ir_rejects_duplicate_keys_and_unknown_edge_targets() -> None:
     edge = IREdge(EdgeType.PARENT, "x#missing", "x#also-missing")
     with pytest.raises(ValueError, match="unknown edge"):
         InscriptionIR(identity, provenance, (sign,), (), (edge,), ())
+
+
+def test_point_index_requires_an_empty_span_and_valid_boundary() -> None:
+    sign = IRSign(key="x#s1", glyph="A", layer=Layer.TRANSCRIPTION)
+    identity = SourceIdentity("x", "x.xml", "x", (), "grc")
+    provenance = SourceProvenance("deadbeef", False, None, 0)
+
+    point = IRNode(
+        key="x#point",
+        node_type=NodeType.MARKUP,
+        sign_keys=(),
+        features=(("kind", "unclear"),),
+        point_index=1,
+    )
+    ir = InscriptionIR(identity, provenance, (sign,), (point,), (), ())
+    assert ir.node("x#point").point_index == 1
+
+    with pytest.raises(ValueError, match="point_index"):
+        InscriptionIR(
+            identity,
+            provenance,
+            (sign,),
+            (
+                IRNode(
+                    key="x#bad-span",
+                    node_type=NodeType.MARKUP,
+                    sign_keys=("x#s1",),
+                    point_index=0,
+                ),
+            ),
+            (),
+            (),
+        )
+
+    with pytest.raises(ValueError, match="point_index"):
+        InscriptionIR(
+            identity,
+            provenance,
+            (sign,),
+            (
+                IRNode(
+                    key="x#bad-boundary",
+                    node_type=NodeType.MARKUP,
+                    sign_keys=(),
+                    point_index=2,
+                ),
+            ),
+            (),
+            (),
+        )
