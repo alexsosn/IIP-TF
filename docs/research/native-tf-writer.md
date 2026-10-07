@@ -11,6 +11,43 @@ self-contained Text-Fabric 13.1.x dataset without reinterpreting EpiDoc.
 
 This research follows ADR-0001, ADR-0002 and the #43 zero-span point model.
 
+## Pinned canonical-IR writer audit
+
+A reproducible audit is retained in
+`scripts/research_issue5_writer_contract.py`. Against the pinned Brown
+revision it reports:
+
+- 5,535 parsed records;
+- 1,466,387 sign slots;
+- 308,290 non-slot IR nodes;
+- 380,645 semantic edges;
+- 49 zero-width point nodes;
+- 11,427 empty structural edition/paragraph nodes;
+- 0 duplicate global canonical keys.
+
+Semantic edge counts are:
+
+| edge | count |
+| --- | ---: |
+| `parent` | 238,889 |
+| `in_inscription` | 75,161 |
+| `token_from` | 39,463 |
+| `cites` | 18,011 |
+| `segmentation_of` | 5,167 |
+| `corresponds_to` | 3,954 |
+
+The audit also confirms that every retained `after` separator in the pinned IR
+is a single space (267,141 occurrences). When editorial branches are suppressed,
+separator transfer is required in real data: 351 normalized and 2,599
+source-oriented transcription intervals, plus 14/21 diplomatic intervals.
+This makes separator transfer a source-grounded writer requirement rather than
+a synthetic fixture concern.
+
+All existing node features are single-typed in the pinned IR. In addition to
+the originally documented numeric derivatives, `candidate_index`, `selected`,
+and `token_count` are integer-valued. Schema 0.1 and the writer declare those
+as int features, together with serializer-derived `point_index`.
+
 ## Text-Fabric API choice
 
 Text-Fabric 13.1.0 exposes two relevant paths:
