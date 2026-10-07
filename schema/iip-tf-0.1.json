@@ -71,7 +71,7 @@
       "purpose": "current_layer",
       "target": "sign",
       "template": "{glyph}{after}",
-      "description": "Literal selected-reading text for a specific edition/textpart/line node."
+      "description": "Literal stored-slot view for one edition/textpart/line; may expose both editorial reading branches. Use primary/source/layer-specific selected formats for reading selection."
     },
     "text-source-full": {
       "purpose": "primary_source_reading",
@@ -301,7 +301,9 @@
       "source_n",
       "candidate_index",
       "token_count",
-      "candidate_langs"
+      "candidate_langs",
+      "point_index",
+      "point_relation"
     ],
     "edge": [
       "parent",
@@ -429,6 +431,20 @@
       "domain": "inscription",
       "value_type": "str",
       "semantics": "Exact raw source origin settlement/@cert value."
+    },
+    "point_index": {
+      "domain": "markup",
+      "value_type": "int",
+      "semantics": "TF serialization of canonical IR point_index for zero-width semantic markup; record-local boundary offset."
+    },
+    "point_relation": {
+      "domain": "markup",
+      "value_type": "str",
+      "values": [
+        "before",
+        "after"
+      ],
+      "semantics": "Relation of the zero-width semantic point to its single technical oslots anchor."
     }
   },
   "display_readings": {
@@ -851,7 +867,11 @@
       "line_n",
       "quantity_int",
       "date_not_before_int",
-      "date_not_after_int"
+      "date_not_after_int",
+      "candidate_index",
+      "selected",
+      "token_count",
+      "point_index"
     ],
     "edge_default": "edge_without_values",
     "rule": "Every TF feature has exactly one valueType. Raw source attributes are string features; optional numeric derivatives use separately named int features."
