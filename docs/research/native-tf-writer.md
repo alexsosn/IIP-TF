@@ -195,7 +195,7 @@ Schema 0.1 integer node features remain int:
 - `date_not_before_int`
 - `date_not_after_int`
 
-Writer-derived `point_index` is also int.
+Writer-derived `point_index` is also int. Point serialization is permitted on\ninline semantic `markup` and `entity` nodes, matching the canonical #43 IR contract.
 
 All remaining slot/node features are strings. All canonical edge features are
 unvalued edges.
