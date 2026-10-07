@@ -101,7 +101,7 @@
     "word-default": {
       "purpose": "word",
       "target": "word",
-      "template": "{word_text}"
+      "template": "word#{word_text}"
     }
   },
   "node_types": [
