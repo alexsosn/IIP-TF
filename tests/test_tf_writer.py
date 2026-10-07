@@ -59,6 +59,12 @@ def _record(record_id: str = "demo") -> InscriptionIR:
         sign_keys=tuple(sign.key for sign in signs),
         features=(("layer", "transcription"), ("line_n", 1)),
     )
+    word = IRNode(
+        key=f"{record_id}#word",
+        node_type=NodeType.WORD,
+        sign_keys=tuple(sign.key for sign in signs),
+        features=(("word_text", "demo-word"), ("token_id", "demo-1")),
+    )
     point = IRNode(
         key=f"{record_id}#point",
         node_type=NodeType.MARKUP,
@@ -72,7 +78,7 @@ def _record(record_id: str = "demo") -> InscriptionIR:
         sign_keys=(),
         features=(("kind", "p"), ("layer", "commentary")),
     )
-    nodes = (inscription, textpart, line, point, empty)
+    nodes = (inscription, textpart, line, word, point, empty)
     edges = (
         IREdge(EdgeType.PARENT, textpart.key, inscription.key),
         IREdge(EdgeType.PARENT, line.key, textpart.key),
@@ -155,6 +161,10 @@ def test_writer_round_trips_warp_edges_points_empty_nodes_and_formats(tmp_path: 
     assert T.text(demo, fmt="text-orig-full") == "A y B"
     assert T.text(demo, fmt="text-source-full") == "A x B"
     assert T.text(demo, fmt="text-transcription-full") == "A y B"
+
+    word = F.token_id.s("demo-1")[0]
+    assert T.text(word) == "demo-word"
+    assert T.text(word, fmt="word-default") == "demo-word"
 
     point = F.kind.s("unclear")[0]
     point_slots = L.d(point, otype="sign")
