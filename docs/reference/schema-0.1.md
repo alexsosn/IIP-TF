@@ -106,7 +106,9 @@ derivatives use separate features only when lossless, for example:
 - `date_not_before` (str) and optional `date_not_before_int` (int);
 - `date_not_after` (str) and optional `date_not_after_int` (int).
 
-`candidate_index`, `selected`, `token_count`, and writer-derived `point_index` are also integer features.\n\nNo feature is int-or-string depending on the node.
+`candidate_index`, `selected`, `token_count`, and writer-derived `point_index` are also integer features.
+
+No feature is int-or-string depending on the node.
 
 ## Words
 
@@ -171,7 +173,11 @@ node has no `sign_keys`, but preserves `point_index`: a record-local boundary of
 last; interior offset `k` is between signs `k-1` and `k`. This also applies when selected
 segmented markup projects to a zero-width point. Ambiguous point projection fails closed.
 
-`point_index` is an IR semantic coordinate, not another text layer or slot. The native TF\nwriter gives such a node one adjacent technical `oslots` anchor, preserves `point_index` as an\ninteger TF feature, and writes `point_relation=before|after` so the boundary is independently\nreconstructable from the anchor. Empty structural nodes use the existing
+`point_index` is an IR semantic coordinate, not another text layer or slot. The native TF
+writer gives an empty inline `markup` or `entity` node one adjacent technical `oslots` anchor,
+preserves `point_index` as an integer TF feature, and writes
+`point_relation=before|after` so the boundary is independently reconstructable from the anchor.
+Empty structural nodes use the existing
 inscription-anchor policy and do not acquire point semantics.
 
 ## Record identity
