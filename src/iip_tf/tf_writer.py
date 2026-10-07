@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import shutil
 from collections import defaultdict
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from tf.fabric import Fabric  # type: ignore[import-untyped]
 
 from iip_tf import __version__
-from iip_tf.ir import IRNode, IRSign, InscriptionIR, Layer, NodeType
+from iip_tf.ir import InscriptionIR, IRSign, Layer, NodeType
 
 _NODE_TYPE_ORDER = (
     NodeType.INSCRIPTION,
