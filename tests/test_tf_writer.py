@@ -198,17 +198,51 @@ def test_writer_output_is_byte_stable_and_removes_date_written(tmp_path: Path) -
 
 def test_writer_fails_closed_on_duplicate_global_key(tmp_path: Path) -> None:
     first = _record("same")
-    second = _record("other")
+    base = _record("other")
+    old_inscription = base.nodes[0].key
+    colliding = IRNode(
+        key=first.nodes[0].key,
+        node_type=NodeType.INSCRIPTION,
+        sign_keys=base.nodes[0].sign_keys,
+        features=base.nodes[0].features,
+    )
     second = InscriptionIR(
-        identity=second.identity,
-        provenance=second.provenance,
-        signs=(IRSign(first.signs[0].key, "Z", Layer.TRANSCRIPTION), *second.signs[1:]),
-        nodes=second.nodes,
-        edges=second.edges,
+        identity=base.identity,
+        provenance=base.provenance,
+        signs=base.signs,
+        nodes=(colliding, *base.nodes[1:]),
+        edges=tuple(
+            IREdge(
+                edge.edge_type,
+                edge.source,
+                colliding.key if edge.target == old_inscription else edge.target,
+            )
+            for edge in base.edges
+        ),
         diagnostics=(),
     )
     with pytest.raises(TFWriterError, match="duplicate canonical key"):
         write_tf_corpus((first, second), tmp_path / "tf", converter_commit=CONVERTER_COMMIT)
+
+
+def test_writer_fails_closed_on_wrong_feature_type(tmp_path: Path) -> None:
+    ir = _record()
+    bad = IRNode(
+        key="demo#bad",
+        node_type=NodeType.MARKUP,
+        sign_keys=(ir.signs[0].key,),
+        features=(("kind", "unclear"), ("candidate_index", "0")),
+    )
+    ir = InscriptionIR(
+        identity=ir.identity,
+        provenance=ir.provenance,
+        signs=ir.signs,
+        nodes=(*ir.nodes, bad),
+        edges=ir.edges,
+        diagnostics=ir.diagnostics,
+    )
+    with pytest.raises(TFWriterError, match="declared int domain"):
+        write_tf_corpus((ir,), tmp_path / "tf", converter_commit=CONVERTER_COMMIT)
 
 
 def test_writer_fails_closed_on_inconsistent_source_revision(tmp_path: Path) -> None:
