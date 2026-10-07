@@ -212,7 +212,7 @@ def _otext() -> dict[str, str]:
         "fmt:text-diplomatic-full": "{diplomatic_glyph}{diplomatic_after}",
         "fmt:text-translation-full": "{translation_glyph}{translation_after}",
         "fmt:text-commentary-full": "{commentary_glyph}{commentary_after}",
-        "fmt:word-default": "{word_text}",
+        "fmt:word-default": "word#{word_text}",
     }
 
 
