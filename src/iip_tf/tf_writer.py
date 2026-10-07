@@ -317,9 +317,9 @@ def write_tf_corpus(
         if node.sign_keys:
             slots = {slot_by_key[key] for key in node.sign_keys}
         elif node.point_index is not None:
-            if node.node_type != NodeType.MARKUP:
+            if node.node_type not in {NodeType.MARKUP, NodeType.ENTITY}:
                 raise TFWriterError(
-                    f"{node.key}: point semantics are only supported on markup nodes"
+                    f"{node.key}: point semantics are only supported on inline semantic nodes"
                 )
             record_slots = [slot_by_key[sign.key] for sign in ir.signs]
             if node.point_index < len(record_slots):
