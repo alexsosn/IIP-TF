@@ -8,10 +8,10 @@ from tf.fabric import Fabric  # type: ignore[import-untyped]
 
 from iip_tf.ir import (
     EdgeType,
+    InscriptionIR,
     IREdge,
     IRNode,
     IRSign,
-    InscriptionIR,
     Layer,
     NodeType,
     SourceIdentity,
