@@ -39,6 +39,9 @@ _INT_FEATURES = {
     "quantity_int",
     "date_not_before_int",
     "date_not_after_int",
+    "candidate_index",
+    "selected",
+    "token_count",
     "point_index",
 }
 _EMPTY_STRUCTURAL_TYPES = {NodeType.EDITION, NodeType.PARAGRAPH}
