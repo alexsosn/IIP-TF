@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 from tf.fabric import Fabric  # type: ignore[import-untyped]
@@ -127,7 +128,7 @@ def _empty_record(record_id: str = "empty") -> InscriptionIR:
     )
 
 
-def _load(path: Path):
+def _load(path: Path) -> Any:
     api = Fabric(locations=str(path), silent=True).loadAll(silent=True)
     assert api
     return api
