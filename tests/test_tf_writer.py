@@ -270,6 +270,27 @@ def test_writer_fails_closed_on_inconsistent_source_revision(tmp_path: Path) -> 
         write_tf_corpus((_record(), other), tmp_path / "tf", converter_commit=CONVERTER_COMMIT)
 
 
+def test_writer_rejects_point_semantics_on_structural_node(tmp_path: Path) -> None:
+    ir = _record()
+    bad = IRNode(
+        "demo#point-paragraph",
+        NodeType.PARAGRAPH,
+        (),
+        features=(("kind", "p"), ("layer", "transcription")),
+        point_index=1,
+    )
+    ir = InscriptionIR(
+        identity=ir.identity,
+        provenance=ir.provenance,
+        signs=ir.signs,
+        nodes=(*ir.nodes, bad),
+        edges=ir.edges,
+        diagnostics=ir.diagnostics,
+    )
+    with pytest.raises(TFWriterError, match="point semantics"):
+        write_tf_corpus((ir,), tmp_path / "tf", converter_commit=CONVERTER_COMMIT)
+
+
 def test_writer_rejects_unexpected_empty_node_type(tmp_path: Path) -> None:
     ir = _record()
     extra = IRNode("demo#empty-word", NodeType.WORD, (), features=(("word_text", ""),))
