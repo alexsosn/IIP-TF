@@ -433,12 +433,12 @@
       "semantics": "Exact raw source origin settlement/@cert value."
     },
     "point_index": {
-      "domain": "markup",
+      "domain": "markup|entity",
       "value_type": "int",
       "semantics": "TF serialization of canonical IR point_index for zero-width semantic markup; record-local boundary offset."
     },
     "point_relation": {
-      "domain": "markup",
+      "domain": "markup|entity",
       "value_type": "str",
       "values": [
         "before",
