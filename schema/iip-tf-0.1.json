@@ -435,7 +435,7 @@
     "point_index": {
       "domain": "markup|entity",
       "value_type": "int",
-      "semantics": "TF serialization of canonical IR point_index for zero-width semantic markup; record-local boundary offset."
+      "semantics": "TF serialization of canonical IR point_index for a zero-width inline semantic node; record-local boundary offset."
     },
     "point_relation": {
       "domain": "markup|entity",
