@@ -270,6 +270,32 @@ def test_writer_fails_closed_on_inconsistent_source_revision(tmp_path: Path) -> 
         write_tf_corpus((_record(), other), tmp_path / "tf", converter_commit=CONVERTER_COMMIT)
 
 
+def test_writer_accepts_zero_width_entity_point(tmp_path: Path) -> None:
+    ir = _record()
+    entity = IRNode(
+        "demo#entity-point",
+        NodeType.ENTITY,
+        (),
+        features=(("entity_kind", "name"), ("layer", "transcription")),
+        point_index=2,
+    )
+    ir = InscriptionIR(
+        identity=ir.identity,
+        provenance=ir.provenance,
+        signs=ir.signs,
+        nodes=(*ir.nodes, entity),
+        edges=ir.edges,
+        diagnostics=ir.diagnostics,
+    )
+    output = tmp_path / "tf"
+    write_tf_corpus((ir,), output, converter_commit=CONVERTER_COMMIT)
+
+    api = _load(output)
+    node = api.F.entity_kind.s("name")[0]
+    assert api.F.point_index.v(node) == 2
+    assert api.F.point_relation.v(node) == "before"
+
+
 def test_writer_rejects_point_semantics_on_structural_node(tmp_path: Path) -> None:
     ir = _record()
     bad = IRNode(
