@@ -144,11 +144,11 @@ def main() -> int:
     if not empty_values:
         raise SystemExit("generated corpus lacks empty structural markers")
 
+    shutil.rmtree(args.output_dir / ".tf", ignore_errors=True)
     for path in args.output_dir.glob("*.tf"):
         if "@dateWritten=" in path.read_text(encoding="utf-8"):
             raise SystemExit(f"volatile dateWritten remains in {path.name}")
 
-    shutil.rmtree(args.output_dir / ".tf", ignore_errors=True)
     report = {
         **actual,
         "node_counts": dict(sorted(node_counts.items())),
