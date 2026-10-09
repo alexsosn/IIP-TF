@@ -217,9 +217,16 @@ def test_tf_feature_value_types_are_single_and_serializable() -> None:
     assert types["slot_default"] == "str"
     assert types["node_default"] == "str"
     assert types["edge_default"] == "edge_without_values"
-    assert {"line_n", "quantity_int", "date_not_before_int", "date_not_after_int"} <= set(
-        types["node_int"]
-    )
+    assert {
+        "line_n",
+        "quantity_int",
+        "date_not_before_int",
+        "date_not_after_int",
+        "candidate_index",
+        "selected",
+        "token_count",
+        "point_index",
+    } <= set(types["node_int"])
     assert schema["feature_contract"]["quantity"]["value_type"] == "str"
     assert schema["feature_contract"]["quantity_int"]["value_type"] == "int"
     assert schema["feature_contract"]["date_not_before"]["value_type"] == "str"

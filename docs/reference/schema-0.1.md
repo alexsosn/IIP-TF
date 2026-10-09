@@ -56,7 +56,7 @@ needed for uniqueness.
 |---|---|
 | `text-orig-full` | Default primary text |
 | `text-source-full` | Source-oriented primary reading |
-| `text-layer-full` | Literal view of one edition/textpart/line |
+| `text-layer-full` | Literal stored-slot view of one edition/textpart/line; may expose both editorial branches |
 | `text-transcription-full` | Normalized transcription layer |
 | `text-diplomatic-full` | Diplomatic layer |
 | `text-translation-full` | Translation layer |
@@ -105,6 +105,8 @@ derivatives use separate features only when lossless, for example:
 - `quantity` (str) and optional `quantity_int` (int);
 - `date_not_before` (str) and optional `date_not_before_int` (int);
 - `date_not_after` (str) and optional `date_not_after_int` (int).
+
+`candidate_index`, `selected`, `token_count`, and writer-derived `point_index` are also integer features.
 
 No feature is int-or-string depending on the node.
 
@@ -172,8 +174,10 @@ last; interior offset `k` is between signs `k-1` and `k`. This also applies when
 segmented markup projects to a zero-width point. Ambiguous point projection fails closed.
 
 `point_index` is an IR semantic coordinate, not another text layer or slot. The native TF
-writer must give such a node a technical adjacent `oslots` anchor while retaining an explicit
-before/after relation so the point can be reconstructed. Empty structural nodes use the existing
+writer gives an empty inline `markup` or `entity` node one adjacent technical `oslots` anchor,
+preserves `point_index` as an integer TF feature, and writes
+`point_relation=before|after` so the boundary is independently reconstructable from the anchor.
+Empty structural nodes use the existing
 inscription-anchor policy and do not acquire point semantics.
 
 ## Record identity

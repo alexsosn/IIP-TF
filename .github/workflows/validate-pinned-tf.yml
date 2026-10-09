@@ -1,0 +1,66 @@
+name: Validate pinned native TF
+
+on:
+  pull_request:
+    paths:
+      - "src/iip_tf/tf_writer.py"
+      - "src/iip_tf/cli.py"
+      - "src/iip_tf/ir.py"
+      - "src/iip_tf/text_parser.py"
+      - "src/iip_tf/metadata_parser.py"
+      - "src/iip_tf/segmentation.py"
+      - "src/iip_tf/segmentation_projection.py"
+      - "src/iip_tf/source_repair.py"
+      - "schema/iip-tf-0.1.json"
+      - "scripts/validate_pinned_tf.py"
+      - ".github/workflows/validate-pinned-tf.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/iip_tf/tf_writer.py"
+      - "src/iip_tf/cli.py"
+      - "src/iip_tf/ir.py"
+      - "src/iip_tf/text_parser.py"
+      - "src/iip_tf/metadata_parser.py"
+      - "src/iip_tf/segmentation.py"
+      - "src/iip_tf/segmentation_projection.py"
+      - "src/iip_tf/source_repair.py"
+      - "schema/iip-tf-0.1.json"
+      - "scripts/validate_pinned_tf.py"
+      - ".github/workflows/validate-pinned-tf.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact event head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Fetch pinned Brown IIP source
+        env:
+          IIP_REVISION: 0b7dc8358ccdfd0c9391f049da4839fbd91c26e5
+        run: |
+          set -euo pipefail
+          mkdir -p upstream-iip
+          curl --fail --location --retry 3 \
+            "https://codeload.github.com/Brown-University-Library/iip-texts/tar.gz/${IIP_REVISION}" \
+            | tar -xz --strip-components=1 -C upstream-iip
+          test -d upstream-iip/epidoc-files
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install
+        run: python -m pip install -e '.[dev]'
+      - name: Build and reload complete native TF corpus
+        run: |
+          python scripts/validate_pinned_tf.py \
+            upstream-iip/epidoc-files \
+            build/pinned-tf \
+            --revision 0b7dc8358ccdfd0c9391f049da4839fbd91c26e5 \
+            --converter-commit "${{ github.event.pull_request.head.sha || github.sha }}"
