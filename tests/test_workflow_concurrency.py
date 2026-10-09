@@ -65,3 +65,13 @@ def test_only_pr_runs_cancel_in_progress() -> None:
     assert "github.run_id" in GROUP
     assert "github.event.pull_request.number" in GROUP
     assert "github.workflow" in GROUP
+
+
+
+def test_concurrency_workflow_names_are_unique_case_insensitively() -> None:
+    names: list[str] = []
+    for filename in sorted(ACTIVE_PR_WORKFLOWS):
+        first_line = (WORKFLOWS / filename).read_text(encoding="utf-8").splitlines()[0]
+        assert first_line.startswith("name: "), filename
+        names.append(first_line.removeprefix("name: ").strip().casefold())
+    assert len(names) == len(set(names))
