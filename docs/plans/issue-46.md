@@ -2,7 +2,7 @@
 
 1. Audit the five production workflows and the official Actions concurrency
    behavior; leave dormant research workflows unchanged.
-2. Add a RED regression test that requires top-level per-workflow/per-PR
+2. Add a RED regression test covering all seven PR-triggered workflows and requiring top-level per-workflow/per-PR
    concurrency and preserves main push runs through unique run IDs.
 3. Add the identical concurrency stanza in each active PR workflow.
 4. Validate syntax and expected group disjointness, run Ruff, strict MyPy and
