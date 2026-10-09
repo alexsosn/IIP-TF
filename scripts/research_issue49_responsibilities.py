@@ -93,7 +93,10 @@ def main() -> int:
                 _local(child.tag) for child in statement
                 if _local(child.tag) not in {"resp", "name", "persName"}
             ]
-            if (len(responsibilities) != 1 or len(names) != 1 or other_children) and len(anomalies) < 60:
+            is_anomalous = (
+                len(responsibilities) != 1 or len(names) != 1 or bool(other_children)
+            )
+            if is_anomalous and len(anomalies) < 60:
                 anomalies.append({
                     "record": path.name,
                     "shape": signature,
