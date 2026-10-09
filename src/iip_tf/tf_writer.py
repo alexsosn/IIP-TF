@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import shutil
 from collections import defaultdict
 from collections.abc import Callable, Iterable
@@ -139,6 +140,13 @@ def _view(
     return glyphs, afters
 
 
+def _normalized_layer_filter(layer: Layer) -> Callable[[IRSign], bool]:
+    def include(sign: IRSign) -> bool:
+        return sign.layer == layer and sign.reading_role in {"both", "normalized"}
+
+    return include
+
+
 def _add_view_features(
     features: dict[str, dict[int, str | int]],
     *,
@@ -164,11 +172,7 @@ def _add_view_features(
         Layer.TRANSLATION,
         Layer.COMMENTARY,
     ):
-        views[layer.value] = _view(
-            ir.signs,
-            lambda sign, layer=layer: sign.layer == layer
-            and sign.reading_role in {"both", "normalized"},
-        )
+        views[layer.value] = _view(ir.signs, _normalized_layer_filter(layer))
 
     for prefix, (glyphs, afters) in views.items():
         for key, value in glyphs.items():
@@ -216,8 +220,20 @@ def _otext() -> dict[str, str]:
     }
 
 
+def _otext_feature_names(otext: dict[str, str]) -> set[str]:
+    names = set(otext["sectionFeatures"].split(","))
+    for key, template in otext.items():
+        if key.startswith("fmt:"):
+            names.update(re.findall(r"\{([^}]+)\}", template))
+    return names
+
+
+def _tf_feature_files(output_dir: Path) -> list[Path]:
+    return sorted(path for path in output_dir.glob("*.tf") if path.is_file())
+
+
 def _normalize_headers(output_dir: Path) -> None:
-    for path in sorted(output_dir.glob("*.tf")):
+    for path in _tf_feature_files(output_dir):
         lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
         normalized = [line for line in lines if not line.startswith("@dateWritten=")]
         path.write_text("".join(normalized), encoding="utf-8")
@@ -280,7 +296,7 @@ def write_tf_corpus(
     )
 
     node_by_key: dict[str, int] = {}
-    otype: dict[int, str] = {
+    otype: dict[int, str | int] = {
         slot: "sign" for slot in range(1, max_slot + 1)
     }
     for offset, (_, node) in enumerate(ordered_nodes, start=max_slot + 1):
@@ -378,13 +394,16 @@ def write_tf_corpus(
         "converterCommit": converter_commit,
         "schemaVersion": "0.1",
     }
+    otext = _otext()
+    for name in _otext_feature_names(otext):
+        node_features.setdefault(name, {})
     metadata = _feature_metadata(node_features, edge_features, generic)
-    metadata["otext"] = _otext()
+    metadata["otext"] = otext
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    for old in output_dir.glob("*.tf"):
-        old.unlink()
     _clear_binary_cache(output_dir)
+    for old in _tf_feature_files(output_dir):
+        old.unlink()
 
     tf = Fabric(locations=str(output_dir), silent=True)
     good = tf.save(
