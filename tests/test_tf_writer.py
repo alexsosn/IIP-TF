@@ -206,6 +206,22 @@ def test_writer_output_is_byte_stable_and_removes_date_written(tmp_path: Path) -
         assert b"@dateWritten=" not in content
 
 
+def test_writer_rebuilds_into_directory_already_loaded_by_text_fabric(tmp_path: Path) -> None:
+    output = tmp_path / "tf"
+    fresh = tmp_path / "fresh"
+    irs = (_record(), _empty_record())
+
+    write_tf_corpus(irs, output, converter_commit=CONVERTER_COMMIT)
+    _load(output)
+    assert (output / ".tf").is_dir()
+
+    write_tf_corpus(irs, output, converter_commit=CONVERTER_COMMIT)
+    write_tf_corpus(irs, fresh, converter_commit=CONVERTER_COMMIT)
+
+    assert _tf_files(output) == _tf_files(fresh)
+    assert not (output / ".tf").exists()
+
+
 def test_writer_fails_closed_on_duplicate_global_key(tmp_path: Path) -> None:
     first = _record("same")
     base = _record("other")
