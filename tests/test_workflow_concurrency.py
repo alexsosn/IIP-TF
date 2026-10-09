@@ -13,6 +13,8 @@ ACTIVE_PR_WORKFLOWS = {
     "validate-pinned-source.yml",
     "validate-pinned-text-ir.yml",
     "validate-pinned-tf.yml",
+    "research-issue34.yml",
+    "research-issue38.yml",
 }
 
 GROUP = (
