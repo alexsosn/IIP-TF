@@ -19,9 +19,11 @@ def _local(tag: str) -> str:
 
 
 def _shape(element: ET.Element) -> str:
-    children = ",".join(_local(child.tag) for child in element)
-    attrs = ",".join(sorted(_local(name) for name in element.attrib))
-    return f"{_local(element.tag)}[{attrs}]({children})"
+    # Keep full Clark QNames in the research inventory: namespace aliasing
+    # must not make an unaudited element look like a known TEI field.
+    children = ",".join(child.tag for child in element)
+    attrs = ",".join(sorted(element.attrib))
+    return f"{element.tag}[{attrs}]({children})"
 
 
 def _text(element: ET.Element) -> str:
