@@ -24,6 +24,76 @@ EXPECTED_EMPTY_STRUCTURAL = 11427
 EXPECTED_SEGMENTED_TOKEN_IDENTITIES = 39472
 
 
+
+def _validate_native_metadata_queries(api: Any) -> dict[str, int]:
+    """Exercise native metadata node ownership and feature lookups on real IIP TF."""
+
+    F, E = api.F, api.E
+    checks = {
+        "bibl_scope": ("bibl",),
+        "dimension": ("inscription", "hand"),
+        "facsimile_surface": ("inscription", "facsimile_surface"),
+        "image": ("inscription", "facsimile_surface"),
+        "support_note": ("inscription",),
+        "revision": ("inscription",),
+        "decoration": ("inscription",),
+    }
+    for node_type, allowed_parents in checks.items():
+        nodes = F.otype.s(node_type)
+        if not nodes:
+            raise SystemExit(f"native metadata is missing {node_type} nodes")
+        for node in nodes:
+            parents = E.parent.f(node)
+            if len(parents) != 1 or F.otype.v(parents[0]) not in allowed_parents:
+                raise SystemExit(
+                    f"{node_type} {node}: invalid direct parent {parents!r}"
+                )
+
+    # Every citation target must remain a queryable native bibliographic node.
+    citations = 0
+    for source, targets in E.cites.items():
+        if F.otype.v(source) not in {"edition", "textpart"}:
+            raise SystemExit(f"cites edge has unexpected source {source}")
+        for target in targets:
+            if F.otype.v(target) != "bibl":
+                raise SystemExit(f"cites edge has non-bibl target {target}")
+            citations += 1
+    if not citations:
+        raise SystemExit("no native citations are queryable")
+
+    dated = tuple(api.Fs("date_not_before_int").items())
+    if not dated or not any(
+        isinstance(year, int) and isinstance(api.Fs("date_not_before").v(n), str)
+        for n, year in dated
+    ):
+        raise SystemExit("raw/typed date features are not jointly queryable")
+
+    referenced_places = tuple(api.Fs("settlement_ref").items())
+    if not referenced_places or not all(
+        F.otype.v(n) == "inscription" and isinstance(ref, str)
+        for n, ref in referenced_places
+    ):
+        raise SystemExit("inscription settlement references are not queryable")
+
+    nested_surfaces = sum(
+        1
+        for node in F.otype.s("facsimile_surface")
+        if F.otype.v(E.parent.f(node)[0]) == "facsimile_surface"
+    )
+    if not nested_surfaces:
+        raise SystemExit("nested facsimile surfaces lost on serialization")
+
+    return {
+        "validated_bibl_scopes": len(F.otype.s("bibl_scope")),
+        "validated_dimensions": len(F.otype.s("dimension")),
+        "validated_images": len(F.otype.s("image")),
+        "validated_nested_surfaces": nested_surfaces,
+        "validated_citations": citations,
+        "dated_inscriptions_with_typed_derivative": len(dated),
+        "settlement_refs": len(referenced_places),
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("source_dir", type=Path)
@@ -149,8 +219,10 @@ def main() -> int:
         if "@dateWritten=" in path.read_text(encoding="utf-8"):
             raise SystemExit(f"volatile dateWritten remains in {path.name}")
 
+    metadata_queries = _validate_native_metadata_queries(api)
     report = {
         **actual,
+        "metadata_queries": metadata_queries,
         "node_counts": dict(sorted(node_counts.items())),
         "edge_counts": dict(sorted(edge_counts.items())),
         "tf_files": len(tuple(args.output_dir.glob("*.tf"))),
