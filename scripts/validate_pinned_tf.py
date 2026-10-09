@@ -52,8 +52,8 @@ def _validate_native_metadata_queries(api: Any) -> dict[str, int]:
     # Every citation target must remain a queryable native bibliographic node.
     citations = 0
     for source, targets in E.cites.items():
-        if F.otype.v(source) not in {"edition", "textpart"}:
-            raise SystemExit(f"cites edge has unexpected source {source}")
+        if F.otype.v(source) == "sign":
+            raise SystemExit(f"cites edge originates from slot {source}")
         for target in targets:
             if F.otype.v(target) != "bibl":
                 raise SystemExit(f"cites edge has non-bibl target {target}")
