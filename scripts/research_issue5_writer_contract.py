@@ -7,7 +7,7 @@ import json
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from iip_tf.ir import EdgeType, Layer, NodeType
+from iip_tf.ir import Layer, NodeType
 from iip_tf.text_parser import parse_epidoc_file
 
 SELECTED_ROLES = {
@@ -33,7 +33,7 @@ def _selection_hazards(signs, *, roles: frozenset[str]) -> tuple[int, int, list[
     ambiguous = 0
     examples: list[dict[str, object]] = []
 
-    for left, right in zip(selected, selected[1:]):
+    for left, right in zip(selected, selected[1:], strict=False):
         interval = signs[left:right]
         nonempty = [(i + left, sign.after) for i, sign in enumerate(interval) if sign.after]
         if not nonempty:

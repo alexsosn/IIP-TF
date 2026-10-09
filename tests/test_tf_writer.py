@@ -19,7 +19,6 @@ from iip_tf.ir import (
 )
 from iip_tf.tf_writer import TFWriterError, write_tf_corpus
 
-
 REVISION = "0b7dc8358ccdfd0c9391f049da4839fbd91c26e5"
 CONVERTER_COMMIT = "deadbeef"
 
