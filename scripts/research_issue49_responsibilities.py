@@ -51,8 +51,9 @@ def main() -> int:
         title = root.find(f"./{TEI}teiHeader/{TEI}fileDesc/{TEI}titleStmt")
         if title is None:
             counters["records_without_titleStmt"] += 1
-            continue
-        counters["records_with_titleStmt"] += 1
+            title = ET.Element("absent-titleStmt")
+        else:
+            counters["records_with_titleStmt"] += 1
         for child in title:
             counters[f"titleStmt_child:{_local(child.tag)}"] += 1
             child_shapes[_shape(child)] += 1
