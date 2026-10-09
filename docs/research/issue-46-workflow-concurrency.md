@@ -18,17 +18,19 @@ https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-synt
 
 ## Production workflow inventory
 
-The active workflows accepting pull requests are:
+All seven workflows accepting pull requests are:
 
 - `.github/workflows/ci.yml`
 - `.github/workflows/audit-pinned-iip.yml`
 - `.github/workflows/validate-pinned-source.yml`
 - `.github/workflows/validate-pinned-text-ir.yml`
 - `.github/workflows/validate-pinned-tf.yml`
+- `.github/workflows/research-issue34.yml`
+- `.github/workflows/research-issue38.yml`
 
-`research-issue34.yml`, `research-issue38.yml`, and
-`research-issue43.yml` are dormant, branch-scoped research workflows rather
-than general PR gates; do not change their triggers.
+`research-issue34.yml` and `research-issue38.yml` remain active on selected
+pull-request paths, and need the same policy. `research-issue43.yml` is an
+old branch-scoped *push-only* research workflow; do not change its trigger.
 
 ## Decision
 
