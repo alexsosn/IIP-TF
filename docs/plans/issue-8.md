@@ -19,3 +19,9 @@
 ### Release boundary
 
 `app/config.yaml` is a display config, not a corpus semantic sidecar. No XML/JSON transformations or new TF content are stored in the app. TF data packaging / download is tracked by #10, so browser command claims must distinguish locally generated data from published versioned data.
+
+## CI-observed RED and correction (2026-10-10)
+
+- Exact-head run 38063447435: 3 browser fixture tests fail after native TF successfully loads. Run 38063447436: the full pinned 5,535-record, 157-feature reproducibility build succeeds, then `tf.app.use` fails in `tf.advanced.links.linksApi` at `"/".join(components)` because `app.context.version` is `None` (third component) when app provenance omits a data version.
+- Source check: TF 13.1's `linksApi` creates a local path with `version` unconditionally for `app:`-style paths. The unversioned local TF directory is legitimate; configure an **explicit empty string**, `provenanceSpec.version: ''`, which prevents the TypeError without inventing a published version or activating remote-data discovery.
+- RED evidence is the actual three failing fixture tests plus full-corpus browser gate; the config test now requires this documented empty version and the production browser tests must go green. Do not disable link generation or replace the standard TF server.
