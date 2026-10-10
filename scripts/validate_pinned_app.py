@@ -83,7 +83,15 @@ def main() -> int:
             raise RuntimeError("TF browser response lacks IIP corpus identity")
 
         # These are actual browser endpoints, not just core TF section lookups.
-        passage = client.post("/passage", data={"sec0": "abil0001"})
+        # A three-level corpus with browseNavLevel=2 requires both the
+        # inscription (sec0) and textpart (sec1) for line content.
+        sections = api.L.d(chor, otype="line")
+        if not sections:
+            raise RuntimeError("pinned inscription has no browseable line")
+        section = api.T.sectionFromNode(sections[0])
+        passage = client.post(
+            "/passage", data={"sec0": "chor0001", "sec1": str(section[1])}
+        )
         payload = passage.get_json()
         if passage.status_code != 200 or not isinstance(payload, dict):
             raise RuntimeError("pinned browser passage endpoint failed")
