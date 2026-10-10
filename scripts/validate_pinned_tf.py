@@ -201,181 +201,232 @@ def main() -> int:
     # Refuse rather than erase any previous research output.
     require_empty_output_directory(reports_dir)
 
-    irs = []
-    node_counts: Counter[str] = Counter()
-    edge_counts: Counter[str] = Counter()
-    slot_languages: Counter[str] = Counter()
-    slot_kinds: Counter[str] = Counter()
-    sign_count = 0
-    point_count = 0
-    empty_structural = 0
-    token_identities = 0
+    # Every successful parse is only IR, not a successfully converted TF record.
+    # Keep a durable failure ledger separate from the native corpus output.
+    parsed_files: list[str] = []
+    stage = "parse"
+    failing_file: str | None = None
+    try:
+        irs = []
+        node_counts: Counter[str] = Counter()
+        edge_counts: Counter[str] = Counter()
+        slot_languages: Counter[str] = Counter()
+        slot_kinds: Counter[str] = Counter()
+        sign_count = 0
+        point_count = 0
+        empty_structural = 0
+        token_identities = 0
 
-    for path in selected:
-        ir = parse_epidoc_file(path, source_revision=args.revision)
-        irs.append(ir)
-        sign_count += len(ir.signs)
-        for sign in ir.signs:
-            slot_languages[sign.lang or "und"] += 1
-            slot_kinds[sign.synthetic_kind or "visible"] += 1
-        for node in ir.nodes:
-            node_counts[node.node_type.value] += 1
-            if node.point_index is not None:
-                point_count += 1
-            elif not node.sign_keys and node.node_type in {
-                NodeType.EDITION,
-                NodeType.PARAGRAPH,
-            }:
-                empty_structural += 1
-            if node.node_type == NodeType.WORD:
-                token_identities += 1
-            elif (
-                node.node_type == NodeType.MARKUP
-                and node.feature("annotation_source") == "transcription_segmented"
-                and node.feature("token_id") is not None
-                and not node.sign_keys
-            ):
-                token_identities += 1
-        for edge in ir.edges:
-            edge_counts[edge.edge_type.value] += 1
+        for path in selected:
+            failing_file = path.name
+            ir = parse_epidoc_file(path, source_revision=args.revision)
+            irs.append(ir)
+            parsed_files.append(path.name)
+            sign_count += len(ir.signs)
+            for sign in ir.signs:
+                slot_languages[sign.lang or "und"] += 1
+                slot_kinds[sign.synthetic_kind or "visible"] += 1
+            for node in ir.nodes:
+                node_counts[node.node_type.value] += 1
+                if node.point_index is not None:
+                    point_count += 1
+                elif not node.sign_keys and node.node_type in {
+                    NodeType.EDITION,
+                    NodeType.PARAGRAPH,
+                }:
+                    empty_structural += 1
+                if node.node_type == NodeType.WORD:
+                    token_identities += 1
+                elif (
+                    node.node_type == NodeType.MARKUP
+                    and node.feature("annotation_source") == "transcription_segmented"
+                    and node.feature("token_id") is not None
+                    and not node.sign_keys
+                ):
+                    token_identities += 1
+            for edge in ir.edges:
+                edge_counts[edge.edge_type.value] += 1
 
-    parsed = len(irs)
-    edge_count = sum(edge_counts.values())
-    node_count = sum(node_counts.values())
+        stage = "ir_validation"
+        failing_file = None
+        parsed = len(irs)
+        edge_count = sum(edge_counts.values())
+        node_count = sum(node_counts.values())
 
-    expected = {
-        "parsed": EXPECTED_PARSED,
-        "signs": EXPECTED_SIGNS,
-        "nodes": EXPECTED_NODES,
-        "edges": EXPECTED_EDGES,
-        "points": EXPECTED_POINTS,
-        "empty_structural": EXPECTED_EMPTY_STRUCTURAL,
-        "segmented_token_identities": EXPECTED_SEGMENTED_TOKEN_IDENTITIES,
-    }
-    actual = {
-        "parsed": parsed,
-        "signs": sign_count,
-        "nodes": node_count,
-        "edges": edge_count,
-        "points": point_count,
-        "empty_structural": empty_structural,
-        "segmented_token_identities": token_identities,
-    }
-    if actual != expected:
-        raise SystemExit(
-            "pinned canonical IR accounting changed: "
-            + json.dumps({"expected": expected, "actual": actual}, sort_keys=True)
-        )
-
-    require_empty_output_directory(args.output_dir)
-    write_tf_corpus(
-        tuple(irs),
-        args.output_dir,
-        converter_commit=args.converter_commit,
-    )
-
-    api: Any = Fabric(locations=str(args.output_dir), silent=True).loadAll(silent=True)
-    if not api:
-        raise SystemExit("Text-Fabric failed to load generated pinned corpus")
-
-    loaded_node_counts = {
-        node_type: len(api.F.otype.s(node_type))
-        for node_type in ("sign", *sorted(node_counts))
-    }
-    if loaded_node_counts["sign"] != sign_count:
-        raise SystemExit(
-            f"loaded sign count {loaded_node_counts['sign']} != {sign_count}"
-        )
-    for node_type, count in node_counts.items():
-        if loaded_node_counts[node_type] != count:
+        expected = {
+            "parsed": EXPECTED_PARSED,
+            "signs": EXPECTED_SIGNS,
+            "nodes": EXPECTED_NODES,
+            "edges": EXPECTED_EDGES,
+            "points": EXPECTED_POINTS,
+            "empty_structural": EXPECTED_EMPTY_STRUCTURAL,
+            "segmented_token_identities": EXPECTED_SEGMENTED_TOKEN_IDENTITIES,
+        }
+        actual = {
+            "parsed": parsed,
+            "signs": sign_count,
+            "nodes": node_count,
+            "edges": edge_count,
+            "points": point_count,
+            "empty_structural": empty_structural,
+            "segmented_token_identities": token_identities,
+        }
+        if actual != expected:
             raise SystemExit(
-                f"loaded {node_type} count {loaded_node_counts[node_type]} != {count}"
+                "pinned canonical IR accounting changed: "
+                + json.dumps({"expected": expected, "actual": actual}, sort_keys=True)
             )
 
-    validated_oslots_nodes = validate_oslots_mapping(
-        api.E.oslots.items(),
-        sign_count=sign_count,
-        node_count=node_count,
-    )
-
-    loaded_edge_counts: dict[str, int] = {}
-    for edge_type, expected_count in edge_counts.items():
-        feature = api.Es(edge_type)
-        count = sum(len(targets) for _, targets in feature.items())
-        loaded_edge_counts[edge_type] = count
-        if count != expected_count:
-            raise SystemExit(
-                f"loaded edge {edge_type} count {count} != {expected_count}"
-            )
-
-    point_nodes = tuple(node for node, _ in api.Fs("point_index").items())
-    if len(point_nodes) != EXPECTED_POINTS:
-        raise SystemExit(f"loaded point count {len(point_nodes)} != {EXPECTED_POINTS}")
-    for node in point_nodes:
-        slots = tuple(api.L.d(node, otype="sign"))
-        if len(slots) != 1:
-            raise SystemExit(f"point node {node} has {len(slots)} technical slots")
-        relation = api.Fs("point_relation").v(node)
-        if relation not in {"before", "after"}:
-            raise SystemExit(f"point node {node} has invalid relation {relation!r}")
-
-    empty_values = tuple(api.Fs("empty").items())
-    if not empty_values:
-        raise SystemExit("generated corpus lacks empty structural markers")
-
-    shutil.rmtree(args.output_dir / ".tf", ignore_errors=True)
-    for path in args.output_dir.glob("*.tf"):
-        if "@dateWritten=" in path.read_text(encoding="utf-8"):
-            raise SystemExit(f"volatile dateWritten remains in {path.name}")
-
-    metadata_queries = _validate_native_metadata_queries(api)
-    report = {
-        **actual,
-        "metadata_queries": metadata_queries,
-        "node_counts": dict(sorted(node_counts.items())),
-        "edge_counts": dict(sorted(edge_counts.items())),
-        "tf_files": len(tuple(args.output_dir.glob("*.tf"))),
-        "validated_oslots_nodes": validated_oslots_nodes,
-    }
-    # Rebuild from source in a separate fresh directory, not the cached
-    # in-memory canonical IR. Compare every native TF feature bytewise.
-    # Drop first-build memory before the independent parse of 5,535 files.
-    irs.clear()
-    del api
-    gc.collect()
-    with tempfile.TemporaryDirectory(
-        prefix="pinned-tf-independent-",
-        dir=args.output_dir.parent,
-    ) as fresh_directory:
-        second_dir = Path(fresh_directory)
+        stage = "tf_write"
+        require_empty_output_directory(args.output_dir)
         write_tf_corpus(
-            (parse_epidoc_file(path, source_revision=args.revision) for path in selected),
-            second_dir,
+            tuple(irs),
+            args.output_dir,
             converter_commit=args.converter_commit,
         )
-        feature_hashes = compare_tf_feature_hashes(args.output_dir, second_dir)
-    if len(feature_hashes) != report["tf_files"]:
-        raise SystemExit("not all native TF features were hashed")
 
-    complete = {
-        **report,
-        "status": "success",
-        "source_revision": args.revision,
-        "verified_source_tree_git_sha1": verified_source_tree,
-        "converter_commit": args.converter_commit,
-        "source_files": {
-            "converted": [path.name for path in selected],
-            "excluded": excluded,
-            "failed": [],
-        },
-        "slot_languages": dict(sorted(slot_languages.items())),
-        "slot_kinds": dict(sorted(slot_kinds.items())),
-        "tf_feature_hashes": feature_hashes,
-        "reproducible_builds": 2,
-    }
-    write_build_reports(reports_dir, complete)
-    print(json.dumps(complete, sort_keys=True))
-    return 0
+        stage = "tf_reload"
+        api: Any = Fabric(locations=str(args.output_dir), silent=True).loadAll(silent=True)
+        if not api:
+            raise SystemExit("Text-Fabric failed to load generated pinned corpus")
+
+        stage = "native_integrity"
+        loaded_node_counts = {
+            node_type: len(api.F.otype.s(node_type))
+            for node_type in ("sign", *sorted(node_counts))
+        }
+        if loaded_node_counts["sign"] != sign_count:
+            raise SystemExit(
+                f"loaded sign count {loaded_node_counts['sign']} != {sign_count}"
+            )
+        for node_type, count in node_counts.items():
+            if loaded_node_counts[node_type] != count:
+                raise SystemExit(
+                    f"loaded {node_type} count {loaded_node_counts[node_type]} != {count}"
+                )
+
+        validated_oslots_nodes = validate_oslots_mapping(
+            api.E.oslots.items(),
+            sign_count=sign_count,
+            node_count=node_count,
+        )
+
+        loaded_edge_counts: dict[str, int] = {}
+        for edge_type, expected_count in edge_counts.items():
+            feature = api.Es(edge_type)
+            count = sum(len(targets) for _, targets in feature.items())
+            loaded_edge_counts[edge_type] = count
+            if count != expected_count:
+                raise SystemExit(
+                    f"loaded edge {edge_type} count {count} != {expected_count}"
+                )
+
+        point_nodes = tuple(node for node, _ in api.Fs("point_index").items())
+        if len(point_nodes) != EXPECTED_POINTS:
+            raise SystemExit(f"loaded point count {len(point_nodes)} != {EXPECTED_POINTS}")
+        for node in point_nodes:
+            slots = tuple(api.L.d(node, otype="sign"))
+            if len(slots) != 1:
+                raise SystemExit(f"point node {node} has {len(slots)} technical slots")
+            relation = api.Fs("point_relation").v(node)
+            if relation not in {"before", "after"}:
+                raise SystemExit(f"point node {node} has invalid relation {relation!r}")
+
+        empty_values = tuple(api.Fs("empty").items())
+        if not empty_values:
+            raise SystemExit("generated corpus lacks empty structural markers")
+
+        shutil.rmtree(args.output_dir / ".tf", ignore_errors=True)
+        for path in args.output_dir.glob("*.tf"):
+            if "@dateWritten=" in path.read_text(encoding="utf-8"):
+                raise SystemExit(f"volatile dateWritten remains in {path.name}")
+
+        metadata_queries = _validate_native_metadata_queries(api)
+        report = {
+            **actual,
+            "metadata_queries": metadata_queries,
+            "node_counts": dict(sorted(node_counts.items())),
+            "edge_counts": dict(sorted(edge_counts.items())),
+            "tf_files": len(tuple(args.output_dir.glob("*.tf"))),
+            "validated_oslots_nodes": validated_oslots_nodes,
+        }
+        stage = "reproducibility"
+        # Rebuild from source in a separate fresh directory, not the cached
+        # in-memory canonical IR. Compare every native TF feature bytewise.
+        # Drop first-build memory before the independent parse of 5,535 files.
+        irs.clear()
+        del api
+        gc.collect()
+        with tempfile.TemporaryDirectory(
+            prefix="pinned-tf-independent-",
+            dir=args.output_dir.parent,
+        ) as fresh_directory:
+            second_dir = Path(fresh_directory)
+            write_tf_corpus(
+                (parse_epidoc_file(path, source_revision=args.revision) for path in selected),
+                second_dir,
+                converter_commit=args.converter_commit,
+            )
+            feature_hashes = compare_tf_feature_hashes(args.output_dir, second_dir)
+        if len(feature_hashes) != report["tf_files"]:
+            raise SystemExit("not all native TF features were hashed")
+
+        complete = {
+            **report,
+            "status": "success",
+            "source_revision": args.revision,
+            "verified_source_tree_git_sha1": verified_source_tree,
+            "converter_commit": args.converter_commit,
+            "source_files": {
+                "converted": [path.name for path in selected],
+                "excluded": excluded,
+                "failed": [],
+            },
+            "slot_languages": dict(sorted(slot_languages.items())),
+            "slot_kinds": dict(sorted(slot_kinds.items())),
+            "tf_feature_hashes": feature_hashes,
+            "reproducible_builds": 2,
+        }
+        stage = "report_write"
+        write_build_reports(reports_dir, complete)
+        print(json.dumps(complete, sort_keys=True))
+        return 0
+    except (Exception, SystemExit) as error:
+        selected_names = [path.name for path in selected]
+        remainder = (
+            selected_names[len(parsed_files) + (1 if failing_file else 0):]
+            if stage == "parse"
+            else []
+        )
+        failed: dict[str, object] = {
+            "filename": failing_file,
+            "stage": stage,
+            "error_type": type(error).__name__,
+        }
+        # No raw XML or exception messages: source exception text may embed data.
+        # We only count a source as converted on the all-green success path.
+        failure_report: dict[str, object] = {
+            "status": "failed",
+            "source_revision": args.revision,
+            "verified_source_tree_git_sha1": verified_source_tree,
+            "converter_commit": args.converter_commit,
+            "failed_stage": stage,
+            "source_files": {
+                "converted": [],
+                "parsed": parsed_files,
+                "excluded": excluded,
+                "failed": [failed],
+                "unprocessed": remainder,
+            },
+        }
+        try:
+            write_build_reports(reports_dir, failure_report)
+        except OSError as report_error:
+            error.add_note(
+                "Could not persist pinned conversion failure report: "
+                + type(report_error).__name__
+            )
+        raise
 
 
 if __name__ == "__main__":
