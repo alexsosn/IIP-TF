@@ -40,6 +40,10 @@ def audit(
     role_counts: Counter[str] = Counter()
     child_shapes: Counter[str] = Counter()
     statement_shapes: Counter[str] = Counter()
+    publication_shapes: Counter[str] = Counter()
+    publication_child_shapes: Counter[str] = Counter()
+    publication_includes: Counter[str] = Counter()
+    publication_samples: dict[str, dict[str, object]] = {}
     anomalies: list[dict[str, object]] = []
     samples: dict[str, dict[str, object]] = {}
 
@@ -107,14 +111,27 @@ def audit(
         publication = root.find(
             f"./{TEI}teiHeader/{TEI}fileDesc/{TEI}publicationStmt"
         )
-        if publication is not None:
+        if publication is None:
+            counters["records_without_publicationStmt"] += 1
+        else:
+            counters["records_with_publicationStmt"] += 1
+            publication_shapes[_shape(publication)] += 1
             for child in publication:
                 name = _local(child.tag)
                 counters[f"publicationStmt_child:{name}"] += 1
+                signature = _shape(child)
+                publication_child_shapes[signature] += 1
+                if signature not in publication_samples:
+                    publication_samples[signature] = {
+                        "record": path.name,
+                        "text": _text(child),
+                        "attrs": dict(child.attrib),
+                    }
                 if child.tag == f"{TEI}authority":
                     counters[f"publication_authority_text:{_text(child)}"] += 1
                 elif child.tag == f"{XI}include":
                     counters["unexpanded_publication_xinclude"] += 1
+                    publication_includes[child.attrib.get("href", "")] += 1
 
     report = {
         "parsed": parsed,
@@ -122,6 +139,10 @@ def audit(
         "role_counts": dict(sorted(role_counts.items())),
         "title_and_agent_shapes": dict(sorted(child_shapes.items())),
         "respStmt_shapes": dict(sorted(statement_shapes.items())),
+        "publicationStmt_shapes": dict(sorted(publication_shapes.items())),
+        "publication_child_shapes": dict(sorted(publication_child_shapes.items())),
+        "publication_include_hrefs": dict(sorted(publication_includes.items())),
+        "sample_per_publication_child_shape": dict(sorted(publication_samples.items())),
         "sample_per_respStmt_shape": dict(sorted(samples.items())),
         "anomalies": anomalies,
     }
