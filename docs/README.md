@@ -12,6 +12,12 @@ IIP-TF keeps maintainer design material separate from the eventual researcher ma
 
 ## Researcher documentation
 
-Issue #9 will build the release documentation from the actual generated corpus. It will include installation, corpus scope, data model, feature reference, query examples, browser use, reproducibility, citation/licence guidance, and known limitations.
+- [First five minutes: executable researcher examples](guides/researcher-quickstart.md)
+- [Build/authenticate and browse locally](guides/local-tf-browser.md)
+- [Native metadata queries](guides/query-native-metadata.md)
+- [Native data model reference](reference/schema-0.1.md)
 
-Until #7–#9 are complete, examples in development documents are architectural examples rather than a promise that a released corpus already supports them.
+The quickstart examples are exercised against real Text-Fabric in CI and the
+full pinned source gate. Issue #9 remains open for the complete researcher
+manual, audited feature catalog, and broader examples. A remote
+auto-downloadable dataset has not been published (#10).
