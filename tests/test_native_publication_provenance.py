@@ -32,7 +32,7 @@ def test_project_contributors_and_publication_fields_survive_tf_roundtrip(
             <principal><persName xml:id="MS">Michael Satlow</persName></principal>
             <respStmt><resp>Prinicipal Investigator</resp>
               <persName xml:id="editor">Editor Name</persName></respStmt>
-            <respStmt><resp>Creator</resp><name>Another Author</name></respStmt>
+            <respStmt><resp xml:id="editor-role">Creator</resp><name>Another Author</name></respStmt>
           </titleStmt>
           <publicationStmt>
             <authority>Brown University</authority>
@@ -68,6 +68,9 @@ def test_project_contributors_and_publication_fields_survive_tf_roundtrip(
     ]
     assert [n.feature("agent_source_id") for n in responsibilities] == [
         "MS", "editor", None
+    ]
+    assert [n.feature("responsibility_role_source_id") for n in responsibilities] == [
+        None, None, "editor-role"
     ]
 
     publication_id = ir.nodes_of_type(NodeType.PUBLICATION_ID)[0]
@@ -105,6 +108,8 @@ def test_project_contributors_and_publication_fields_survive_tf_roundtrip(
         if F.responsibility_role.v(n) == "Prinicipal Investigator"
     )
     assert F.agent_source_id.v(pi) == "editor"
+    creator = next(n for n in F.otype.s("responsibility") if F.responsibility_role.v(n) == "Creator")
+    assert F.responsibility_role_source_id.v(creator) == "editor-role"
     assert len(E.parent.f(pi)) == 1
     assert len(F.otype.s("publication_reference")) == 2
     assert len(F.otype.s("publication_paragraph")) == 1
