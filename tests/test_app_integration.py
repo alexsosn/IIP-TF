@@ -4,10 +4,16 @@ from __future__ import annotations
 
 from html.parser import HTMLParser
 from pathlib import Path
+from subprocess import PIPE, STDOUT, Popen, TimeoutExpired
 from typing import Any
+from urllib.error import URLError
+from urllib.request import ProxyHandler, build_opener
+import sys
+import time
 
 import yaml  # type: ignore[import-untyped]
 from tf.app import use  # type: ignore[import-untyped]
+from tf.browser.command import argApp, getPort  # type: ignore[import-untyped]
 from tf.browser.web import setup  # type: ignore[import-untyped]
 from tf.fabric import Fabric  # type: ignore[import-untyped]
 
@@ -98,3 +104,59 @@ def test_local_browser_wsgi_loads_native_app_and_passage_without_download(tmp_pa
     response = webapp.test_client().get("/")
     assert response.status_code == 200
     assert b"minimal" in response.data
+
+
+def test_browser_cli_serves_http_offline(tmp_path: Path) -> None:
+    """Actual TF browser process: -noweb skips GUI but still serves HTTP."""
+    source = tmp_path / "minimal.xml"
+    source.write_text(
+        '<TEI xmlns="http://www.tei-c.org/ns/1.0">'
+        "<teiHeader><fileDesc><titleStmt><title>Sample</title>"
+        "<respStmt><resp>Creator</resp><name>Editor</name></respStmt>"
+        "</titleStmt><publicationStmt><idno>minimal</idno></publicationStmt>"
+        "</fileDesc></teiHeader>"
+        '<text><body><div type="edition" subtype="transcription">'
+        "<p>ABC</p></div></body></text></TEI>",
+        encoding="utf-8",
+    )
+    data_dir = tmp_path / "native-tf"
+    write_tf_corpus(
+        (parse_epidoc_file(source, source_revision="fixture-revision"),),
+        data_dir,
+        converter_commit="fixture-commit",
+    )
+
+    args = [f"app:{APP}", f"--locations={data_dir}", "-noweb"]
+    port = getPort(argApp(args, True))
+    # Disable proxies even on CI runners: this is a local-only test.
+    client = build_opener(ProxyHandler({}))
+    process = Popen(
+        [sys.executable, "-m", "tf.browser.start", *args],
+        stdout=PIPE,
+        stderr=STDOUT,
+        text=True,
+    )
+    try:
+        for _ in range(75):
+            if process.poll() is not None:
+                assert process.stdout is not None
+                raise AssertionError(
+                    "TF browser exited without serving HTTP:\n" + process.stdout.read()
+                )
+            try:
+                with client.open(f"http://localhost:{port}/", timeout=1) as response:
+                    assert response.status == 200
+                    html = response.read()
+                    assert b"minimal" in html
+                    return
+            except URLError:
+                time.sleep(0.2)
+        raise AssertionError(f"TF browser did not respond on localhost:{port}")
+    finally:
+        if process.poll() is None:
+            process.terminate()
+        try:
+            process.communicate(timeout=8)
+        except TimeoutExpired:
+            process.kill()
+            process.communicate()
