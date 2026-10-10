@@ -18,6 +18,8 @@ on:
       - "src/iip_tf/source_repair.py"
       - "schema/iip-tf-0.1.json"
       - "scripts/validate_pinned_tf.py"
+      - "scripts/validate_pinned_canary.py"
+      - "schema/pinned-canary-blobs.tsv"
       - ".github/workflows/validate-pinned-tf.yml"
   push:
     branches: [main]
@@ -37,6 +39,8 @@ on:
       - "src/iip_tf/source_repair.py"
       - "schema/iip-tf-0.1.json"
       - "scripts/validate_pinned_tf.py"
+      - "scripts/validate_pinned_canary.py"
+      - "schema/pinned-canary-blobs.tsv"
       - ".github/workflows/validate-pinned-tf.yml"
 
 permissions:
@@ -69,6 +73,8 @@ jobs:
         run: mypy
       - name: Pytest
         run: pytest -q
+      - name: Authenticated real-IIP canary
+        run: python scripts/validate_pinned_canary.py
 
   validate:
     # Do not skip the required validate job when preflight fails: skipped
