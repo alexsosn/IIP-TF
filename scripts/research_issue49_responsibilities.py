@@ -30,11 +30,10 @@ def _text(element: ET.Element) -> str:
     return " ".join("".join(element.itertext()).split())
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("source_dir", type=Path)
-    parser.add_argument("--revision", required=True)
-    args = parser.parse_args()
+def audit(
+    source_dir: Path, *, revision: str, expected_records: int = 5535
+) -> dict[str, object]:
+    """Measure contributor and publication provenance without normalization."""
 
     parsed = 0
     counters: Counter[str] = Counter()
@@ -44,10 +43,10 @@ def main() -> int:
     anomalies: list[dict[str, object]] = []
     samples: dict[str, dict[str, object]] = {}
 
-    for path in sorted(args.source_dir.glob("*.xml")):
+    for path in sorted(source_dir.glob("*.xml")):
         if "test" in path.name.lower():
             continue
-        repaired = repair_source_file(path, source_revision=args.revision)
+        repaired = repair_source_file(path, source_revision=revision)
         root = ET.fromstring(repaired.text)
         parsed += 1
         title = root.find(f"./{TEI}teiHeader/{TEI}fileDesc/{TEI}titleStmt")
@@ -126,9 +125,24 @@ def main() -> int:
         "sample_per_respStmt_shape": dict(sorted(samples.items())),
         "anomalies": anomalies,
     }
+    if parsed != expected_records:
+        raise ValueError(
+            f"unexpected parsed source count: {parsed} != {expected_records}"
+        )
+    return report
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("source_dir", type=Path)
+    parser.add_argument("--revision", required=True)
+    parser.add_argument("--expect-total", type=int, default=5535)
+    args = parser.parse_args()
+
+    report = audit(
+        args.source_dir, revision=args.revision, expected_records=args.expect_total
+    )
     print(json.dumps(report, indent=2, ensure_ascii=False, sort_keys=True))
-    if parsed != 5535:
-        raise SystemExit(f"unexpected parsed source count: {parsed} != 5535")
     return 0
 
 
