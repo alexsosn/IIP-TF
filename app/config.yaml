@@ -1,9 +1,8 @@
 apiVersion: 3
 provenanceSpec:
   corpus: Inscriptions of Israel/Palestine (IIP)
-  org: alexsosn
-  repo: IIP-TF
-  branch: main
+  # Intentionally no org/repo: the browser must not fetch unpublished TF data.
+  # Source and converter provenance live in the native TF header features.
 dataDisplay:
   textFormat: text-orig-full
   browseNavLevel: 2
