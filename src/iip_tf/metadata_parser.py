@@ -14,6 +14,9 @@ TEI_NS: Final = "http://www.tei-c.org/ns/1.0"
 XML_NS: Final = "http://www.w3.org/XML/1998/namespace"
 XML_ID: Final = f"{{{XML_NS}}}id"
 XML_LANG: Final = f"{{{XML_NS}}}lang"
+XI_NS: Final = "http://www.w3.org/2001/XInclude"
+XI_INCLUDE: Final = f"{{{XI_NS}}}include"
+XI_FALLBACK: Final = f"{{{XI_NS}}}fallback"
 _NS: Final = {"tei": TEI_NS}
 
 _METADATA_ATTRS: Final[dict[str, frozenset[str]]] = {
@@ -51,7 +54,19 @@ _METADATA_ATTRS: Final[dict[str, frozenset[str]]] = {
     "surface": frozenset({"xml:id"}),
     "desc": frozenset(),
     "graphic": frozenset({"url", "xml:id"}),
-    "persName": frozenset({"role"}),
+    "persName": frozenset({"role", "xml:id"}),
+    "name": frozenset({"xml:id"}),
+    "titleStmt": frozenset(),
+    "title": frozenset(),
+    "principal": frozenset(),
+    "respStmt": frozenset(),
+    "resp": frozenset(),
+    "publicationStmt": frozenset(),
+    "authority": frozenset(),
+    "idno": frozenset({"type"}),
+    "availability": frozenset({"status"}),
+    "licence": frozenset(),
+    "ref": frozenset({"target"}),
     "note": frozenset(),
     "revisionDesc": frozenset(),
     "change": frozenset({"when", "when-custom", "who", "xml:id"}),
@@ -659,6 +674,262 @@ def enrich_metadata(ir: InscriptionIR, root: ET.Element) -> InscriptionIR:
             raise MetadataParseError(f"duplicate IR source key {key!r}")
         existing_keys.add(key)
         return key
+
+    # Header source responsibility provenance is local to each inscription.
+    # The pinned corpus has 5,536 respStmt records and one distinct principal.
+    for title_stmt in root.findall("./tei:teiHeader/tei:fileDesc/tei:titleStmt", _NS):
+        _validate_attrs(title_stmt)
+        _validate_children(title_stmt, {"title", "respStmt", "principal"})
+        titles = [
+            child for child in title_stmt if _local(child.tag) == "title"
+        ]
+        if len(titles) != 1:
+            raise MetadataParseError("titleStmt: expected one source title")
+        title = titles[0]
+        _append_feature(
+            inscription_features, "source_title", _metadata_text(title)
+        )
+        for statement in title_stmt:
+            kind = _local(statement.tag)
+            if kind not in {"respStmt", "principal"}:
+                continue
+            _validate_attrs(statement)
+            if kind == "respStmt":
+                _validate_children(statement, {"resp", "name", "persName"})
+                roles = [
+                    child for child in statement if _local(child.tag) == "resp"
+                ]
+                agents = [
+                    child for child in statement
+                    if _local(child.tag) in {"name", "persName"}
+                ]
+                if len(roles) != 1 or len(agents) != 1:
+                    raise MetadataParseError(
+                        "respStmt: requires exactly one resp and one named agent"
+                    )
+                role = _metadata_text(roles[0])
+            else:
+                _validate_children(statement, {"persName"})
+                agents = list(statement)
+                if len(agents) != 1:
+                    raise MetadataParseError(
+                        "principal: requires exactly one persName"
+                    )
+                role = None
+            agent = agents[0]
+            _validate_attrs(agent)
+            # Facsimile persName/@role has a separate meaning; the source
+            # responsibility agent never carries that attribute.
+            if agent.attrib.keys() - {XML_ID}:
+                raise MetadataParseError(
+                    "responsibility agent: unresearched attributes"
+                )
+            agent_name = _metadata_text(agent)
+            if not agent_name or (kind == "respStmt" and not role):
+                raise MetadataParseError(
+                    "responsibility: missing source agent or responsibility text"
+                )
+            key = key_for(statement)
+            features: dict[str, str | int] = {
+                "source_key": key,
+                "responsibility_construct": kind,
+                "agent_tag": _local(agent.tag),
+                "agent_name": agent_name,
+            }
+            _append_feature(features, "responsibility_role", role)
+            _append_feature(features, "agent_source_id", agent.attrib.get(XML_ID))
+            node = _make_node(
+                key=key, node_type=NodeType.RESPONSIBILITY,
+                anchor=anchor, features=features,
+            )
+            _add_owned(
+                nodes=nodes, edges=edges, node=node,
+                inscription_key=inscription_key,
+            )
+
+    # Keep publication claims separate from unresolved external includes.
+    for publication in root.findall(
+        "./tei:teiHeader/tei:fileDesc/tei:publicationStmt", _NS
+    ):
+        _validate_attrs(publication)
+        for element in publication:
+            if element.tag == XI_INCLUDE:
+                if set(element.attrib) != {"href"}:
+                    raise MetadataParseError("xi:include: unexpected attributes")
+                fallback_elements = list(element)
+                if len(fallback_elements) != 1 or (
+                    fallback_elements[0].tag != XI_FALLBACK
+                ):
+                    raise MetadataParseError(
+                        "xi:include: unsupported fallback structure"
+                    )
+                fallback = fallback_elements[0]
+                if fallback.attrib:
+                    raise MetadataParseError(
+                        "xi:fallback: unexpected attributes"
+                    )
+                if len(fallback) != 1 or fallback[0].tag != f"{{{TEI_NS}}}p":
+                    raise MetadataParseError(
+                        "xi:fallback: expected single TEI paragraph"
+                    )
+                fallback_text = _metadata_text(fallback[0])
+                key = key_for(element)
+                features = {
+                    "source_key": key,
+                    "include_resolved": "0",
+                }
+                _append_feature(features, "include_href", element.get("href"))
+                _append_feature(features, "include_fallback_text", fallback_text)
+                node = _make_node(
+                    key=key, node_type=NodeType.PUBLICATION_INCLUDE,
+                    anchor=anchor, features=features,
+                )
+                _add_owned(
+                    nodes=nodes, edges=edges, node=node,
+                    inscription_key=inscription_key,
+                )
+                continue
+
+            _validate_attrs(element)
+            name = _metadata_element_name(element.tag)
+            if name == "authority":
+                _append_feature(
+                    inscription_features, "publication_authority",
+                    _scalar(
+                        "publication authority",
+                        [
+                            inscription_features.get("publication_authority", ""),
+                            _metadata_text(element) or "",
+                        ],
+                    ),
+                )
+            elif name == "idno":
+                value = _metadata_text(element)
+                key = key_for(element)
+                features = {"source_key": key}
+                _append_feature(features, "publication_id", value)
+                _append_feature(
+                    features, "publication_id_type", element.get("type")
+                )
+                node = _make_node(
+                    key=key, node_type=NodeType.PUBLICATION_ID,
+                    anchor=anchor, features=features,
+                )
+                _add_owned(
+                    nodes=nodes, edges=edges, node=node,
+                    inscription_key=inscription_key,
+                )
+            elif name == "availability":
+                _validate_children(element, {"licence"})
+                availability_key = key_for(element)
+                features = {"source_key": availability_key}
+                _append_feature(
+                    features, "availability_status", element.get("status")
+                )
+                node = _make_node(
+                    key=availability_key,
+                    node_type=NodeType.PUBLICATION_AVAILABILITY,
+                    anchor=anchor, features=features,
+                )
+                _add_owned(
+                    nodes=nodes, edges=edges, node=node,
+                    inscription_key=inscription_key,
+                )
+                for licence in element:
+                    _validate_attrs(licence)
+                    _validate_children(licence, {"ref", "p"})
+                    licence_key = key_for(licence)
+                    licence_features = {"source_key": licence_key}
+                    _append_feature(
+                        licence_features, "licence_text", _text(licence)
+                    )
+                    _append_feature(
+                        licence_features, "licence_direct_text",
+                        _direct_text(licence),
+                    )
+                    licence_node = _make_node(
+                        key=licence_key,
+                        node_type=NodeType.PUBLICATION_LICENCE,
+                        anchor=anchor, features=licence_features,
+                    )
+                    _add_owned(
+                        nodes=nodes, edges=edges, node=licence_node,
+                        inscription_key=inscription_key,
+                        parent=availability_key,
+                    )
+                    for child in licence:
+                        child_name = _metadata_element_name(child.tag)
+                        _validate_attrs(child)
+                        if child_name == "ref":
+                            _validate_children(child, set())
+                            ref_key = key_for(child)
+                            ref_features = {"source_key": ref_key}
+                            _append_feature(
+                                ref_features, "reference_text", _text(child)
+                            )
+                            _append_feature(
+                                ref_features, "reference_target",
+                                child.get("target"),
+                            )
+                            ref_node = _make_node(
+                                key=ref_key,
+                                node_type=NodeType.PUBLICATION_REFERENCE,
+                                anchor=anchor, features=ref_features,
+                            )
+                            _add_owned(
+                                nodes=nodes, edges=edges, node=ref_node,
+                                inscription_key=inscription_key,
+                                parent=licence_key,
+                            )
+                        elif child_name == "p":
+                            _validate_children(child, {"ref"})
+                            paragraph_key = key_for(child)
+                            para_features = {"source_key": paragraph_key}
+                            _append_feature(
+                                para_features, "paragraph_text", _text(child)
+                            )
+                            paragraph_node = _make_node(
+                                key=paragraph_key,
+                                node_type=NodeType.PUBLICATION_PARAGRAPH,
+                                anchor=anchor, features=para_features,
+                            )
+                            _add_owned(
+                                nodes=nodes, edges=edges, node=paragraph_node,
+                                inscription_key=inscription_key,
+                                parent=licence_key,
+                            )
+                            for ref in child:
+                                _validate_attrs(ref)
+                                _validate_children(ref, set())
+                                ref_key = key_for(ref)
+                                ref_features = {"source_key": ref_key}
+                                _append_feature(
+                                    ref_features, "reference_text", _text(ref)
+                                )
+                                _append_feature(
+                                    ref_features, "reference_target",
+                                    ref.get("target"),
+                                )
+                                ref_node = _make_node(
+                                    key=ref_key,
+                                    node_type=NodeType.PUBLICATION_REFERENCE,
+                                    anchor=anchor, features=ref_features,
+                                )
+                                _add_owned(
+                                    nodes=nodes, edges=edges, node=ref_node,
+                                    inscription_key=inscription_key,
+                                    parent=paragraph_key,
+                                )
+            else:
+                raise MetadataParseError(
+                    f"publicationStmt: unsupported child {name!r}"
+                )
+
+    # Reflect source-level title and authority in the canonical inscription.
+    replacement = replace(
+        replacement, features=tuple(sorted(inscription_features.items()))
+    )
+    nodes[0] = replacement
 
     # Physical support children in source order.
     for support in root.findall(
