@@ -129,6 +129,17 @@ def _validate_native_metadata_queries(api: Any) -> dict[str, int]:
             or F.agent_tag.v(node) not in {"name", "persName"}
         ):
             raise SystemExit(f"responsibility {node}: source agent was lost")
+    role_ids = tuple(api.Fs("responsibility_role_source_id").items())
+    if len(role_ids) != 579 or not all(
+        F.otype.v(node) == "responsibility"
+        and F.responsibility_construct.v(node) == "respStmt"
+        and isinstance(source_id, str)
+        and source_id
+        for node, source_id in role_ids
+    ):
+        raise SystemExit(
+            "source resp/@xml:id provenance count or type changed"
+        )
     if sum(
         F.responsibility_construct.v(node) == "principal"
         for node in responsibilities
@@ -142,6 +153,7 @@ def _validate_native_metadata_queries(api: Any) -> dict[str, int]:
 
     return {
         "validated_responsibilities": len(responsibilities),
+        "validated_responsibility_role_ids": len(role_ids),
         "validated_publication_ids": len(F.otype.s("publication_id")),
         "validated_unexpanded_includes": len(includes),
         "validated_explicit_publication_authorities": len(authorities),
