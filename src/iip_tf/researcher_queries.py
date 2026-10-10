@@ -64,7 +64,9 @@ def inspect_corpus(api: Any, inscription_ids: tuple[str, ...]) -> dict[str, Any]
         if node is None or F.inscription_id.v(node) != inscription_id:
             raise ValueError(f"inscription not found: {inscription_id}")
         query = f"inscription inscription_id={inscription_id}"
-        hits = S.search(query)
+        # TF 13.1 Search.search yields a generator, not a sized sequence.
+        # An exact-ID query is expected to return precisely one tuple.
+        hits = tuple(S.search(query))
         if len(hits) != 1 or hits[0][0] != node:
             raise ValueError(f"exact native TF search did not uniquely match: {inscription_id}")
 
