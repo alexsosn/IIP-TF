@@ -10,6 +10,7 @@ from typing import Any
 
 import pytest
 
+from iip_tf import release_gate
 from iip_tf.source_repair import PINNED_IIP_REVISION
 from scripts import validate_pinned_tf as pinned
 
@@ -112,3 +113,51 @@ def test_tf_write_failure_reports_no_converted_records(
     assert report["source_files"]["failed"] == [
         {"filename": None, "stage": "tf_write", "error_type": "OSError"}
     ]
+
+
+def test_atomic_report_replace_keeps_prior_bytes_when_rename_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    prior: dict[str, object] = {
+        "status": "success",
+        "source_files": {"converted": ["good.xml"], "excluded": {}, "failed": []},
+    }
+    machine, readable = release_gate.write_build_reports(tmp_path, prior)
+    original_json = machine.read_bytes()
+    original_markdown = readable.read_bytes()
+
+    failed: dict[str, object] = {
+        "status": "failed",
+        "source_files": {
+            "converted": [],
+            "parsed": [],
+            "unprocessed": [],
+            "excluded": {},
+            "failed": [{"filename": "bad.xml", "stage": "parse", "error_type": "ValueError"}],
+        },
+    }
+
+    def simulated_io_failure(_source: Any, _destination: Any) -> None:
+        raise OSError("atomic rename failed")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(release_gate.os, "replace", simulated_io_failure)
+        with pytest.raises(OSError, match="rename failed"):
+            release_gate.write_build_reports(tmp_path, failed)
+
+    assert machine.read_bytes() == original_json
+    assert readable.read_bytes() == original_markdown
+    assert not tuple(tmp_path.glob(".iip-corpus-report.json.*"))
+
+
+def test_failure_report_workflow_retains_browser_gate_and_mandatory_success_files() -> None:
+    root = Path(__file__).resolve().parents[1]
+    workflow = (root / ".github/workflows/validate-pinned-tf.yml").read_text(
+        encoding="utf-8"
+    )
+    assert "Validate native app + Flask browser against pinned corpus" in workflow
+    assert "Require successful pinned build report" in workflow
+    assert "if: success()" in workflow
+    assert "Upload reproducibility or failure reports" in workflow
+    assert "if: always()" in workflow
+    assert "if-no-files-found: warn" in workflow
