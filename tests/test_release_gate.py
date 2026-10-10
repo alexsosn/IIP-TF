@@ -12,6 +12,7 @@ from iip_tf.release_gate import (
     inventory_source_files,
     require_empty_output_directory,
     tf_feature_hashes,
+    validate_oslots_mapping,
     write_build_reports,
 )
 
@@ -186,3 +187,29 @@ def test_pinned_revision_exclusion_is_source_specific(tmp_path: Path) -> None:
     )
     assert [path.name for path in files] == ["contest0001.xml"]
     assert excluded == {"aaTestFile.xml": "pinned source test fixture"}
+
+
+def test_oslots_mapping_checks_all_non_slot_owners() -> None:
+    assert validate_oslots_mapping(
+        [(4, [1, 2]), (5, [3]), (6, [2, 3])],
+        sign_count=3,
+        node_count=3,
+    ) == 3
+
+
+@pytest.mark.parametrize(
+    "edges, error",
+    [
+        ([(4, [1]), (5, [2])], "missing"),
+        ([(4, [1]), (5, []), (6, [3])], "empty"),
+        ([(4, [1]), (5, [4]), (6, [3])], "invalid slot"),
+        ([(2, [1]), (5, [2]), (6, [3])], "invalid non-slot"),
+        ([(4, [1]), (4, [2]), (5, [3]), (6, [1])], "duplicate"),
+        ([(4, [1]), (5, [2]), (7, [3])], "invalid non-slot"),
+    ],
+)
+def test_oslots_mapping_blocks_orphans_and_wrong_feature_domain(
+    edges: list[tuple[int, list[int]]], error: str
+) -> None:
+    with pytest.raises(ReproducibilityError, match=error):
+        validate_oslots_mapping(edges, sign_count=3, node_count=3)
