@@ -38,6 +38,17 @@ def inventory_source_files(source_dir: Path) -> tuple[tuple[Path, ...], dict[str
     return tuple(included), excluded
 
 
+def require_empty_output_directory(path: Path) -> None:
+    """Use only fresh build outputs; never recursively delete caller data."""
+    if path.is_symlink():
+        raise ValueError(f"output directory must not be a symlink: {path}")
+    if path.exists():
+        if not path.is_dir() or any(path.iterdir()):
+            raise ValueError(f"output directory is not empty: {path}")
+    else:
+        path.mkdir(parents=True, exist_ok=False)
+
+
 def _file_sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as stream:
