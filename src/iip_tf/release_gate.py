@@ -9,6 +9,8 @@ import json
 from collections.abc import Mapping
 from pathlib import Path
 
+from iip_tf.source_repair import PINNED_IIP_REVISION
+
 _PINNED_EXCLUSIONS = {"aaTestFile.xml": "pinned source test fixture"}
 
 
@@ -16,7 +18,9 @@ class ReproducibilityError(ValueError):
     """A TF corpus feature set is missing or differs byte-for-byte."""
 
 
-def inventory_source_files(source_dir: Path) -> tuple[tuple[Path, ...], dict[str, str]]:
+def inventory_source_files(
+    source_dir: Path, *, source_revision: str = PINNED_IIP_REVISION
+) -> tuple[tuple[Path, ...], dict[str, str]]:
     """Enumerate source files with narrowly audited exclusions.
 
     A broad filename-substring test is forbidden: e.g. contest0001.xml
@@ -28,7 +32,11 @@ def inventory_source_files(source_dir: Path) -> tuple[tuple[Path, ...], dict[str
     included: list[Path] = []
     excluded: dict[str, str] = {}
     for path in paths:
-        reason = _PINNED_EXCLUSIONS.get(path.name)
+        reason = (
+            _PINNED_EXCLUSIONS.get(path.name)
+            if source_revision == PINNED_IIP_REVISION
+            else None
+        )
         if reason is not None:
             excluded[path.name] = reason
         else:
