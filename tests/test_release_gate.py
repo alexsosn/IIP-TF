@@ -166,3 +166,23 @@ def test_output_guard_refuses_symlink_directory(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="symlink"):
         require_empty_output_directory(alias)
     assert (real / "protect.txt").read_text(encoding="utf-8") == "do not alter"
+
+def test_non_pinned_source_revision_does_not_exclude_filename(tmp_path: Path) -> None:
+    (tmp_path / "aaTestFile.xml").write_text("<TEI/>", encoding="utf-8")
+    files, excluded = inventory_source_files(
+        tmp_path, source_revision="different-upstream-revision"
+    )
+    assert [path.name for path in files] == ["aaTestFile.xml"]
+    assert excluded == {}
+
+
+def test_pinned_revision_exclusion_is_source_specific(tmp_path: Path) -> None:
+    from iip_tf.source_repair import PINNED_IIP_REVISION
+
+    for filename in ("aaTestFile.xml", "contest0001.xml"):
+        (tmp_path / filename).write_text("<TEI/>", encoding="utf-8")
+    files, excluded = inventory_source_files(
+        tmp_path, source_revision=PINNED_IIP_REVISION
+    )
+    assert [path.name for path in files] == ["contest0001.xml"]
+    assert excluded == {"aaTestFile.xml": "pinned source test fixture"}
