@@ -6,6 +6,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import tempfile
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 
@@ -141,6 +143,20 @@ def compare_tf_feature_hashes(left: Path, right: Path) -> dict[str, str]:
     return expected
 
 
+def _atomic_write_text(destination: Path, content: str) -> None:
+    """Replace one report file atomically, leaving prior bytes intact on I/O failure."""
+    fd, temp_name = tempfile.mkstemp(prefix=f".{destination.name}.", dir=destination.parent)
+    temp_path = Path(temp_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temp_path, destination)
+    finally:
+        temp_path.unlink(missing_ok=True)
+
+
 def write_build_reports(
     output_dir: Path, report: Mapping[str, object]
 ) -> tuple[Path, Path]:
@@ -180,8 +196,20 @@ def write_build_reports(
     ]
     for filename, reason in sorted(excluded.items()):
         lines.append(f"- Excluded `{filename}`: {reason}")
+    if report["status"] == "failed":
+        parsed = source_files.get("parsed", [])
+        unprocessed = source_files.get("unprocessed", [])
+        if isinstance(parsed, list) and isinstance(unprocessed, list):
+            lines.append(f"Parsed (not necessarily converted): {len(parsed)}")
+            lines.append(f"Unprocessed: {len(unprocessed)}")
     for entry in failed:
-        lines.append(f"- Failed: {entry}")
+        if isinstance(entry, dict):
+            lines.append(
+                f"- Failed: {entry.get('filename')} at {entry.get('stage')}"
+                f" ({entry.get('error_type')})"
+            )
+        else:
+            lines.append(f"- Failed: {entry}")
     lines.extend(["", "## Canonical corpus statistics", ""])
     for name in ("signs", "nodes", "edges", "points"):
         if name in report:
@@ -203,11 +231,10 @@ def write_build_reports(
     output_dir.mkdir(parents=True, exist_ok=True)
     machine = output_dir / "iip-corpus-report.json"
     readable = output_dir / "iip-corpus-report.md"
-    machine.write_text(
-        json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
+    _atomic_write_text(
+        machine, json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     )
-    readable.write_text("\n".join(lines), encoding="utf-8")
+    _atomic_write_text(readable, "\n".join(lines))
     return machine, readable
 
 
