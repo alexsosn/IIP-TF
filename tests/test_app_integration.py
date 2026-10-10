@@ -33,8 +33,8 @@ def test_app_config_uses_only_documented_advanced_tf_settings() -> None:
     assert config["apiVersion"] == 3
     assert config["dataDisplay"]["textFormat"] == "text-orig-full"
     assert config["provenanceSpec"]["corpus"]
-    assert config["provenanceSpec"]["org"] == "alexsosn"
-    assert config["provenanceSpec"]["repo"] == "IIP-TF"
+    assert "org" not in config["provenanceSpec"]
+    assert "repo" not in config["provenanceSpec"]
     assert config["typeDisplay"]["inscription"]["label"] == "{inscription_id}"
     assert config["typeDisplay"]["line"]["label"] == "{line_n}"
 
