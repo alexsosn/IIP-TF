@@ -833,7 +833,9 @@ def enrich_metadata(ir: InscriptionIR, root: ET.Element) -> InscriptionIR:
             elif name == "availability":
                 _validate_children(element, {"licence"})
                 availability_key = key_for(element)
-                availability_features: dict[str, str | int] = {"source_key": availability_key}
+                availability_features: dict[str, str | int] = {
+                    "source_key": availability_key
+                }
                 _append_feature(
                     availability_features, "availability_status", element.get("status")
                 )
