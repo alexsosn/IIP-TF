@@ -94,10 +94,16 @@ def render_sign(app: Any, options: Any, chunk: Any, n_type: str, outer: bool) ->
     """Render one sign without suppressing its original characters or spacing."""
     node = chunk[0]
     fmt = getattr(options, "fmt", None)
+    # The standard TF browser and app.plain() may pass fmt=None while
+    # displaying context.textFormat. Do not mistake that for an unknown
+    # corpus layer, or the annotation overlay silently disappears.
+    display_fmt = fmt or getattr(app.context, "textFormat", None)
+    if display_fmt is None:
+        display_fmt = app.api.T.defaultFormat
     original = app.api.T.text(node, fmt=fmt)
     material = escape("" if original is None else str(original))
     note_html = ""
-    if _is_selected_sign(app, node, fmt):
+    if _is_selected_sign(app, node, display_fmt):
         for label in _sign_annotations(app, node):
             note_html += (
                 '<span class="iip-editorial-note" role="note">'
