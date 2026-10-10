@@ -77,7 +77,7 @@ for record in results["records"]:
 inscription = api.T.nodeFromSection(("abil0001",))
 assert inscription is not None
 print(api.F.source_file.v(inscription))
-print(api.S.search("inscription inscription_id=abil0001"))
+print(tuple(api.S.search("inscription inscription_id=abil0001")))
 ```
 
 These operations retrieve data directly from **native `.tf` features**:
