@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -80,3 +82,22 @@ def test_researcher_guide_command_links_to_executable_entrypoint() -> None:
     assert "CC BY-NC 4.0" in guide
     assert "No released" in guide or "not yet released" in guide
     assert "TF_DIR" not in guide  # every copied command is self-contained
+
+
+def test_researcher_cli_runs_using_real_native_tf_data(
+    native_api: Any, tmp_path: Path
+) -> None:
+    assert native_api
+    completed = subprocess.run(
+        [
+            sys.executable, "-m", "iip_tf.researcher_queries",
+            str(tmp_path / "native-tf"), "sample",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    output = json.loads(completed.stdout)
+    assert output["records"][0]["search_hits"] == 1
+    assert output["records"][0]["inscription_id"] == "sample"
+    assert output["source_revision"] == "fixture-revision"
