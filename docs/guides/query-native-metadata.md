@@ -137,6 +137,7 @@ for responsibility in F.otype.s("responsibility"):
         F.agent_tag.v(responsibility),                 # name or persName
         F.agent_name.v(responsibility),
         F.agent_source_id.v(responsibility),           # local to this XML file
+        F.responsibility_role_source_id.v(responsibility),  # resp xml:id if present
         owners,
     )
 
