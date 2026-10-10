@@ -73,6 +73,6 @@ jobs:
         with:
           name: iip-pinned-reproducibility-report
           path: |
-            build/iip-corpus-report.json
-            build/iip-corpus-report.md
+            build/pinned-tf-reports/iip-corpus-report.json
+            build/pinned-tf-reports/iip-corpus-report.md
           if-no-files-found: error
