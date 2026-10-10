@@ -51,6 +51,8 @@ def test_advanced_app_can_wrap_native_tf_data_offline(tmp_path: Path) -> None:
     assert app.api.F.otype.s("inscription")
     inscription = app.api.F.otype.s("inscription")[0]
     assert app.api.F.inscription_id.v(inscription) == "minimal"
-    rendered = app.plain(inscription, _asString=True)
+    assert app.api.T.text(inscription, fmt="text-orig-full").strip() == "ABC"
+    line = app.api.F.otype.s("line")[0]
+    rendered = app.plain(line, _asString=True)
     assert isinstance(rendered, str)
     assert "ABC" in rendered
