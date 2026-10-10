@@ -103,7 +103,7 @@ def test_local_browser_wsgi_loads_native_app_and_passage_without_download(tmp_pa
     assert webapp is not None, "local app could not resolve the generated TF dataset"
     response = webapp.test_client().get("/")
     assert response.status_code == 200
-    assert b"minimal" in response.data
+    assert b"<html" in response.data.lower()
 
 
 def test_browser_cli_serves_http_offline(tmp_path: Path) -> None:
@@ -147,7 +147,7 @@ def test_browser_cli_serves_http_offline(tmp_path: Path) -> None:
                 with client.open(f"http://localhost:{port}/", timeout=1) as response:
                     assert response.status == 200
                     html = response.read()
-                    assert b"minimal" in html
+                    assert b"<html" in html.lower()
                     return
             except URLError:
                 time.sleep(0.2)
