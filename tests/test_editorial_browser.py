@@ -85,7 +85,7 @@ def _passage(corpus: tuple[Any, Any], name: str) -> tuple[str, str]:
     assert isinstance(html, str)
     visible = _Visible()
     visible.feed(html)
-    return html, " ".join(visible.chunks)
+    return html, "".join(visible.chunks)
 
 
 def test_visible_supply_uncertainty_and_gap_preserve_plain_reading(
@@ -95,6 +95,15 @@ def test_visible_supply_uncertainty_and_gap_preserve_plain_reading(
     owner = api.T.nodeFromSection(("annotated",))
     assert owner is not None
     assert "ABCDE" in api.T.text(owner, fmt="text-orig-full")
+    markups = api.L.d(owner, otype="markup")
+    assert {"supplied", "gap", "unclear"}.issubset(
+        {api.F.kind.v(m) for m in markups}
+    )
+    assert any(
+        api.F.kind.v(m) == "supplied"
+        and any(m in api.L.u(slot, otype="markup") for slot in api.E.oslots.s(m))
+        for m in markups
+    ), "native TF markup must be reachable from its sign slots"
     _, visible = _passage(corpus, "annotated")
     assert "A" in visible and "BC" in visible and "D" in visible
     assert "supplied" in visible.lower()
@@ -111,6 +120,11 @@ def test_glyph_reference_only_record_not_silently_empty(
     owner = api.T.nodeFromSection(("glyphonly",))
     assert owner is not None
     assert not api.T.text(owner, fmt="text-orig-full").strip()
+    refs = [
+        api.F.ref.v(m) for m in api.L.d(owner, otype="markup")
+        if api.F.kind.v(m) == "glyph"
+    ]
+    assert "phoen-gaml" in refs
     _, visible = _passage(corpus, "glyphonly")
     assert "phoen-gaml" in visible
     assert "glyph" in visible.lower()
