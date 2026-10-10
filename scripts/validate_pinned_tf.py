@@ -184,7 +184,7 @@ def main() -> int:
     parser.add_argument("--converter-commit", required=True)
     args = parser.parse_args()
 
-    selected, excluded = inventory_source_files(args.source_dir)
+    selected, excluded = inventory_source_files(args.source_dir, source_revision=args.revision)
     if len(selected) != EXPECTED_PARSED or excluded != {
         "aaTestFile.xml": "pinned source test fixture"
     }:
