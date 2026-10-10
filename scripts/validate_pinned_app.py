@@ -10,9 +10,10 @@ from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 
-from iip_tf.researcher_queries import verify_pinned_examples
 from tf.advanced.app import findApp  # type: ignore[import-untyped]
 from tf.browser import kernel, web  # type: ignore[import-untyped]
+
+from iip_tf.researcher_queries import verify_pinned_examples
 
 ROOT = Path(__file__).resolve().parents[1]
 APP_DIR = ROOT / "app"
