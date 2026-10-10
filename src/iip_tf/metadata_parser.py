@@ -817,14 +817,14 @@ def enrich_metadata(ir: InscriptionIR, root: ET.Element) -> InscriptionIR:
             elif name == "idno":
                 value = _metadata_text(element)
                 key = key_for(element)
-                features = {"source_key": key}
-                _append_feature(features, "publication_id", value)
+                id_features: dict[str, str | int] = {"source_key": key}
+                _append_feature(id_features, "publication_id", value)
                 _append_feature(
-                    features, "publication_id_type", element.get("type")
+                    id_features, "publication_id_type", element.get("type")
                 )
                 node = _make_node(
                     key=key, node_type=NodeType.PUBLICATION_ID,
-                    anchor=anchor, features=features,
+                    anchor=anchor, features=id_features,
                 )
                 _add_owned(
                     nodes=nodes, edges=edges, node=node,
@@ -833,14 +833,14 @@ def enrich_metadata(ir: InscriptionIR, root: ET.Element) -> InscriptionIR:
             elif name == "availability":
                 _validate_children(element, {"licence"})
                 availability_key = key_for(element)
-                features = {"source_key": availability_key}
+                availability_features: dict[str, str | int] = {"source_key": availability_key}
                 _append_feature(
-                    features, "availability_status", element.get("status")
+                    availability_features, "availability_status", element.get("status")
                 )
                 node = _make_node(
                     key=availability_key,
                     node_type=NodeType.PUBLICATION_AVAILABILITY,
-                    anchor=anchor, features=features,
+                    anchor=anchor, features=availability_features,
                 )
                 _add_owned(
                     nodes=nodes, edges=edges, node=node,
