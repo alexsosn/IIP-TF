@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -141,7 +142,7 @@ def test_atomic_report_replace_keeps_prior_bytes_when_rename_fails(
         raise OSError("atomic rename failed")
 
     with monkeypatch.context() as patch:
-        patch.setattr(release_gate.os, "replace", simulated_io_failure)
+        patch.setattr(os, "replace", simulated_io_failure)
         with pytest.raises(OSError, match="rename failed"):
             release_gate.write_build_reports(tmp_path, failed)
 
