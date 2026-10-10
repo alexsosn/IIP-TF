@@ -12,7 +12,6 @@ from typing import Any
 
 from tf.advanced.app import findApp  # type: ignore[import-untyped]
 from tf.browser import kernel, web  # type: ignore[import-untyped]
-from tf.fabric import Fabric  # type: ignore[import-untyped]
 
 ROOT = Path(__file__).resolve().parents[1]
 APP_DIR = ROOT / "app"
@@ -32,18 +31,22 @@ def main() -> int:
     parser.add_argument("tf_dir", type=Path)
     args = parser.parse_args()
 
-    api: Any = Fabric(locations=str(args.tf_dir.resolve()), silent=True).loadAll(
-        silent=True
-    )
-    if not api:
-        raise RuntimeError("pinned app validation could not load native TF")
-    # TF browser routes require app.header() to return four HTML elements;
-    # a plain tf.app.use() creates a non-browser app whose header returns None.
+    # Load through TF's production browser-mode app loader, not by passing
+    # a preloaded Fabric API. The latter bypasses its module/provenance setup
+    # (app.provenance), which is required by the HTML index route.
+    # This also loads 1.47M slots only once, avoiding memory amplification.
     app: Any = findApp(
-        f"app:{APP_DIR}", None, None, "github", True, api=api, silent="deep"
+        f"app:{APP_DIR}",
+        None,
+        None,
+        "github",
+        True,
+        locations=str(args.tf_dir.resolve()),
+        silent="deep",
     )
-    if app is None or app.api is None:
-        raise RuntimeError("pinned app could not wrap native TF API")
+    if app is None or app.api is None or not hasattr(app, "provenance"):
+        raise RuntimeError("pinned browser loader did not initialize native TF")
+    api: Any = app.api
 
     if len(api.F.otype.s("inscription")) != 5535:
         raise RuntimeError("pinned app did not load 5,535 inscriptions")
