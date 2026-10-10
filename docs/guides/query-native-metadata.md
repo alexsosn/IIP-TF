@@ -122,3 +122,50 @@ edge direction on the entire pinned Brown source.
 This corpus does **not** claim every inscription has every metadata property.
 Missing source fields remain missing; raw language/period/place vocabulary is
 not silently standardized.
+
+## Source contributor and publication provenance (issue #49)
+
+Header statements are separate native nodes; same `xml:id` in different
+inscriptions **does not imply a linked person**.
+
+```python
+for responsibility in F.otype.s("responsibility"):
+    owners = E.parent.f(responsibility)
+    print(
+        F.responsibility_construct.v(responsibility),  # respStmt or principal
+        F.responsibility_role.v(responsibility),       # literal role, typo retained
+        F.agent_tag.v(responsibility),                 # name or persName
+        F.agent_name.v(responsibility),
+        F.agent_source_id.v(responsibility),           # local to this XML file
+        owners,
+    )
+
+for inscription in F.otype.s("inscription"):
+    print(
+        F.source_title.v(inscription),
+        F.publication_authority.v(inscription),  # only explicit TEI authority
+    )
+
+for include in F.otype.s("publication_include"):
+    print(
+        F.include_href.v(include),
+        F.include_fallback_text.v(include),
+        F.include_resolved.v(include),  # "0" = unexpanded, not resolved
+    )
+
+for publication_id in F.otype.s("publication_id"):
+    # An empty idno still has a native node.
+    print(
+        F.publication_id.v(publication_id),
+        F.publication_id_type.v(publication_id),
+    )
+
+for licence in F.otype.s("publication_licence"):
+    descendants = E.parent.t(licence)
+    print(F.licence_text.v(licence), descendants)
+```
+
+Source-explicit publication licence/availability is modeled independently
+from corpus-level generated-data licence provenance stored in TF headers.
+An XInclude pointer's fallback diagnostic is not evidence that external
+publication statements were successfully resolved.
