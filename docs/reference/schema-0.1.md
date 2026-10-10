@@ -55,6 +55,7 @@ needed for uniqueness.
 | Format | Use |
 |---|---|
 | `text-orig-full` | Default primary text |
+| `text-orig-refs-full` | Explicit primary reading with source-empty glyph identifiers in IIP `((ref))` notation; these tokens are **not attested source letters**, nor Unicode substitutions |
 | `text-source-full` | Source-oriented primary reading |
 | `text-layer-full` | Literal stored-slot view of one edition/textpart/line; may expose both editorial branches |
 | `text-transcription-full` | Normalized transcription layer |
@@ -65,10 +66,27 @@ needed for uniqueness.
 
 The default uses `primary_glyph` / `primary_after`, undefined on non-primary slots.
 
+The **opt-in** `text-orig-refs-full` uses
+`{primary_glyph}{primary_ref_token}{primary_after}` and retains primary
+normalized selection, including diplomatic fallback. The `primary_ref_token`
+feature is *sparse*: it appears only on selected primary zero-width
+`synthetic_kind=glyph_ref` slots with a nonempty source `markup ref`.
+The derived label `((ref))` follows the earlier IIP published display
+convention. It is **not attested source text** or a Unicode transliteration,
+and it never changes `glyph`, `primary_glyph`, `text-orig-full`, source
+`ref`, or the `T.text` default. HTML-sensitive source ref characters
+are entity-escaped in these visible tokens only, leaving the native
+`markup` `ref` verbatim. For text-level discovery of those tokens choose
+the explicit format, and use `markup kind=glyph ref=...` to query the
+source annotation. Glyphs missing a source `ref` are not fabricated;
+nonprimary textparts still need an explicit layer format (#51).
+
 ## Slot features
 
 Core features include `glyph`, `after`, `layer`, `lang`, `lang_source`, `reading_role`,
-`synthetic_kind`, primary/source display pairs, and layer-specific glyph/after pairs.
+`synthetic_kind`, primary/source display pairs, the sparse derived
+`primary_ref_token` used by the opt-in source-reference view, and layer-specific
+glyph/after pairs.
 
 `synthetic_kind` covers anchor, line/column break, gap, space, hand shift, milestone,
 glyph reference, figure, and other audited point events.
