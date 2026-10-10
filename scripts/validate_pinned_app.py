@@ -81,6 +81,26 @@ def main() -> int:
             text.parts
         ):
             raise RuntimeError("TF browser response lacks IIP corpus identity")
+
+        # These are actual browser endpoints, not just core TF section lookups.
+        passage = client.post("/passage", data={"sec0": "abil0001"})
+        payload = passage.get_json()
+        if passage.status_code != 200 or not isinstance(payload, dict):
+            raise RuntimeError("pinned browser passage endpoint failed")
+        if not isinstance(payload.get("table"), str) or not payload["table"]:
+            raise RuntimeError("pinned browser returned empty passage HTML")
+
+        search = client.post(
+            "/query", data={"query": "inscription inscription_id=abil0001"}
+        )
+        query_payload = search.get_json()
+        if (
+            search.status_code != 200
+            or not isinstance(query_payload, dict)
+            or query_payload.get("status") is not True
+            or query_payload.get("nResults") != 1
+        ):
+            raise RuntimeError(f"pinned browser exact-ID search failed: {query_payload!r}")
     print("Pinned TF app: 5,535 sections; reference glyph preserved; HTTP / = 200")
     return 0
 
