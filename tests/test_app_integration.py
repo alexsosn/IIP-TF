@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 from tf.app import use  # type: ignore[import-untyped]
 from tf.fabric import Fabric  # type: ignore[import-untyped]
 
