@@ -7,9 +7,9 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from iip_tf.researcher_queries import inspect_corpus, require_native_features
 from tf.fabric import Fabric  # type: ignore[import-untyped]
 
-from iip_tf.researcher_queries import inspect_corpus, require_native_features
 from iip_tf.text_parser import parse_epidoc_file
 from iip_tf.tf_writer import write_tf_corpus
 
