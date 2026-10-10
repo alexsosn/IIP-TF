@@ -33,6 +33,7 @@ class VisibleText(HTMLParser):
 def validate_native_reference_tokens(api: Any) -> int:
     """Verify all source-backed primary glyph-reference tokens, not a sample."""
     F, L = api.F, api.L
+    annotation_source = getattr(F, "annotation_source", None)
     matched = 0
     for slot in F.synthetic_kind.s("glyph_ref"):
         if F.glyph.v(slot) is not None:
@@ -40,6 +41,10 @@ def validate_native_reference_tokens(api: Any) -> int:
         glyph_markups = [
             node for node in L.u(slot, otype="markup")
             if F.kind.v(node) == "glyph"
+            and not (
+                annotation_source is not None
+                and annotation_source.v(node) == "transcription_segmented"
+            )
         ]
         if len(glyph_markups) != 1:
             raise RuntimeError(f"glyph ref slot {slot} has ambiguous/missing native markup")
