@@ -51,6 +51,11 @@ def test_responsibility_inventory_retains_repetition_and_external_publication(
     assert counts["agent_tag:name"] == 2
     assert counts["publication_authority_text:Brown University"] == 1
     assert counts["unexpanded_publication_xinclude"] == 1
+    assert report["publication_include_hrefs"]["../publication.xml"] == 1
+    assert any(
+        "{http://www.w3.org/2001/XInclude}include" in shape
+        for shape in report["publication_child_shapes"]
+    )
     assert report["role_counts"]["Prinicipal Investigator"] == 1
     assert report["role_counts"]["Creator"] == 1
     assert any("orgName" in anomaly["other_children"] for anomaly in report["anomalies"])
