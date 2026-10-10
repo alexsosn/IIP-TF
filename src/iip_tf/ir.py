@@ -35,6 +35,13 @@ class NodeType(StrEnum):
     DIMENSION = "dimension"
     SUPPORT_NOTE = "support_note"
     FACSIMILE_SURFACE = "facsimile_surface"
+    RESPONSIBILITY = "responsibility"
+    PUBLICATION_ID = "publication_id"
+    PUBLICATION_INCLUDE = "publication_include"
+    PUBLICATION_AVAILABILITY = "publication_availability"
+    PUBLICATION_LICENCE = "publication_licence"
+    PUBLICATION_REFERENCE = "publication_reference"
+    PUBLICATION_PARAGRAPH = "publication_paragraph"
     WORD = "word"
     SEGMENTATION = "segmentation"
 
