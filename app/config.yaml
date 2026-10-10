@@ -24,11 +24,3 @@ typeDisplay:
     level: 1
     condense: true
     verselike: true
-  word:
-    features: "lang token_kind"
-  markup:
-    hidden: true
-    features: "kind reason cert"
-  entity:
-    hidden: true
-    features: "kind ref"
