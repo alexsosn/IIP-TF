@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import shutil
+from html import escape
 from collections import defaultdict
 from collections.abc import Callable, Iterable
 from pathlib import Path
@@ -188,6 +189,60 @@ def _add_view_features(
             _set_feature(features, f"{prefix}_after", slot_by_key[key], value)
 
 
+
+def _add_primary_reference_tokens(
+    features: dict[str, dict[int, str | int]],
+    *,
+    ir: InscriptionIR,
+    slot_by_key: dict[str, int],
+) -> None:
+    """Opt-in, sparse source-glyph-reference display tokens, never real glyphs.
+
+    IIP published empty TEI g elements as ((ref)); these labels are not
+    attested source characters and must remain absent from text-orig-full.
+    """
+    by_key = {sign.key: sign for sign in ir.signs}
+    refs: dict[str, str] = {}
+    for node in ir.nodes:
+        if node.node_type != NodeType.MARKUP or node.feature("kind") != "glyph":
+            continue
+        # A nonempty <g ref=...> already has real characters and should
+        # not be replaced or represented twice in the display.
+        if len(node.sign_keys) != 1:
+            continue
+        key = node.sign_keys[0]
+        sign = by_key.get(key)
+        if sign is None or sign.synthetic_kind != "glyph_ref":
+            continue
+        if key in refs:
+            raise TFWriterError(
+                f"{ir.identity.inscription_id}: ambiguous glyph reference on {key}"
+            )
+        source_ref = node.feature("ref")
+        if source_ref is None or source_ref == "":
+            continue
+        if not isinstance(source_ref, str):
+            raise TFWriterError(f"{ir.identity.inscription_id}: non-string glyph ref")
+        refs[key] = source_ref
+
+    primary = _primary_layer(ir)
+    for sign in ir.signs:
+        if sign.synthetic_kind != "glyph_ref":
+            continue
+        if sign.layer.value != primary or sign.reading_role not in {"both", "normalized"}:
+            continue
+        ref = refs.get(sign.key)
+        if ref is not None:
+            # HTML-safe *display* convention; the native markup retains the
+            # byte-for-byte source ref, while glyph remains genuinely empty.
+            _set_feature(
+                features,
+                "primary_ref_token",
+                slot_by_key[sign.key],
+                f"(({escape(ref, quote=True)}))",
+            )
+
+
 def _feature_metadata(
     node_features: dict[str, dict[int, str | int]],
     edge_features: dict[str, dict[int, set[int]]],
@@ -217,6 +272,7 @@ def _otext() -> dict[str, str]:
         "sectionTypes": "inscription,textpart,line",
         "sectionFeatures": "inscription_id,section_part,line_n",
         "fmt:text-orig-full": "{primary_glyph}{primary_after}",
+        "fmt:text-orig-refs-full": "{primary_glyph}{primary_ref_token}{primary_after}",
         "fmt:text-layer-full": "{glyph}{after}",
         "fmt:text-source-full": "{source_glyph}{source_after}",
         "fmt:text-transcription-full": "{transcription_glyph}{transcription_after}",
@@ -327,6 +383,7 @@ def write_tf_corpus(
             _set_feature(node_features, "reading_role", slot, sign.reading_role)
             _set_feature(node_features, "synthetic_kind", slot, sign.synthetic_kind)
         _add_view_features(node_features, ir=ir, slot_by_key=slot_by_key)
+        _add_primary_reference_tokens(node_features, ir=ir, slot_by_key=slot_by_key)
 
     for ir, node in ordered_nodes:
         tf_node = node_by_key[node.key]
