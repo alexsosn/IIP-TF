@@ -51,6 +51,7 @@ pinned source files. The audit workflow succeeded.
 | --- | ---: |
 | `titleStmt/title` | 5,535 |
 | `titleStmt/respStmt` | 5,536 |
+| `resp/@xml:id` role-level source identifiers | 579 |
 | Records with two `respStmt` | 1 |
 | `respStmt/persName` | 3,449 |
 | `respStmt/name` | 2,087 |
@@ -66,7 +67,7 @@ pinned source files. The audit workflow succeeded.
 
 All observed `respStmt` have exactly one `resp` and one `name` or
 `persName`, with no unexpected children. Agent names may lack `xml:id`;
-any identifier is local to its XML record. The 3,483 XInclude hrefs are
+role identifier and agent identifier are independent, both local to their XML record. The 3,483 XInclude hrefs are
 the identical source URI
 `http://cds.library.brown.edu/projects/iip/include_publicationStmt.xml`.
 Each include has an `xi:fallback` diagnostic; it is not an explicit
