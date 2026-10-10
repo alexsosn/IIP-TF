@@ -143,3 +143,26 @@ def test_output_guard_creates_new_owned_directory(tmp_path: Path) -> None:
     require_empty_output_directory(output)
     assert output.is_dir() and not list(output.iterdir())
     require_empty_output_directory(output)
+
+
+def test_report_directory_guard_preserves_existing_report(
+    tmp_path: Path,
+) -> None:
+    reports = tmp_path / "pinned-tf-reports"
+    reports.mkdir()
+    prior = reports / "iip-corpus-report.md"
+    prior.write_text("independent prior build", encoding="utf-8")
+    with pytest.raises(ValueError, match="not empty"):
+        require_empty_output_directory(reports)
+    assert prior.read_text(encoding="utf-8") == "independent prior build"
+
+
+def test_output_guard_refuses_symlink_directory(tmp_path: Path) -> None:
+    real = tmp_path / "real"
+    real.mkdir()
+    (real / "protect.txt").write_text("do not alter", encoding="utf-8")
+    alias = tmp_path / "alias"
+    alias.symlink_to(real, target_is_directory=True)
+    with pytest.raises(ValueError, match="symlink"):
+        require_empty_output_directory(alias)
+    assert (real / "protect.txt").read_text(encoding="utf-8") == "do not alter"
