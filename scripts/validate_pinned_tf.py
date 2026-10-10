@@ -18,6 +18,7 @@ from iip_tf.release_gate import (
     compare_tf_feature_hashes,
     inventory_source_files,
     require_empty_output_directory,
+    validate_oslots_mapping,
     write_build_reports,
 )
 from iip_tf.text_parser import parse_epidoc_file
@@ -284,6 +285,12 @@ def main() -> int:
                 f"loaded {node_type} count {loaded_node_counts[node_type]} != {count}"
             )
 
+    validated_oslots_nodes = validate_oslots_mapping(
+        api.E.oslots.items(),
+        sign_count=sign_count,
+        node_count=node_count,
+    )
+
     loaded_edge_counts: dict[str, int] = {}
     for edge_type, expected_count in edge_counts.items():
         feature = api.Es(edge_type)
@@ -321,6 +328,7 @@ def main() -> int:
         "node_counts": dict(sorted(node_counts.items())),
         "edge_counts": dict(sorted(edge_counts.items())),
         "tf_files": len(tuple(args.output_dir.glob("*.tf"))),
+        "validated_oslots_nodes": validated_oslots_nodes,
     }
     # Rebuild from source in a separate fresh directory, not the cached
     # in-memory canonical IR. Compare every native TF feature bytewise.
