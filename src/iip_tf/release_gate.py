@@ -12,10 +12,54 @@ from pathlib import Path
 from iip_tf.source_repair import PINNED_IIP_REVISION
 
 _PINNED_EXCLUSIONS = {"aaTestFile.xml": "pinned source test fixture"}
+# Brown-University-Library/iip-texts at PINNED_IIP_REVISION, /epidoc-files/.
+# Verified from the upstream Git Trees API: 5,536 regular 100644 XML blobs.
+PINNED_EPIDOC_SOURCE_TREE = "4445c4878873227c73ead5e8b94f9e3487c28c3b"
 
 
 class ReproducibilityError(ValueError):
     """A TF corpus feature set is missing or differs byte-for-byte."""
+
+
+def _git_blob_oid(path: Path) -> bytes:
+    """Hash source bytes with Git's blob-object framing (SHA-1)."""
+    size = path.stat().st_size
+    digest = hashlib.sha1()
+    digest.update(f"blob {size}\\0".encode("ascii"))
+    with path.open("rb") as stream:
+        while chunk := stream.read(1024 * 1024):
+            digest.update(chunk)
+    return digest.digest()
+
+
+def git_source_tree_sha(source_dir: Path) -> str:
+    """Reconstruct Git's flat tree ID for the complete original EpiDoc directory.
+
+    The verified pinned subtree contains only ordinary 100644 XML blobs.
+    Reject any added file, directory, or symlink rather than silently ignoring it.
+    """
+    if source_dir.is_symlink() or not source_dir.is_dir():
+        raise ReproducibilityError(f"invalid source tree directory: {source_dir}")
+    paths = sorted(source_dir.iterdir(), key=lambda path: path.name.encode("utf-8"))
+    if not paths:
+        raise ReproducibilityError("source tree directory is empty")
+    chunks: list[bytes] = []
+    for path in paths:
+        if path.is_symlink() or not path.is_file() or path.suffix != ".xml":
+            raise ReproducibilityError(f"unexpected source tree entry: {path.name}")
+        chunks.append(b"100644 " + path.name.encode("utf-8") + b"\\0" + _git_blob_oid(path))
+    content = b"".join(chunks)
+    return hashlib.sha1(b"tree " + str(len(content)).encode("ascii") + b"\\0" + content).hexdigest()
+
+
+def require_source_tree_sha(source_dir: Path, *, expected_sha: str) -> str:
+    """Reject source trees that do not match a trusted upstream Git tree object."""
+    observed = git_source_tree_sha(source_dir)
+    if observed != expected_sha:
+        raise ReproducibilityError(
+            f"source tree identity mismatch: expected {expected_sha}, got {observed}"
+        )
+    return observed
 
 
 def inventory_source_files(
