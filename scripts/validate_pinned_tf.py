@@ -17,6 +17,8 @@ from iip_tf.ir import NodeType
 from iip_tf.release_gate import (
     compare_tf_feature_hashes,
     inventory_source_files,
+    PINNED_EPIDOC_SOURCE_TREE,
+    require_source_tree_sha,
     require_empty_output_directory,
     validate_oslots_mapping,
     write_build_reports,
@@ -185,6 +187,11 @@ def main() -> int:
     parser.add_argument("--converter-commit", required=True)
     args = parser.parse_args()
 
+    # Authenticate bytes against the upstream Git subtree, not a caller-supplied
+    # provenance string or the agreement of two builds from identical inputs.
+    verified_source_tree = require_source_tree_sha(
+        args.source_dir, expected_sha=PINNED_EPIDOC_SOURCE_TREE
+    )
     selected, excluded = inventory_source_files(args.source_dir, source_revision=args.revision)
     if len(selected) != EXPECTED_PARSED or excluded != {
         "aaTestFile.xml": "pinned source test fixture"
@@ -354,6 +361,7 @@ def main() -> int:
         **report,
         "status": "success",
         "source_revision": args.revision,
+        "verified_source_tree_git_sha1": verified_source_tree,
         "converter_commit": args.converter_commit,
         "source_files": {
             "converted": [path.name for path in selected],
