@@ -68,6 +68,12 @@
       "template": "{primary_glyph}{primary_after}",
       "description": "Default normalized/source-selected inscription text; all non-primary layer slots render empty."
     },
+    "text-orig-refs-full": {
+      "purpose": "opt_in_primary_editorial_reference_display",
+      "target": "sign",
+      "template": "{primary_glyph}{primary_ref_token}{primary_after}",
+      "description": "Explicit HTML-safe IIP convention ((ref)) on empty primary glyph-reference slots. Does not change source glyph or default reading; labels are not attested source letters."
+    },
     "text-layer-full": {
       "purpose": "current_layer",
       "target": "sign",
@@ -184,6 +190,7 @@
       "reading_role",
       "synthetic_kind",
       "primary_glyph",
+      "primary_ref_token",
       "primary_after",
       "source_glyph",
       "source_after",
