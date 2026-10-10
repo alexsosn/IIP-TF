@@ -13,7 +13,7 @@ WORKFLOW = (
 def _jobs() -> tuple[str, str]:
     content = WORKFLOW.read_text(encoding="utf-8")
     assert "\njobs:\n" in content
-    jobs = content.split("\njobs:\n", 1)[1]
+    jobs = "\n" + content.split("\njobs:\n", 1)[1]
     assert "\n  preflight:\n" in jobs, "missing fast prerequisite job"
     preflight = jobs.split("\n  preflight:\n", 1)[1].split(
         "\n  validate:\n", 1
