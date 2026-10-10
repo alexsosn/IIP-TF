@@ -60,7 +60,7 @@ _METADATA_ATTRS: Final[dict[str, frozenset[str]]] = {
     "title": frozenset(),
     "principal": frozenset(),
     "respStmt": frozenset(),
-    "resp": frozenset(),
+    "resp": frozenset({"xml:id"}),
     "publicationStmt": frozenset(),
     "authority": frozenset(),
     "idno": frozenset({"type"}),
@@ -730,17 +730,23 @@ def enrich_metadata(ir: InscriptionIR, root: ET.Element) -> InscriptionIR:
                     "responsibility: missing source agent or responsibility text"
                 )
             key = key_for(statement)
-            features: dict[str, str | int] = {
+            responsibility_features: dict[str, str | int] = {
                 "source_key": key,
                 "responsibility_construct": kind,
                 "agent_tag": _local(agent.tag),
                 "agent_name": agent_name,
             }
-            _append_feature(features, "responsibility_role", role)
-            _append_feature(features, "agent_source_id", agent.attrib.get(XML_ID))
+            _append_feature(responsibility_features, "responsibility_role", role)
+            _append_feature(
+                responsibility_features, "responsibility_role_source_id",
+                roles[0].attrib.get(XML_ID) if kind == "respStmt" else None,
+            )
+            _append_feature(
+                responsibility_features, "agent_source_id", agent.attrib.get(XML_ID)
+            )
             node = _make_node(
                 key=key, node_type=NodeType.RESPONSIBILITY,
-                anchor=anchor, features=features,
+                anchor=anchor, features=responsibility_features,
             )
             _add_owned(
                 nodes=nodes, edges=edges, node=node,
@@ -774,15 +780,17 @@ def enrich_metadata(ir: InscriptionIR, root: ET.Element) -> InscriptionIR:
                     )
                 fallback_text = _metadata_text(fallback[0])
                 key = key_for(element)
-                features: dict[str, str | int] = {
+                include_features: dict[str, str | int] = {
                     "source_key": key,
                     "include_resolved": "0",
                 }
-                _append_feature(features, "include_href", element.get("href"))
-                _append_feature(features, "include_fallback_text", fallback_text)
+                _append_feature(include_features, "include_href", element.get("href"))
+                _append_feature(
+                    include_features, "include_fallback_text", fallback_text
+                )
                 node = _make_node(
                     key=key, node_type=NodeType.PUBLICATION_INCLUDE,
-                    anchor=anchor, features=features,
+                    anchor=anchor, features=include_features,
                 )
                 _add_owned(
                     nodes=nodes, edges=edges, node=node,
