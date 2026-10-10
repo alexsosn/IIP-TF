@@ -7,6 +7,21 @@ import json
 import xml.etree.ElementTree as ET
 from collections import Counter
 from pathlib import Path
+from typing import TypedDict
+
+
+class ProvenanceAudit(TypedDict):
+    parsed: int
+    counts: dict[str, int]
+    role_counts: dict[str, int]
+    title_and_agent_shapes: dict[str, int]
+    respStmt_shapes: dict[str, int]
+    publicationStmt_shapes: dict[str, int]
+    publication_child_shapes: dict[str, int]
+    publication_include_hrefs: dict[str, int]
+    sample_per_publication_child_shape: dict[str, dict[str, object]]
+    sample_per_respStmt_shape: dict[str, dict[str, object]]
+    anomalies: list[dict[str, object]]
 
 from iip_tf.source_repair import repair_source_file
 
@@ -32,7 +47,7 @@ def _text(element: ET.Element) -> str:
 
 def audit(
     source_dir: Path, *, revision: str, expected_records: int = 5535
-) -> dict[str, object]:
+) -> ProvenanceAudit:
     """Measure contributor and publication provenance without normalization."""
 
     parsed = 0
@@ -117,8 +132,8 @@ def audit(
             counters["records_with_publicationStmt"] += 1
             publication_shapes[_shape(publication)] += 1
             for child in publication:
-                name = _local(child.tag)
-                counters[f"publicationStmt_child:{name}"] += 1
+                publication_child_name = _local(child.tag)
+                counters[f"publicationStmt_child:{publication_child_name}"] += 1
                 signature = _shape(child)
                 publication_child_shapes[signature] += 1
                 if signature not in publication_samples:
