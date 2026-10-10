@@ -112,7 +112,9 @@ def render_sign(app: Any, options: Any, chunk: Any, n_type: str, outer: bool) ->
                 f"⟦{escape(label)}⟧"
                 "</span>"
             )
-    return f'<span class="iip-source-sign">{material}</span>{note_html}'
+    # Opening source-critical notes precede the FIRST affected character.
+    # Emitting them after the sign misleadingly marked only the next letter.
+    return f'{note_html}<span class="iip-source-sign">{material}</span>'
 
 
 def install_editorial_renderer(app: Any) -> None:
