@@ -7,8 +7,8 @@ import pytest
 
 from iip_tf.release_gate import (
     ReproducibilityError,
-    inventory_source_files,
     compare_tf_feature_hashes,
+    inventory_source_files,
     tf_feature_hashes,
 )
 
