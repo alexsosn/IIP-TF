@@ -14,7 +14,6 @@ from tf.app import use  # type: ignore[import-untyped]
 from tf.browser import kernel, web  # type: ignore[import-untyped]
 from tf.fabric import Fabric  # type: ignore[import-untyped]
 
-
 ROOT = Path(__file__).resolve().parents[1]
 APP_DIR = ROOT / "app"
 
