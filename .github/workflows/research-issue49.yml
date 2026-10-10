@@ -1,0 +1,49 @@
+name: Research issue 49 contributor provenance
+
+on:
+  pull_request:
+    paths:
+      - "scripts/research_issue49_responsibilities.py"
+      - ".github/workflows/research-issue49.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Fetch pinned Brown IIP source
+        env:
+          IIP_REVISION: 0b7dc8358ccdfd0c9391f049da4839fbd91c26e5
+        run: |
+          set -euo pipefail
+          mkdir -p upstream-iip
+          curl --fail --location --retry 3 \
+            "https://codeload.github.com/Brown-University-Library/iip-texts/tar.gz/${IIP_REVISION}" \
+            | tar -xz --strip-components=1 -C upstream-iip
+          test -d upstream-iip/epidoc-files
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install project
+        run: python -m pip install -e '.[dev]'
+      - name: Audit full pinned source provenance
+        run: |
+          python scripts/research_issue49_responsibilities.py upstream-iip/epidoc-files \
+            --revision 0b7dc8358ccdfd0c9391f049da4839fbd91c26e5 \
+            | tee /tmp/iip-issue49-inventory.json
+      - name: Upload measured shapes
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue49-provenance-inventory
+          path: /tmp/iip-issue49-inventory.json
