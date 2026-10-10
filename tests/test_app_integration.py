@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
+import sys
+import time
 from html.parser import HTMLParser
 from pathlib import Path
 from subprocess import PIPE, STDOUT, Popen, TimeoutExpired
 from typing import Any
 from urllib.error import URLError
 from urllib.request import ProxyHandler, build_opener
-import sys
-import time
 
 import yaml  # type: ignore[import-untyped]
 from tf.app import use  # type: ignore[import-untyped]
