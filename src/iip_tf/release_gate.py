@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 
 from iip_tf.source_repair import PINNED_IIP_REVISION
@@ -165,3 +165,37 @@ def write_build_reports(
     )
     readable.write_text("\n".join(lines), encoding="utf-8")
     return machine, readable
+
+
+def validate_oslots_mapping(
+    entries: Iterable[tuple[int, Iterable[int]]],
+    *,
+    sign_count: int,
+    node_count: int,
+) -> int:
+    """Require all TF non-slot nodes to have valid nonempty slot domains."""
+    if sign_count < 1 or node_count < 1:
+        raise ReproducibilityError("invalid slot/non-slot cardinalities")
+    seen: set[int] = set()
+    maximum = sign_count + node_count
+    for node, slots in entries:
+        if node <= sign_count or node > maximum:
+            raise ReproducibilityError(f"invalid non-slot oslots source {node}")
+        if node in seen:
+            raise ReproducibilityError(f"duplicate oslots source {node}")
+        seen.add(node)
+        has_slot = False
+        for slot in slots:
+            has_slot = True
+            if slot < 1 or slot > sign_count:
+                raise ReproducibilityError(
+                    f"node {node} has invalid slot target {slot}"
+                )
+        if not has_slot:
+            raise ReproducibilityError(f"node {node} has empty oslots")
+    if len(seen) != node_count:
+        raise ReproducibilityError(
+            f"missing oslots owners: {node_count - len(seen)} "
+            "non-slot nodes have no slot domain"
+        )
+    return len(seen)
