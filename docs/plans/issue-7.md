@@ -16,3 +16,9 @@
 
 ## Failure policy
 Unsupported source records block release; explicit exclusion is allowed only for the enumerated pinned `aaTestFile.xml`. No broad substring heuristic, no guessed substitutions. Any differing .tf file hash, missing feature, unsupported node, malformed source, or output provenance mismatch blocks release.
+
+## Additional source-authenticity research (independent adversarial review)
+- GitHub Git Trees API, Brown IIP commit `0b7dc8358ccdfd0c9391f049da4839fbd91c26e5`: the `epidoc-files/` subtree is exactly Git tree `4445c4878873227c73ead5e8b94f9e3487c28c3b`, containing 5,536 regular (`100644`) XML blobs and no nested folders or extra files.
+- Two equal bytewise TF builds establish reproducibility *conditional on the input*; they do not authenticate the advertised `--revision`. A same-shape edited source can pass the current IR cardinality gates and compare identical output hashes.
+- Plan: verify the Git tree object ID reconstructed from source file bytes before applying pinned repairs or writing any success report. Require the exact upstream SHA, reject missing/extra/symlink/non-file entries, and retain the verified source tree ID in the build report. This check is limited to the pinned whole-corpus validator; generic partial/third-party source conversion remains permitted.
+- TDD: RED fixture for missing verification helper and a same-length XML reading edit; GREEN Git blob/tree byte hashing, fixture verified against independent `git write-tree` output `d93d77737d2778b65ebb493f153bbbb05120ccbd`.
