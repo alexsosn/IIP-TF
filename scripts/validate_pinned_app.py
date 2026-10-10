@@ -10,7 +10,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 
-from tf.app import use  # type: ignore[import-untyped]
+from tf.advanced.app import findApp  # type: ignore[import-untyped]
 from tf.browser import kernel, web  # type: ignore[import-untyped]
 from tf.fabric import Fabric  # type: ignore[import-untyped]
 
@@ -37,7 +37,11 @@ def main() -> int:
     )
     if not api:
         raise RuntimeError("pinned app validation could not load native TF")
-    app: Any = use(f"app:{APP_DIR}", api=api, silent="deep")
+    # TF browser routes require app.header() to return four HTML elements;
+    # a plain tf.app.use() creates a non-browser app whose header returns None.
+    app: Any = findApp(
+        f"app:{APP_DIR}", None, None, "github", True, api=api, silent="deep"
+    )
     if app is None or app.api is None:
         raise RuntimeError("pinned app could not wrap native TF API")
 
@@ -99,7 +103,8 @@ def main() -> int:
             raise RuntimeError("pinned browser returned empty passage HTML")
 
         search = client.post(
-            "/query", data={"query": "inscription inscription_id=abil0001"}
+            "/query",
+            data={"query": "inscription inscription_id=abil0001", "condenseType": "line"}
         )
         query_payload = search.get_json()
         if (
