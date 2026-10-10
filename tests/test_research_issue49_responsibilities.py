@@ -20,7 +20,7 @@ def test_responsibility_inventory_retains_repetition_and_external_publication(
             <titleStmt><title>IIP</title>
               <respStmt><resp>Prinicipal Investigator</resp>
                 <persName xml:id="MS">Michael Satlow</persName></respStmt>
-              <respStmt><resp>Creator</resp>
+              <respStmt><resp xml:id="role1">Creator</resp>
                 <name xml:id="MC">Michael Satlow</name></respStmt>
               <respStmt><resp>Editor</resp><name>E. Scholar</name>
                 <orgName>Unmodeled contributor organization</orgName></respStmt>
@@ -69,7 +69,12 @@ def test_responsibility_inventory_retains_repetition_and_external_publication(
     )
     assert report["role_counts"]["Prinicipal Investigator"] == 1
     assert report["role_counts"]["Creator"] == 2
-    assert any("orgName" in anomaly["other_children"] for anomaly in report["anomalies"])
+    assert any("}id" in shape for shape in report["role_shapes"])
+    assert any(
+        isinstance(anomaly["other_children"], list)
+        and "orgName" in anomaly["other_children"]
+        for anomaly in report["anomalies"]
+    )
     assert any(
         "{http://www.tei-c.org/ns/1.0}persName" in shape
         for shape in report["title_and_agent_shapes"]
