@@ -6,6 +6,7 @@ import argparse
 import gc
 import json
 import shutil
+import tempfile
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -16,6 +17,7 @@ from iip_tf.ir import NodeType
 from iip_tf.release_gate import (
     compare_tf_feature_hashes,
     inventory_source_files,
+    require_empty_output_directory,
     write_build_reports,
 )
 from iip_tf.text_parser import parse_epidoc_file
@@ -259,7 +261,7 @@ def main() -> int:
             + json.dumps({"expected": expected, "actual": actual}, sort_keys=True)
         )
 
-    shutil.rmtree(args.output_dir, ignore_errors=True)
+    require_empty_output_directory(args.output_dir)
     write_tf_corpus(
         tuple(irs),
         args.output_dir,
@@ -328,14 +330,17 @@ def main() -> int:
     irs.clear()
     del api
     gc.collect()
-    second_dir = args.output_dir.with_name(args.output_dir.name + "-independent")
-    shutil.rmtree(second_dir, ignore_errors=True)
-    write_tf_corpus(
-        (parse_epidoc_file(path, source_revision=args.revision) for path in selected),
-        second_dir,
-        converter_commit=args.converter_commit,
-    )
-    feature_hashes = compare_tf_feature_hashes(args.output_dir, second_dir)
+    with tempfile.TemporaryDirectory(
+        prefix="pinned-tf-independent-",
+        dir=args.output_dir.parent,
+    ) as fresh_directory:
+        second_dir = Path(fresh_directory)
+        write_tf_corpus(
+            (parse_epidoc_file(path, source_revision=args.revision) for path in selected),
+            second_dir,
+            converter_commit=args.converter_commit,
+        )
+        feature_hashes = compare_tf_feature_hashes(args.output_dir, second_dir)
     if len(feature_hashes) != report["tf_files"]:
         raise SystemExit("not all native TF features were hashed")
 
