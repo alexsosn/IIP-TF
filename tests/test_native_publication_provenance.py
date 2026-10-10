@@ -181,3 +181,22 @@ def test_identical_agent_local_id_across_files_is_not_a_global_identity(
     b = two.nodes_of_type(NodeType.RESPONSIBILITY)[0]
     assert a.feature("agent_source_id") == b.feature("agent_source_id") == "MS"
     assert a.key != b.key
+
+
+def test_unsupported_publication_authority_markup_fails_closed(
+    tmp_path: Path,
+) -> None:
+    source = _fixture(
+        tmp_path,
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0">
+          <teiHeader><fileDesc><titleStmt><title>Title</title></titleStmt>
+          <publicationStmt>
+            <authority><orgName>Brown University</orgName></authority>
+            <idno type="IIP">one</idno>
+          </publicationStmt></fileDesc></teiHeader>
+          <text><body><div type="edition" subtype="transcription">
+            <p>A</p></div></body></text>
+        </TEI>""",
+    )
+    with pytest.raises(MetadataParseError, match="authority"):
+        parse_epidoc_file(source, source_revision="fixture-revision")
