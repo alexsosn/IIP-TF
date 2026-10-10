@@ -65,7 +65,8 @@ def _annotation_label(app: Any, markup: int) -> str:
 def _sign_annotations(app: Any, node: int) -> list[str]:
     """Return visible notes at each *start* point, with no repeated spans."""
     api = app.api
-    synthetic = api.F.synthetic_kind.v(node)
+    synthetic_feature = getattr(api.F, "synthetic_kind", None)
+    synthetic = synthetic_feature.v(node) if synthetic_feature is not None else None
     point_kind = {"gap": "gap", "glyph_ref": "glyph"}.get(synthetic)
     emitted: set[int] = set()
     notes: list[str] = []
