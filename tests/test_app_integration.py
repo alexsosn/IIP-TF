@@ -102,9 +102,30 @@ def test_local_browser_wsgi_loads_native_app_and_passage_without_download(tmp_pa
     # using exactly the app/config.yaml data-resolution rules used by the CLI.
     webapp: Any = setup(False, f"app:{APP}", f"--locations={data_dir}", "-noweb")
     assert webapp is not None, "local app could not resolve the generated TF dataset"
-    response = webapp.test_client().get("/")
-    assert response.status_code == 200
-    assert b"<html" in response.data.lower()
+    with webapp.test_client() as client:
+        response = client.get("/")
+        assert response.status_code == 200
+        assert b"<html" in response.data.lower()
+
+        # TF 13 browser uses POST form fields, not GET query parameters.
+        passage = client.post("/passage", data={"sec0": "minimal"})
+        assert passage.status_code == 200
+        passage_data = passage.get_json()
+        assert isinstance(passage_data, dict)
+        rendered = passage_data["table"]
+        assert isinstance(rendered, str)
+        visible = _VisibleText()
+        visible.feed(rendered)
+        assert "ABC" in "".join(visible.parts)
+
+        search = client.post(
+            "/query", data={"query": "inscription inscription_id=minimal"}
+        )
+        assert search.status_code == 200
+        result = search.get_json()
+        assert isinstance(result, dict)
+        assert result["status"] is True
+        assert result["nResults"] == 1
 
 
 def test_browser_cli_serves_http_offline(tmp_path: Path) -> None:
