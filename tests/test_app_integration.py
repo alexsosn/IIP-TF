@@ -108,7 +108,9 @@ def test_local_browser_wsgi_loads_native_app_and_passage_without_download(tmp_pa
         assert b"<html" in response.data.lower()
 
         # TF 13 browser uses POST form fields, not GET query parameters.
-        passage = client.post("/passage", data={"sec0": "minimal"})
+        passage = client.post(
+            "/passage", data={"sec0": "minimal", "sec1": "transcription"}
+        )
         assert passage.status_code == 200
         passage_data = passage.get_json()
         assert isinstance(passage_data, dict)
