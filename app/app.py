@@ -15,6 +15,8 @@ from tf.advanced.app import App
 _ANNOTATION_FEATURES = {
     "supplied": ("reason", "cert"),
     "unclear": ("cert",),
+    "abbr": ("cert",),
+    "ex": ("cert",),
     "gap": ("reason", "extent", "unit", "quantity", "cert"),
     "glyph": ("ref", "cert"),
 }
