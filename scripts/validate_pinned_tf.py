@@ -37,6 +37,13 @@ def _validate_native_metadata_queries(api: Any) -> dict[str, int]:
         "support_note": ("inscription",),
         "revision": ("inscription",),
         "decoration": ("inscription",),
+        "responsibility": ("inscription",),
+        "publication_id": ("inscription",),
+        "publication_include": ("inscription",),
+        "publication_availability": ("inscription",),
+        "publication_licence": ("publication_availability",),
+        "publication_paragraph": ("publication_licence",),
+        "publication_reference": ("publication_licence", "publication_paragraph"),
     }
     for node_type, allowed_parents in checks.items():
         nodes = F.otype.s(node_type)
@@ -83,7 +90,62 @@ def _validate_native_metadata_queries(api: Any) -> dict[str, int]:
     if not nested_surfaces:
         raise SystemExit("nested facsimile surfaces lost on serialization")
 
+    # Provenance must be source-explicit: XInclude does not confer authority.
+    inscriptions = F.otype.s("inscription")
+    responsibilities = F.otype.s("responsibility")
+    includes = F.otype.s("publication_include")
+    authorities = tuple(api.Fs("publication_authority").items())
+    titles = tuple(api.Fs("source_title").items())
+    if len(titles) != len(inscriptions) or len(responsibilities) != 5537:
+        raise SystemExit("source titles/responsibility cardinality mismatch")
+    if len(includes) != 3483 or len(authorities) != 2052:
+        raise SystemExit("publication include/authority cardinality mismatch")
+    if len(F.otype.s("publication_id")) != len(inscriptions):
+        raise SystemExit("publication IDs are missing or duplicated")
+    if len(F.otype.s("publication_availability")) != 3:
+        raise SystemExit("explicit availability statements were not retained")
+    if len(F.otype.s("publication_licence")) != 3:
+        raise SystemExit("explicit licence declarations were not retained")
+    if len(F.otype.s("publication_paragraph")) != 3:
+        raise SystemExit("explicit licence paragraph nodes were not retained")
+    if len(F.otype.s("publication_reference")) != 6:
+        raise SystemExit("explicit licence reference nodes were not retained")
+    source_include = (
+        "http://cds.library.brown.edu/projects/iip/include_publicationStmt.xml"
+    )
+    for node in includes:
+        if (
+            F.include_href.v(node) != source_include
+            or F.include_resolved.v(node) != "0"
+            or not F.include_fallback_text.v(node)
+        ):
+            raise SystemExit(f"publication include {node}: invalid source pointer")
+        owner = E.parent.f(node)[0]
+        if F.publication_authority.v(owner) is not None:
+            raise SystemExit(f"publication include {node}: invented explicit authority")
+    for node in responsibilities:
+        if (
+            not F.agent_name.v(node)
+            or F.agent_tag.v(node) not in {"name", "persName"}
+        ):
+            raise SystemExit(f"responsibility {node}: source agent was lost")
+    if sum(
+        F.responsibility_construct.v(node) == "principal"
+        for node in responsibilities
+    ) != 1:
+        raise SystemExit("source-specific principal record was not preserved")
+    if sum(
+        F.responsibility_role.v(node) == "Prinicipal Investigator"
+        for node in responsibilities
+    ) != 3445:
+        raise SystemExit("original misspelled investigator roles were normalized away")
+
     return {
+        "validated_responsibilities": len(responsibilities),
+        "validated_publication_ids": len(F.otype.s("publication_id")),
+        "validated_unexpanded_includes": len(includes),
+        "validated_explicit_publication_authorities": len(authorities),
+        "validated_explicit_licences": len(F.otype.s("publication_licence")),
         "validated_bibl_scopes": len(F.otype.s("bibl_scope")),
         "validated_dimensions": len(F.otype.s("dimension")),
         "validated_images": len(F.otype.s("image")),
