@@ -37,7 +37,7 @@ def _convert(args: argparse.Namespace) -> int:
     source_revision: str = args.source_revision
     converter_commit: str = args.converter_commit
 
-    paths, _excluded = inventory_source_files(source)
+    paths, _excluded = inventory_source_files(source, source_revision=source_revision)
     irs = tuple(
         parse_epidoc_file(path, source_revision=source_revision)
         for path in paths
