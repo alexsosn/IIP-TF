@@ -30,7 +30,7 @@ def _source(tmp_path: Path, record_id: str, text: str, layer: str = "transcripti
 @pytest.fixture
 def glyph_api(tmp_path: Path) -> Any:
     fixtures = [
-        ("masa0286", '<g ref="phoen-gaml" type="char"/><g ref="phoen-delt" type="char"/>', "transcription"),
+        ("masa0286", '<g ref="phoen-gaml"/><g ref="phoen-delt"/>', "transcription"),
         ("mixed", 'A<g ref="phoen-gaml"/>B<g ref="cross">+</g>C', "transcription"),
         ("branch", '<choice><orig>x</orig><reg>y</reg></choice><g ref="bird"/>', "transcription"),
         ("dipl", '<g ref="phoen-wau"/>Z', "diplomatic"),
@@ -101,9 +101,10 @@ def test_reference_token_is_escaped_without_changing_source_ref(glyph_api: Any) 
 
 
 def test_ambiguous_native_glyph_ref_fails_closed(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path
 ) -> None:
     from dataclasses import replace
+
     from iip_tf.ir import IRNode
 
     path = _source(tmp_path, "ambig", '<g ref="one"/>')
