@@ -1,6 +1,7 @@
 apiVersion: 3
 provenanceSpec:
   corpus: Inscriptions of Israel/Palestine (IIP)
+  version: ''  # Unversioned local .tf directory; TF 13.1 links require a string.
   # Intentionally no org/repo: the browser must not fetch unpublished TF data.
   # Source and converter provenance live in the native TF header features.
 dataDisplay:
