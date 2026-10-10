@@ -21,7 +21,7 @@ def test_responsibility_inventory_retains_repetition_and_external_publication(
               <respStmt><resp>Prinicipal Investigator</resp>
                 <persName xml:id="MS">Michael Satlow</persName></respStmt>
               <respStmt><resp>Creator</resp>
-                <name xml:id="MS">Michael Satlow</name></respStmt>
+                <name xml:id="MC">Michael Satlow</name></respStmt>
               <respStmt><resp>Editor</resp><name>E. Scholar</name>
                 <orgName>Unmodeled contributor organization</orgName></respStmt>
             </titleStmt>
@@ -40,15 +40,26 @@ def test_responsibility_inventory_retains_repetition_and_external_publication(
         encoding="utf-8",
     )
 
-    report = audit(tmp_path, revision=PINNED_IIP_REVISION, expected_records=2)
+    # The same source-local xml:id can independently occur in another file.
+    (tmp_path / "masa0001.xml").write_text(
+        """<TEI xmlns="http://www.tei-c.org/ns/1.0">
+          <teiHeader><fileDesc><titleStmt>
+            <respStmt><resp>Creator</resp>
+              <name xml:id="MS">Michael Satlow</name></respStmt>
+          </titleStmt></fileDesc></teiHeader>
+        </TEI>""",
+        encoding="utf-8",
+    )
+
+    report = audit(tmp_path, revision=PINNED_IIP_REVISION, expected_records=3)
     counts = report["counts"]
-    assert report["parsed"] == 2
-    assert counts["records_with_titleStmt"] == 1
+    assert report["parsed"] == 3
+    assert counts["records_with_titleStmt"] == 2
     assert counts["records_without_titleStmt"] == 1
     assert counts["records_with_multiple_respStmt"] == 1
-    assert counts["respStmt_count"] == 3
+    assert counts["respStmt_count"] == 4
     assert counts["agent_tag:persName"] == 1
-    assert counts["agent_tag:name"] == 2
+    assert counts["agent_tag:name"] == 3
     assert counts["publication_authority_text:Brown University"] == 1
     assert counts["unexpanded_publication_xinclude"] == 1
     assert report["publication_include_hrefs"]["../publication.xml"] == 1
@@ -57,7 +68,7 @@ def test_responsibility_inventory_retains_repetition_and_external_publication(
         for shape in report["publication_child_shapes"]
     )
     assert report["role_counts"]["Prinicipal Investigator"] == 1
-    assert report["role_counts"]["Creator"] == 1
+    assert report["role_counts"]["Creator"] == 2
     assert any("orgName" in anomaly["other_children"] for anomaly in report["anomalies"])
     assert any(
         "{http://www.tei-c.org/ns/1.0}persName" in shape
