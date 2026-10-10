@@ -10,6 +10,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 
+from iip_tf.researcher_queries import verify_pinned_examples
 from tf.advanced.app import findApp  # type: ignore[import-untyped]
 from tf.browser import kernel, web  # type: ignore[import-untyped]
 
@@ -117,6 +118,11 @@ def main() -> int:
             or query_payload.get("nResults") != 1
         ):
             raise RuntimeError(f"pinned browser exact-ID search failed: {query_payload!r}")
+    research_results = verify_pinned_examples(api)
+    print(
+        "Researcher examples verified: "
+        + ", ".join(row["inscription_id"] for row in research_results["records"])
+    )
     print("Pinned TF app: 5,535 sections; reference glyph preserved; HTTP / = 200")
     return 0
 
