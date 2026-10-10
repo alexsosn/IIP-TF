@@ -189,11 +189,9 @@ def main() -> int:
         "aaTestFile.xml": "pinned source test fixture"
     }:
         raise SystemExit("pinned source file accounting changed")
-    for stale_report in (
-        args.output_dir.parent / "iip-corpus-report.json",
-        args.output_dir.parent / "iip-corpus-report.md",
-    ):
-        stale_report.unlink(missing_ok=True)
+    reports_dir = args.output_dir.with_name(args.output_dir.name + "-reports")
+    # Refuse rather than erase any previous research output.
+    require_empty_output_directory(reports_dir)
 
     irs = []
     node_counts: Counter[str] = Counter()
@@ -359,7 +357,7 @@ def main() -> int:
         "tf_feature_hashes": feature_hashes,
         "reproducible_builds": 2,
     }
-    write_build_reports(args.output_dir.parent, complete)
+    write_build_reports(reports_dir, complete)
     print(json.dumps(complete, sort_keys=True))
     return 0
 
