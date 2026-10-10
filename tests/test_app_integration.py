@@ -6,14 +6,14 @@ from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 
-from tf.browser.web import setup  # type: ignore[import-untyped]
-
 import yaml  # type: ignore[import-untyped]
 from tf.app import use  # type: ignore[import-untyped]
+from tf.browser.web import setup  # type: ignore[import-untyped]
 from tf.fabric import Fabric  # type: ignore[import-untyped]
 
 from iip_tf.text_parser import parse_epidoc_file
 from iip_tf.tf_writer import write_tf_corpus
+
 
 class _VisibleText(HTMLParser):
     def __init__(self) -> None:
