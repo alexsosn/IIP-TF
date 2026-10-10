@@ -1,0 +1,17 @@
+/* Source-critical annotations are *not* source characters.
+   Keep direction isolated so English labels do not reorder RTL inscriptions. */
+.iip-editorial-note {
+  display: inline-block;
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-size: 0.78em;
+  font-style: normal;
+  border: 1px dotted currentColor;
+  border-radius: 0.25em;
+  padding: 0 0.15em;
+  margin-inline: 0.18em;
+  vertical-align: baseline;
+}
+.iip-source-sign {
+  white-space: pre-wrap;
+}
