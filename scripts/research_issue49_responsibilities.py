@@ -16,6 +16,7 @@ class ProvenanceAudit(TypedDict):
     parsed: int
     counts: dict[str, int]
     role_counts: dict[str, int]
+    role_shapes: dict[str, int]
     title_and_agent_shapes: dict[str, int]
     respStmt_shapes: dict[str, int]
     publicationStmt_shapes: dict[str, int]
@@ -54,6 +55,7 @@ def audit(
     parsed = 0
     counters: Counter[str] = Counter()
     role_counts: Counter[str] = Counter()
+    role_shapes: Counter[str] = Counter()
     child_shapes: Counter[str] = Counter()
     statement_shapes: Counter[str] = Counter()
     publication_shapes: Counter[str] = Counter()
@@ -92,6 +94,7 @@ def audit(
             ]
             for role in responsibilities:
                 role_counts[_text(role)] += 1
+                role_shapes[_shape(role)] += 1
             for name in names:
                 counters[f"agent_tag:{_local(name.tag)}"] += 1
                 child_shapes[_shape(name)] += 1
@@ -149,10 +152,11 @@ def audit(
                     counters["unexpanded_publication_xinclude"] += 1
                     publication_includes[child.attrib.get("href", "")] += 1
 
-    report = {
+    report: ProvenanceAudit = {
         "parsed": parsed,
         "counts": dict(sorted(counters.items())),
         "role_counts": dict(sorted(role_counts.items())),
+        "role_shapes": dict(sorted(role_shapes.items())),
         "title_and_agent_shapes": dict(sorted(child_shapes.items())),
         "respStmt_shapes": dict(sorted(statement_shapes.items())),
         "publicationStmt_shapes": dict(sorted(publication_shapes.items())),
