@@ -6,6 +6,8 @@ on:
       - "src/iip_tf/tf_writer.py"
       - "app/**"
       - "scripts/validate_pinned_app.py"
+      - "src/iip_tf/researcher_queries.py"
+      - "docs/guides/researcher-quickstart.md"
       - "src/iip_tf/cli.py"
       - "src/iip_tf/release_gate.py"
       - "src/iip_tf/ir.py"
@@ -22,6 +24,8 @@ on:
     paths:
       - "app/**"
       - "scripts/validate_pinned_app.py"
+      - "src/iip_tf/researcher_queries.py"
+      - "docs/guides/researcher-quickstart.md"
       - "src/iip_tf/tf_writer.py"
       - "src/iip_tf/cli.py"
       - "src/iip_tf/release_gate.py"
