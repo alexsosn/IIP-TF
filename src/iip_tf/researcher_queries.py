@@ -21,7 +21,7 @@ _ID_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 
 def feature_inventory(api: Any) -> tuple[tuple[str, ...], tuple[str, ...]]:
     """Discover feature names in the *loaded* TF data rather than the schema."""
-    discovered: dict[str, list[str]] = api.TF.explore(silent="deep", show=False)
+    discovered: dict[str, list[str]] = api.TF.explore(silent="deep", show=True)
     return (
         tuple(sorted(discovered["nodes"])),
         tuple(sorted(discovered["edges"])),
