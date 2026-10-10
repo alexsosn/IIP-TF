@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import re
 import shutil
-from html import escape
 from collections import defaultdict
 from collections.abc import Callable, Iterable
+from html import escape
 from pathlib import Path
 from typing import Any
 
