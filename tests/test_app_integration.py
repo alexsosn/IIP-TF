@@ -121,7 +121,8 @@ def test_local_browser_wsgi_loads_native_app_and_passage_without_download(tmp_pa
         assert "ABC" in "".join(visible.parts)
 
         search = client.post(
-            "/query", data={"query": "inscription inscription_id=minimal"}
+            "/query",
+            data={"query": "inscription inscription_id=minimal", "condenseType": "line"}
         )
         assert search.status_code == 200
         result = search.get_json()
