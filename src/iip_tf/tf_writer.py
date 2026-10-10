@@ -206,6 +206,11 @@ def _add_primary_reference_tokens(
     for node in ir.nodes:
         if node.node_type != NodeType.MARKUP or node.feature("kind") != "glyph":
             continue
+        # Segmentation annotations may share an existing source glyph's
+        # exact sign slot (Brown bshe0146). They are annotations about
+        # segmentation, NOT competing authored <g ref> records.
+        if node.feature("annotation_source") == "transcription_segmented":
+            continue
         # A nonempty <g ref=...> already has real characters and should
         # not be replaced or represented twice in the display.
         if len(node.sign_keys) != 1:
