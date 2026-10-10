@@ -5,6 +5,7 @@ on:
     paths:
       - "src/iip_tf/tf_writer.py"
       - "src/iip_tf/cli.py"
+      - "src/iip_tf/release_gate.py"
       - "src/iip_tf/ir.py"
       - "src/iip_tf/text_parser.py"
       - "src/iip_tf/metadata_parser.py"
@@ -19,6 +20,7 @@ on:
     paths:
       - "src/iip_tf/tf_writer.py"
       - "src/iip_tf/cli.py"
+      - "src/iip_tf/release_gate.py"
       - "src/iip_tf/ir.py"
       - "src/iip_tf/text_parser.py"
       - "src/iip_tf/metadata_parser.py"
@@ -68,3 +70,11 @@ jobs:
             build/pinned-tf \
             --revision 0b7dc8358ccdfd0c9391f049da4839fbd91c26e5 \
             --converter-commit "${{ github.event.pull_request.head.sha || github.sha }}"
+      - name: Upload reproducibility reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: iip-pinned-reproducibility-report
+          path: |
+            build/pinned-tf-reports/iip-corpus-report.json
+            build/pinned-tf-reports/iip-corpus-report.md
+          if-no-files-found: error

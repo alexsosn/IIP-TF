@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import gc
 import json
 import shutil
+import tempfile
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -12,6 +14,15 @@ from typing import Any
 from tf.fabric import Fabric  # type: ignore[import-untyped]
 
 from iip_tf.ir import NodeType
+from iip_tf.release_gate import (
+    PINNED_EPIDOC_SOURCE_TREE,
+    compare_tf_feature_hashes,
+    inventory_source_files,
+    require_empty_output_directory,
+    require_source_tree_sha,
+    validate_oslots_mapping,
+    write_build_reports,
+)
 from iip_tf.text_parser import parse_epidoc_file
 from iip_tf.tf_writer import write_tf_corpus
 
@@ -176,20 +187,37 @@ def main() -> int:
     parser.add_argument("--converter-commit", required=True)
     args = parser.parse_args()
 
+    # Authenticate bytes against the upstream Git subtree, not a caller-supplied
+    # provenance string or the agreement of two builds from identical inputs.
+    verified_source_tree = require_source_tree_sha(
+        args.source_dir, expected_sha=PINNED_EPIDOC_SOURCE_TREE
+    )
+    selected, excluded = inventory_source_files(args.source_dir, source_revision=args.revision)
+    if len(selected) != EXPECTED_PARSED or excluded != {
+        "aaTestFile.xml": "pinned source test fixture"
+    }:
+        raise SystemExit("pinned source file accounting changed")
+    reports_dir = args.output_dir.with_name(args.output_dir.name + "-reports")
+    # Refuse rather than erase any previous research output.
+    require_empty_output_directory(reports_dir)
+
     irs = []
     node_counts: Counter[str] = Counter()
     edge_counts: Counter[str] = Counter()
+    slot_languages: Counter[str] = Counter()
+    slot_kinds: Counter[str] = Counter()
     sign_count = 0
     point_count = 0
     empty_structural = 0
     token_identities = 0
 
-    for path in sorted(args.source_dir.glob("*.xml")):
-        if "test" in path.name.lower():
-            continue
+    for path in selected:
         ir = parse_epidoc_file(path, source_revision=args.revision)
         irs.append(ir)
         sign_count += len(ir.signs)
+        for sign in ir.signs:
+            slot_languages[sign.lang or "und"] += 1
+            slot_kinds[sign.synthetic_kind or "visible"] += 1
         for node in ir.nodes:
             node_counts[node.node_type.value] += 1
             if node.point_index is not None:
@@ -239,6 +267,7 @@ def main() -> int:
             + json.dumps({"expected": expected, "actual": actual}, sort_keys=True)
         )
 
+    require_empty_output_directory(args.output_dir)
     write_tf_corpus(
         tuple(irs),
         args.output_dir,
@@ -262,6 +291,12 @@ def main() -> int:
             raise SystemExit(
                 f"loaded {node_type} count {loaded_node_counts[node_type]} != {count}"
             )
+
+    validated_oslots_nodes = validate_oslots_mapping(
+        api.E.oslots.items(),
+        sign_count=sign_count,
+        node_count=node_count,
+    )
 
     loaded_edge_counts: dict[str, int] = {}
     for edge_type, expected_count in edge_counts.items():
@@ -300,8 +335,46 @@ def main() -> int:
         "node_counts": dict(sorted(node_counts.items())),
         "edge_counts": dict(sorted(edge_counts.items())),
         "tf_files": len(tuple(args.output_dir.glob("*.tf"))),
+        "validated_oslots_nodes": validated_oslots_nodes,
     }
-    print(json.dumps(report, sort_keys=True))
+    # Rebuild from source in a separate fresh directory, not the cached
+    # in-memory canonical IR. Compare every native TF feature bytewise.
+    # Drop first-build memory before the independent parse of 5,535 files.
+    irs.clear()
+    del api
+    gc.collect()
+    with tempfile.TemporaryDirectory(
+        prefix="pinned-tf-independent-",
+        dir=args.output_dir.parent,
+    ) as fresh_directory:
+        second_dir = Path(fresh_directory)
+        write_tf_corpus(
+            (parse_epidoc_file(path, source_revision=args.revision) for path in selected),
+            second_dir,
+            converter_commit=args.converter_commit,
+        )
+        feature_hashes = compare_tf_feature_hashes(args.output_dir, second_dir)
+    if len(feature_hashes) != report["tf_files"]:
+        raise SystemExit("not all native TF features were hashed")
+
+    complete = {
+        **report,
+        "status": "success",
+        "source_revision": args.revision,
+        "verified_source_tree_git_sha1": verified_source_tree,
+        "converter_commit": args.converter_commit,
+        "source_files": {
+            "converted": [path.name for path in selected],
+            "excluded": excluded,
+            "failed": [],
+        },
+        "slot_languages": dict(sorted(slot_languages.items())),
+        "slot_kinds": dict(sorted(slot_kinds.items())),
+        "tf_feature_hashes": feature_hashes,
+        "reproducible_builds": 2,
+    }
+    write_build_reports(reports_dir, complete)
+    print(json.dumps(complete, sort_keys=True))
     return 0
 
 
