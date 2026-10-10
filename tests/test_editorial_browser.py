@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import runpy
 from html.parser import HTMLParser
 from pathlib import Path
@@ -107,7 +108,9 @@ def test_visible_supply_uncertainty_and_gap_preserve_plain_reading(
         for m in markups
     ), "native TF markup must be reachable from its sign slots"
     _, visible = _passage(corpus, "annotated")
-    assert "A" in visible and "BC" in visible and "D" in visible
+    # Notes are real rendered text nodes, so source letters need not be adjacent
+    # until the visibly delimited editorial overlays have been excluded.
+    assert "ABCDE" in re.sub(r"⟦[^⟧]*⟧", "", visible)
     assert "supplied" in visible.lower()
     assert "low" in visible.lower()
     assert "unclear" in visible.lower()
