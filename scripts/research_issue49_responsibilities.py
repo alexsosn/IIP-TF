@@ -9,6 +9,8 @@ from collections import Counter
 from pathlib import Path
 from typing import TypedDict
 
+from iip_tf.source_repair import repair_source_file
+
 
 class ProvenanceAudit(TypedDict):
     parsed: int
@@ -23,7 +25,6 @@ class ProvenanceAudit(TypedDict):
     sample_per_respStmt_shape: dict[str, dict[str, object]]
     anomalies: list[dict[str, object]]
 
-from iip_tf.source_repair import repair_source_file
 
 TEI = "{http://www.tei-c.org/ns/1.0}"
 XI = "{http://www.w3.org/2001/XInclude}"
