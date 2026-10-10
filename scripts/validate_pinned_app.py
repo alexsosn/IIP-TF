@@ -119,6 +119,51 @@ def main() -> int:
             or query_payload.get("nResults") != 1
         ):
             raise RuntimeError(f"pinned browser exact-ID search failed: {query_payload!r}")
+    # Source-critical reading: choose the textpart containing the actual
+    # editorial node, not a guessed section index or a synthetic placeholder.
+    for record_id, kind, expected in (
+        ("abil0001", "gap", "gap"),
+        ("abil0001", "supplied", "supplied"),
+        ("caes0260", "ex", "ex"),
+        ("masa0286", "glyph", "phoen-gaml"),
+    ):
+        owner = api.T.nodeFromSection((record_id,))
+        if owner is None:
+            raise RuntimeError(f"missing pinned editorial record: {record_id}")
+        markups = [
+            m for m in api.L.d(owner, otype="markup")
+            if api.F.kind.v(m) == kind
+        ]
+        if not markups:
+            raise RuntimeError(f"{record_id}: missing source editorial kind={kind}")
+        target_line = next(
+            (
+                line
+                for m in markups
+                for line in api.L.u(m, otype="line")
+                if api.F.layer.v(m) == api.F.primary_layer.v(owner)
+            ),
+            None,
+        )
+        if target_line is None:
+            raise RuntimeError(f"{record_id}: no primary text line for {kind}")
+        textpart = api.T.sectionFromNode(target_line)[1]
+        with webapp.test_client() as client:
+            endpoint = client.post(
+                "/passage", data={"sec0": record_id, "sec1": str(textpart)}
+            )
+        if endpoint.status_code != 200:
+            raise RuntimeError(f"{record_id}: editorial browser route not HTTP 200")
+        endpoint_data = endpoint.get_json()
+        html = endpoint_data.get("table") if isinstance(endpoint_data, dict) else None
+        if not isinstance(html, str):
+            raise RuntimeError(f"{record_id}: missing passage HTML")
+        visible_note = VisibleText()
+        visible_note.feed(html)
+        if expected not in " ".join(visible_note.parts):
+            raise RuntimeError(
+                f"{record_id}: {kind} source evidence invisible in browser"
+            )
     research_results = verify_pinned_examples(api)
     print(
         "Researcher examples verified: "
