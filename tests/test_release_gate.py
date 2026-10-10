@@ -10,6 +10,7 @@ from iip_tf.release_gate import (
     ReproducibilityError,
     compare_tf_feature_hashes,
     inventory_source_files,
+    require_empty_output_directory,
     tf_feature_hashes,
     write_build_reports,
 )
@@ -125,3 +126,20 @@ def test_failed_build_cannot_be_reported_as_success(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="failed records"):
         write_build_reports(tmp_path, report)
     assert not list(tmp_path.glob("*.json"))
+
+
+def test_output_guard_preserves_existing_user_files(tmp_path: Path) -> None:
+    output = tmp_path / "valuable-output"
+    output.mkdir()
+    valuable = output / "research-notes.txt"
+    valuable.write_text("keep", encoding="utf-8")
+    with pytest.raises(ValueError, match="not empty"):
+        require_empty_output_directory(output)
+    assert valuable.read_text(encoding="utf-8") == "keep"
+
+
+def test_output_guard_creates_new_owned_directory(tmp_path: Path) -> None:
+    output = tmp_path / "build" / "pinned-tf"
+    require_empty_output_directory(output)
+    assert output.is_dir() and not list(output.iterdir())
+    require_empty_output_directory(output)
