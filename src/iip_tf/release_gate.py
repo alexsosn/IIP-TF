@@ -5,6 +5,8 @@ Reports and SHA manifests are build artifacts, never semantic sidecars.
 from __future__ import annotations
 
 import hashlib
+import json
+from collections.abc import Mapping
 from pathlib import Path
 
 _PINNED_EXCLUSIONS = {"aaTestFile.xml": "pinned source test fixture"}
@@ -74,3 +76,73 @@ def compare_tf_feature_hashes(left: Path, right: Path) -> dict[str, str]:
             f"extra={extra}, different={different}"
         )
     return expected
+
+
+def write_build_reports(
+    output_dir: Path, report: Mapping[str, object]
+) -> tuple[Path, Path]:
+    """Persist deterministic JSON and researcher-readable Markdown build artifacts.
+
+    Reports describe an independently validated conversion; they are not
+    loaded by Text-Fabric and cannot substitute for TF-native semantics.
+    """
+    source_files = report.get("source_files")
+    if not isinstance(source_files, dict):
+        raise ValueError("build report requires source_files accounting")
+    converted = source_files.get("converted")
+    excluded = source_files.get("excluded")
+    failed = source_files.get("failed")
+    if not isinstance(converted, list) or not isinstance(excluded, dict):
+        raise ValueError("build report requires converted and excluded source files")
+    if not isinstance(failed, list):
+        raise ValueError("build report requires failed source files")
+    if report.get("status") == "success" and failed:
+        raise ValueError("cannot report success with failed records")
+    if report.get("status") not in {"success", "failed"}:
+        raise ValueError("build report requires explicit success/failed status")
+
+    lines = [
+        "# IIP-TF conversion and reproducibility report",
+        "",
+        f"Status: {report['status']}",
+        f"Source revision: `{report.get('source_revision', 'unknown')}`",
+        f"Converter commit: `{report.get('converter_commit', 'unknown')}`",
+        "",
+        "## Source-file accounting",
+        "",
+        f"Converted: {len(converted)}",
+        f"Excluded: {len(excluded)}",
+        f"Failed: {len(failed)}",
+        "",
+    ]
+    for filename, reason in sorted(excluded.items()):
+        lines.append(f"- Excluded `{filename}`: {reason}")
+    for entry in failed:
+        lines.append(f"- Failed: {entry}")
+    lines.extend(["", "## Canonical corpus statistics", ""])
+    for name in ("signs", "nodes", "edges", "points"):
+        if name in report:
+            lines.append(f"- {name}: {report[name]}")
+    for heading, field in (
+        ("Node counts", "node_counts"),
+        ("Slot languages", "slot_languages"),
+        ("Slot kinds", "slot_kinds"),
+        ("TF feature SHA-256 digests", "tf_feature_hashes"),
+    ):
+        value = report.get(field)
+        if not isinstance(value, dict):
+            continue
+        lines.extend(["", f"## {heading}", ""])
+        for key, count in sorted(value.items()):
+            lines.append(f"- `{key}`: {count}")
+    lines.append("")
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    machine = output_dir / "iip-corpus-report.json"
+    readable = output_dir / "iip-corpus-report.md"
+    machine.write_text(
+        json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    readable.write_text("\n".join(lines), encoding="utf-8")
+    return machine, readable
