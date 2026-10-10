@@ -6,6 +6,7 @@ Runs after validate_pinned_tf.py; never downloads data or interprets EpiDoc.
 from __future__ import annotations
 
 import argparse
+from html import escape
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
@@ -26,6 +27,61 @@ class VisibleText(HTMLParser):
 
     def handle_data(self, data: str) -> None:
         self.parts.append(data)
+
+
+
+def validate_native_reference_tokens(api: Any) -> int:
+    """Verify all source-backed primary glyph-reference tokens, not a sample."""
+    F, L = api.F, api.L
+    matched = 0
+    for slot in F.synthetic_kind.s("glyph_ref"):
+        if F.glyph.v(slot) is not None:
+            raise RuntimeError(f"glyph reference slot {slot} gained fabricated source text")
+        glyph_markups = [
+            node for node in L.u(slot, otype="markup")
+            if F.kind.v(node) == "glyph"
+        ]
+        if len(glyph_markups) != 1:
+            raise RuntimeError(f"glyph ref slot {slot} has ambiguous/missing native markup")
+        source_ref = F.ref.v(glyph_markups[0])
+        owners = L.u(slot, otype="inscription")
+        if len(owners) != 1:
+            raise RuntimeError(f"glyph ref slot {slot} lacks unique inscription owner")
+        primary = (
+            F.layer.v(slot) == F.primary_layer.v(owners[0])
+            and F.reading_role.v(slot) in {"both", "normalized"}
+        )
+        expected = (
+            f"(({escape(source_ref, quote=True)}))"
+            if primary and source_ref else None
+        )
+        actual = F.primary_ref_token.v(slot)
+        if actual != expected:
+            raise RuntimeError(
+                f"glyph reference slot {slot}: expected {expected!r}, actual {actual!r}"
+            )
+        if expected:
+            matched += 1
+
+    if matched < 1000:
+        raise RuntimeError(f"unexpectedly low pinned primary glyph-ref coverage: {matched}")
+
+    for record_id, expected_refs in (
+        ("masa0286", ("phoen-gaml", "phoen-delt")),
+        ("masa0290", ("phoen-wau", "phoen-mem")),
+    ):
+        owner = api.T.nodeFromSection((record_id,))
+        if owner is None:
+            raise RuntimeError(f"missing native glyph-reference example: {record_id}")
+        plain = api.T.text(owner, fmt="text-orig-full")
+        with_refs = api.T.text(owner, fmt="text-orig-refs-full")
+        if plain.strip():
+            raise RuntimeError(f"{record_id} unexpectedly contains visible source glyphs")
+        for ref in expected_refs:
+            if f"(({ref}))" not in with_refs:
+                raise RuntimeError(f"{record_id}: missing opt-in glyph ref {ref}")
+    print(f"Pinned native glyph-reference display: {matched} primary tokens verified")
+    return matched
 
 
 def main() -> int:
@@ -75,6 +131,8 @@ def main() -> int:
     ]
     if "phoen-gaml" not in native_refs:
         raise RuntimeError("paleo-Hebrew inscription glyph reference was lost")
+
+    validate_native_reference_tokens(api)
 
     # Exercise real native browser route creation and returned HTML against the
     # full corpus, without spawning another process or loading the corpus twice.
