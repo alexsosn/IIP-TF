@@ -1,6 +1,7 @@
 """RED acceptance tests for issue #7: source accounting and deterministic TF."""
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -10,6 +11,7 @@ from iip_tf.release_gate import (
     compare_tf_feature_hashes,
     inventory_source_files,
     tf_feature_hashes,
+    write_build_reports,
 )
 
 
@@ -75,3 +77,51 @@ def test_tf_hash_comparison_rejects_empty_feature_directory(tmp_path: Path) -> N
     right.mkdir()
     with pytest.raises(ReproducibilityError, match="no TF feature"):
         compare_tf_feature_hashes(left, right)
+
+
+def test_reproducibility_report_is_human_readable_and_machine_complete(
+    tmp_path: Path,
+) -> None:
+    report: dict[str, object] = {
+        "source_revision": "pinned-upstream-sha",
+        "converter_commit": "exact-converter-sha",
+        "status": "success",
+        "source_files": {
+            "converted": ["abil0001.xml", "contest0001.xml"],
+            "excluded": {"aaTestFile.xml": "pinned source test fixture"},
+            "failed": [],
+        },
+        "signs": 12,
+        "nodes": 5,
+        "edges": 9,
+        "node_counts": {"inscription": 2},
+        "slot_languages": {"grc": 10, "he": 2},
+        "slot_kinds": {"visible": 11, "anchor": 1},
+        "tf_feature_hashes": {"otype.tf": "a" * 64},
+    }
+    machine, readable = write_build_reports(tmp_path, report)
+    assert machine.parent == readable.parent == tmp_path
+    assert json.loads(machine.read_text(encoding="utf-8")) == report
+    assert readable.suffix == ".md"
+    text = readable.read_text(encoding="utf-8")
+    for expected in (
+        "pinned-upstream-sha", "exact-converter-sha",
+        "aaTestFile.xml", "pinned source test fixture",
+        "Converted: 2", "Excluded: 1", "Failed: 0",
+        "otype.tf", "grc", "anchor",
+    ):
+        assert expected in text
+
+
+def test_failed_build_cannot_be_reported_as_success(tmp_path: Path) -> None:
+    report: dict[str, object] = {
+        "status": "success",
+        "source_files": {
+            "converted": ["abil0001.xml"],
+            "excluded": {},
+            "failed": [{"path": "invalid.xml", "error": "invalid TEI"}],
+        },
+    }
+    with pytest.raises(ValueError, match="failed records"):
+        write_build_reports(tmp_path, report)
+    assert not list(tmp_path.glob("*.json"))
