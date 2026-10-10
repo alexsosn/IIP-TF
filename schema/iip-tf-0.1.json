@@ -336,7 +336,8 @@
       "licence_direct_text",
       "reference_text",
       "reference_target",
-      "paragraph_text"
+      "paragraph_text",
+      "responsibility_role_source_id"
     ],
     "edge": [
       "parent",
@@ -498,6 +499,11 @@
       "domain": "responsibility",
       "value_type": "str",
       "semantics": "Original source resp text (including typo); absent for TEI principal construct."
+    },
+    "responsibility_role_source_id": {
+      "domain": "responsibility",
+      "value_type": "str",
+      "semantics": "Original resp/@xml:id, scoped to the source XML file; distinct from agent xml:id. Do not synthesize cross-file identity."
     }
   },
   "display_readings": {
@@ -850,7 +856,8 @@
         "responsibility_role",
         "agent_tag",
         "agent_name",
-        "agent_source_id"
+        "agent_source_id",
+        "responsibility_role_source_id"
       ]
     },
     "publication_id": {
