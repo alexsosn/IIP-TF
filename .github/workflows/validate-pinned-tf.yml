@@ -70,11 +70,17 @@ jobs:
             build/pinned-tf \
             --revision 0b7dc8358ccdfd0c9391f049da4839fbd91c26e5 \
             --converter-commit "${{ github.event.pull_request.head.sha || github.sha }}"
-      - name: Upload reproducibility reports
+      - name: Require successful pinned build report
+        if: success()
+        run: |
+          test -s build/pinned-tf-reports/iip-corpus-report.json
+          test -s build/pinned-tf-reports/iip-corpus-report.md
+      - name: Upload reproducibility or failure reports
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: iip-pinned-reproducibility-report
           path: |
             build/pinned-tf-reports/iip-corpus-report.json
             build/pinned-tf-reports/iip-corpus-report.md
-          if-no-files-found: error
+          if-no-files-found: warn
