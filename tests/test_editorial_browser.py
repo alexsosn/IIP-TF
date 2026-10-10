@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from html.parser import HTMLParser
+import runpy
+from types import SimpleNamespace
 from pathlib import Path
 from typing import Any
 
@@ -143,4 +145,33 @@ def test_editorial_renderer_escapes_source_characters(
     html, visible = _passage(corpus, "escaped")
     assert "<researcher-input>" in visible
     assert "<researcher-input>" not in html
-    assert "&lt;researcher-input&gt;" in html
+    # TF inserts one HTML span per sign; encoded entities need not be adjacent.
+    assert "&lt;" in html and "&gt;" in html
+
+
+def test_native_markup_slot_mapping_is_renderable(corpus: tuple[Any, Any]) -> None:
+    api, _ = corpus
+    mod = runpy.run_path(str(APP / "app.py"))
+    proxy = SimpleNamespace(api=api)
+    n = api.T.nodeFromSection(("annotated",))
+    assert n is not None
+    markups = api.L.d(n, otype="markup")
+    supplied = next(m for m in markups if api.F.kind.v(m) == "supplied")
+    gap = next(m for m in markups if api.F.kind.v(m) == "gap")
+    for m in (supplied, gap):
+        slots = tuple(api.E.oslots.s(m))
+        diag = [
+            {
+                "sign": slot,
+                "glyph": api.F.glyph.v(slot),
+                "layer": api.F.layer.v(slot),
+                "role": api.F.reading_role.v(slot),
+                "owner": [api.F.primary_layer.v(o) for o in api.L.u(slot, otype="inscription")],
+                "selected": mod["_is_selected_sign"](proxy, slot, "text-orig-full"),
+                "notes": mod["_sign_annotations"](proxy, slot),
+            }
+            for slot in slots
+        ]
+        assert any(row["selected"] and row["notes"] for row in diag), (
+            f"Markup kind={api.F.kind.v(m)} slots={slots} not visible: {diag!r}"
+        )
