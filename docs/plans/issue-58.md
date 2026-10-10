@@ -13,10 +13,10 @@ equivalents; Brown IIP old browser used literal `((ref))` notation.
 
 The frozen `_otext()` currently produces `{primary_glyph}{primary_after}`.
 Its `primary_glyph` is normalized primary reading, with all alternative
-branches excluded. A new `text-orig-refs-full` can use a separate
-per-sign native feature `primary_ref_glyph`, copying each already-selected
-visible `primary_glyph` unchanged, and substituting **only** empty
-`glyph_ref` signs on that primary reading with `((verbatim-ref))`.
+branches excluded. A new `text-orig-refs-full` can use a **sparse** per-sign native feature `primary_ref_token`, populated **only**
+on eligible empty `glyph_ref` signs with HTML-escaped `((ref))`.
+`primary_glyph` continues supplying every selected source character,
+so the template simply combines `{primary_glyph}{primary_ref_token}{primary_after}`.
 The ordinary `primary_after` remains authoritative for spacing.
 No source `glyph`, canonical IR, text-orig-full, role selection or
 other layer format changes; the format is opt-in and must be documented
@@ -34,9 +34,10 @@ as a *display/transcription aid*, not an attested reading.
 2. GREEN build an index from **native IR markup sign_keys** to the
    referenced synthetic sign, fail closed on duplicate/conflicting
    refs or synthetic/glyph mismatch (rather than picking arbitrarily),
-   construct `primary_ref_glyph` using selected `primary_glyph` and
-   documented `((ref))` rendering *only* for eligible primary sign
-   events. Add `fmt:text-orig-refs-full` to `_otext` metadata, without
+   construct sparse `primary_ref_token` using the selected primary
+   layer and reading role and documented `((ref))` rendering *only*
+   for eligible synthetic sign events. This avoids duplicating all
+   ordinary source letters in a second TF feature. Add `fmt:text-orig-refs-full` to `_otext` metadata, without
    changing its default format order or IR slots.
 3. Document the backwards-compatible explicit format in frozen
    schema 0.1 reference and JSON, including source/derived provenance.
