@@ -144,6 +144,34 @@ certainty/precision qualifiers for their specific metadata paths rather than sha
 - `image`: URL, description, note, credit/role; parented to a surface when present; no binary payload.
 - `revision`: when/custom-when, who, description.
 
+## Source responsibility and publication provenance
+
+The pinned 5,535-record source audit (`docs/research/issue-49-responsibilities.md`)
+justifies the following additional native node types:
+
+- `responsibility`: one `titleStmt/respStmt` or exceptional
+  `titleStmt/principal`; preserves raw `responsibility_role`, construct,
+  agent tag (`name` versus `persName`), agent name and local
+  `agent_source_id`. It never implies global person identity.
+- `publication_id`: one `publicationStmt/idno`, including empty elements.
+- `publication_include`: one **unexpanded** XInclude pointer, literal
+  `include_href`, fallback diagnostic and `include_resolved="0"`;
+  neither publisher nor licence is inferred from external content.
+- `publication_availability`, `publication_licence`,
+  `publication_paragraph`, `publication_reference`: preserve source-explicit
+  availability and licence text, structural paragraph and reference
+  parentage, and original reference targets, without a semantic sidecar.
+
+Every new metadata node has a technical sign anchor plus a direct `parent`
+and `in_inscription` edge. Inscription scalar `source_title` stores the raw
+TEI title statement text (whitespace-normalized); `publication_authority`
+exists only when the original record explicitly provides an authority.
+
+The pinned source has 5,536 `respStmt` plus one `principal`, 5,535 publication
+identifiers, 3,483 unexpanded includes, 2,052 explicit authorities, and
+three explicit nested licence declarations. The source typo
+`Prinicipal Investigator` is deliberately retained.
+
 ## Entity nodes
 
 `persName`, `name`, `rs`, `placeName`, and textual `date` annotations become `entity` nodes

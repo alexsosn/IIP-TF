@@ -33,6 +33,13 @@ _NODE_TYPE_ORDER = (
     NodeType.DIMENSION,
     NodeType.SUPPORT_NOTE,
     NodeType.FACSIMILE_SURFACE,
+    NodeType.RESPONSIBILITY,
+    NodeType.PUBLICATION_ID,
+    NodeType.PUBLICATION_INCLUDE,
+    NodeType.PUBLICATION_AVAILABILITY,
+    NodeType.PUBLICATION_LICENCE,
+    NodeType.PUBLICATION_REFERENCE,
+    NodeType.PUBLICATION_PARAGRAPH,
 )
 _NODE_TYPE_RANK = {node_type: index for index, node_type in enumerate(_NODE_TYPE_ORDER)}
 _INT_FEATURES = {

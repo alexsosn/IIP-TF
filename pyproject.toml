@@ -36,6 +36,7 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]  # make top-level research scripts importable to focused tests
 
 [tool.ruff]
 target-version = "py311"

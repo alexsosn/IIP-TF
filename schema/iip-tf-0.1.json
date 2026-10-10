@@ -5,7 +5,8 @@
     "corpus_audit": "docs/research/iip-corpus-audit.md",
     "duplicate_segmentation_research": "docs/research/segmented-duplicates.md",
     "pinned_source_revision": "0b7dc8358ccdfd0c9391f049da4839fbd91c26e5",
-    "zero_span_research": "docs/research/zero-span-points.md"
+    "zero_span_research": "docs/research/zero-span-points.md",
+    "contributor_provenance_research": "docs/research/issue-49-responsibilities.md"
   },
   "warp": {
     "slot_type": "sign",
@@ -122,7 +123,14 @@
     "bibl_scope",
     "dimension",
     "support_note",
-    "facsimile_surface"
+    "facsimile_surface",
+    "responsibility",
+    "publication_id",
+    "publication_include",
+    "publication_availability",
+    "publication_licence",
+    "publication_reference",
+    "publication_paragraph"
   ],
   "node_type_contract": {
     "inscription": "Record and top-level section node. Canonical TF section id is the unique source file stem; raw IIP/xml ids remain metadata.",
@@ -157,7 +165,14 @@
     "bibl_scope": "One source biblScope child; repeatable and parented to a bibl node.",
     "dimension": "One source dimensions element; repeatable and usable for object/surface or hand/letter dimensions without flattening ranges.",
     "support_note": "One non-empty direct support/p source paragraph; repeatable and parented to the inscription.",
-    "facsimile_surface": "One source facsimile/surface grouping node; top-level surfaces belong to the inscription and nested surfaces retain surface parentage."
+    "facsimile_surface": "One source facsimile/surface grouping node; top-level surfaces belong to the inscription and nested surfaces retain surface parentage.",
+    "responsibility": "One original titleStmt/respStmt or titleStmt/principal; preserve source spelling, distinct name/persName tags and source-local agent xml:id, without global entity coalescing.",
+    "publication_id": "One original publicationStmt/idno element even when its text is empty; optional original type and value are features.",
+    "publication_include": "One unresolved xi:include publication pointer with original href and fallback diagnostic; never expand source authority or claim its licence as observed.",
+    "publication_availability": "One original availability declaration with raw status, parent of explicit licence nodes.",
+    "publication_licence": "Explicit licence text and direct text; parent of source ref and paragraph nodes, not extrapolated from a global boilerplate.",
+    "publication_reference": "One TEI licence/ref with original text and optional @target, parented to licence or paragraph.",
+    "publication_paragraph": "One TEI licence/p with literal text and reference children."
   },
   "features": {
     "slot": [
@@ -303,7 +318,26 @@
       "token_count",
       "candidate_langs",
       "point_index",
-      "point_relation"
+      "point_relation",
+      "source_title",
+      "publication_authority",
+      "responsibility_construct",
+      "responsibility_role",
+      "agent_tag",
+      "agent_name",
+      "agent_source_id",
+      "publication_id",
+      "publication_id_type",
+      "include_href",
+      "include_fallback_text",
+      "include_resolved",
+      "availability_status",
+      "licence_text",
+      "licence_direct_text",
+      "reference_text",
+      "reference_target",
+      "paragraph_text",
+      "responsibility_role_source_id"
     ],
     "edge": [
       "parent",
@@ -445,6 +479,31 @@
         "after"
       ],
       "semantics": "Relation of the zero-width semantic point to its single technical oslots anchor."
+    },
+    "source_title": {
+      "domain": "inscription",
+      "value_type": "str",
+      "semantics": "Original TEI titleStmt/title text, distinct from project-wide work title."
+    },
+    "publication_authority": {
+      "domain": "inscription",
+      "value_type": "str",
+      "semantics": "Source-explicit publicationStmt/authority; absent for unexpanded XInclude."
+    },
+    "agent_source_id": {
+      "domain": "responsibility",
+      "value_type": "str",
+      "semantics": "Original agent xml:id scoped to source inscription only; not linked across documents."
+    },
+    "responsibility_role": {
+      "domain": "responsibility",
+      "value_type": "str",
+      "semantics": "Original source resp text (including typo); absent for TEI principal construct."
+    },
+    "responsibility_role_source_id": {
+      "domain": "responsibility",
+      "value_type": "str",
+      "semantics": "Original resp/@xml:id, scoped to the source XML file; distinct from agent xml:id. Do not synthesize cross-file identity."
     }
   },
   "display_readings": {
@@ -656,7 +715,9 @@
       "provenance_place",
       "origin_note",
       "condition_note",
-      "layout_note"
+      "layout_note",
+      "source_title",
+      "publication_authority"
     ],
     "repeatable_nodes": [
       "bibl",
@@ -667,7 +728,14 @@
       "bibl_scope",
       "dimension",
       "support_note",
-      "facsimile_surface"
+      "facsimile_surface",
+      "responsibility",
+      "publication_id",
+      "publication_include",
+      "publication_availability",
+      "publication_licence",
+      "publication_reference",
+      "publication_paragraph"
     ],
     "source_values_retained": true,
     "derived_values_must_be_separate_and_documented": true
@@ -778,6 +846,80 @@
       "features": [
         "source_key",
         "note"
+      ]
+    },
+    "responsibility": {
+      "parent_type": "inscription",
+      "features": [
+        "source_key",
+        "responsibility_construct",
+        "responsibility_role",
+        "agent_tag",
+        "agent_name",
+        "agent_source_id",
+        "responsibility_role_source_id"
+      ]
+    },
+    "publication_id": {
+      "parent_type": "inscription",
+      "features": [
+        "source_key",
+        "publication_id",
+        "publication_id_type"
+      ],
+      "empty_value_policy": "retain node with absent value feature"
+    },
+    "publication_include": {
+      "parent_type": "inscription",
+      "features": [
+        "source_key",
+        "include_href",
+        "include_fallback_text",
+        "include_resolved"
+      ],
+      "resolution_policy": "unexpanded literal source XInclude, no remote inference"
+    },
+    "publication_availability": {
+      "parent_type": "inscription",
+      "features": [
+        "source_key",
+        "availability_status"
+      ],
+      "child_nodes": [
+        "publication_licence"
+      ]
+    },
+    "publication_licence": {
+      "parent_type": "publication_availability",
+      "features": [
+        "source_key",
+        "licence_text",
+        "licence_direct_text"
+      ],
+      "child_nodes": [
+        "publication_reference",
+        "publication_paragraph"
+      ]
+    },
+    "publication_reference": {
+      "parent_types": [
+        "publication_licence",
+        "publication_paragraph"
+      ],
+      "features": [
+        "source_key",
+        "reference_text",
+        "reference_target"
+      ]
+    },
+    "publication_paragraph": {
+      "parent_type": "publication_licence",
+      "features": [
+        "source_key",
+        "paragraph_text"
+      ],
+      "child_nodes": [
+        "publication_reference"
       ]
     }
   },
