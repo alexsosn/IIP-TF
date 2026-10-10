@@ -121,6 +121,41 @@ def test_ambiguous_native_glyph_ref_fails_closed(
         write_tf_corpus((ambiguous,), tmp_path / "fail", converter_commit="fixture-commit")
 
 
+
+def test_segmented_glyph_annotation_does_not_shadow_source_reference(
+    tmp_path: Path,
+) -> None:
+    from dataclasses import replace
+
+    from iip_tf.ir import IRNode
+
+    path = _source(tmp_path, "segmented", '<g ref="cross"/>')
+    ir = parse_epidoc_file(path, source_revision="fixture-revision")
+    original = next(n for n in ir.nodes if n.feature("kind") == "glyph")
+    # Mirrors actual Brown bshe0146: segmented <g/> is projected onto
+    # the same canonical synthetic sign as an authored <g ref="cross"/>.
+    segmented = IRNode(
+        key="segmented#annotation",
+        node_type=original.node_type,
+        sign_keys=original.sign_keys,
+        features=(
+            ("kind", "glyph"),
+            ("annotation_source", "transcription_segmented"),
+            ("layer", "transcription"),
+        ),
+    )
+    ir = replace(ir, nodes=(*ir.nodes, segmented))
+    output = tmp_path / "tf"
+    write_tf_corpus((ir,), output, converter_commit="fixture-commit")
+    api: Any = Fabric(locations=str(output), silent=True).loadAll(silent=True)
+    assert api
+    inscription = api.T.nodeFromSection(("segmented",))
+    assert inscription is not None
+    assert api.T.text(inscription, fmt="text-orig-full") == ""
+    assert api.T.text(inscription, fmt="text-orig-refs-full") == "((cross))"
+
+
+
 def test_schema_reference_labels_opt_in_not_source_reading() -> None:
     root = Path(__file__).resolve().parents[1]
     documentation = (root / "docs/reference/schema-0.1.md").read_text(
