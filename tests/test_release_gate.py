@@ -9,10 +9,10 @@ import pytest
 from iip_tf.release_gate import (
     ReproducibilityError,
     compare_tf_feature_hashes,
-    inventory_source_files,
     git_source_tree_sha,
-    require_source_tree_sha,
+    inventory_source_files,
     require_empty_output_directory,
+    require_source_tree_sha,
     tf_feature_hashes,
     validate_oslots_mapping,
     write_build_reports,
