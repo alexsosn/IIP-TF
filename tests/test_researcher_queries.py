@@ -82,6 +82,7 @@ def test_researcher_guide_command_links_to_executable_entrypoint() -> None:
     assert "CC BY-NC 4.0" in guide
     assert "No released" in guide or "not yet released" in guide
     assert "TF_DIR" not in guide  # every copied command is self-contained
+    assert 'print(tuple(api.S.search("inscription inscription_id=abil0001")))' in guide
 
 
 def test_researcher_cli_runs_using_real_native_tf_data(
