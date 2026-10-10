@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import subprocess
 from pathlib import Path
 
 WORKFLOW = (
@@ -50,3 +52,32 @@ def test_pinned_dependency_failure_fails_required_job_before_network_or_build() 
     assert "github.event.pull_request.head.sha || github.sha" in validate
     assert "Require successful pinned build report" in validate
     assert "Upload reproducibility or failure reports" in validate
+
+
+def test_preflight_shell_gate_fails_closed_for_all_non_success_states() -> None:
+    _, validate = _jobs()
+    source = validate.split("      - name: Require green preflight\n", 1)[1]
+    source = source.split("        run: |\n", 1)[1]
+    source = source.split("      - name: Checkout exact event head\n", 1)[0]
+    script = "\n".join(
+        line[10:] if line.startswith("          ") else line
+        for line in source.splitlines()
+    )
+    for result in ("failure", "cancelled", "skipped", ""):
+        outcome = subprocess.run(
+            ["bash", "-e", "-c", script],
+            env={**os.environ, "PREFLIGHT_RESULT": result},
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert outcome.returncode != 0, result
+        assert "Pinned build blocked" in outcome.stdout
+    success = subprocess.run(
+        ["bash", "-e", "-c", script],
+        env={**os.environ, "PREFLIGHT_RESULT": "success"},
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert success.returncode == 0, success.stderr
