@@ -76,11 +76,17 @@ jobs:
             --converter-commit "${{ github.event.pull_request.head.sha || github.sha }}"
       - name: Validate native app + Flask browser against pinned corpus
         run: python scripts/validate_pinned_app.py build/pinned-tf
-      - name: Upload reproducibility reports
+      - name: Require successful pinned build report
+        if: success()
+        run: |
+          test -s build/pinned-tf-reports/iip-corpus-report.json
+          test -s build/pinned-tf-reports/iip-corpus-report.md
+      - name: Upload reproducibility or failure reports
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: iip-pinned-reproducibility-report
           path: |
             build/pinned-tf-reports/iip-corpus-report.json
             build/pinned-tf-reports/iip-corpus-report.md
-          if-no-files-found: error
+          if-no-files-found: warn
