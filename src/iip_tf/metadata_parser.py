@@ -842,7 +842,7 @@ def enrich_metadata(ir: InscriptionIR, root: ET.Element) -> InscriptionIR:
                     _validate_attrs(licence)
                     _validate_children(licence, {"ref", "p"})
                     licence_key = key_for(licence)
-                    licence_features = {"source_key": licence_key}
+                    licence_features: dict[str, str | int] = {"source_key": licence_key}
                     _append_feature(
                         licence_features, "licence_text", _text(licence)
                     )
@@ -866,7 +866,7 @@ def enrich_metadata(ir: InscriptionIR, root: ET.Element) -> InscriptionIR:
                         if child_name == "ref":
                             _validate_children(child, set())
                             ref_key = key_for(child)
-                            ref_features = {"source_key": ref_key}
+                            ref_features: dict[str, str | int] = {"source_key": ref_key}
                             _append_feature(
                                 ref_features, "reference_text", _text(child)
                             )
@@ -887,7 +887,7 @@ def enrich_metadata(ir: InscriptionIR, root: ET.Element) -> InscriptionIR:
                         elif child_name == "p":
                             _validate_children(child, {"ref"})
                             paragraph_key = key_for(child)
-                            para_features = {"source_key": paragraph_key}
+                            para_features: dict[str, str | int] = {"source_key": paragraph_key}
                             _append_feature(
                                 para_features, "paragraph_text", _text(child)
                             )
