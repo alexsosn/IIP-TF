@@ -15,11 +15,11 @@ from tf.fabric import Fabric  # type: ignore[import-untyped]
 
 from iip_tf.ir import NodeType
 from iip_tf.release_gate import (
+    PINNED_EPIDOC_SOURCE_TREE,
     compare_tf_feature_hashes,
     inventory_source_files,
-    PINNED_EPIDOC_SOURCE_TREE,
-    require_source_tree_sha,
     require_empty_output_directory,
+    require_source_tree_sha,
     validate_oslots_mapping,
     write_build_reports,
 )
