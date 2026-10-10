@@ -111,6 +111,10 @@ def test_visible_supply_uncertainty_and_gap_preserve_plain_reading(
     # Notes are real rendered text nodes, so source letters need not be adjacent
     # until the visibly delimited editorial overlays have been excluded.
     assert "ABCDE" in re.sub(r"⟦[^⟧]*⟧", "", visible)
+    # A source-critical label belongs at the START of its marked span.
+    assert visible.index("supplied") < visible.index("B")
+    assert visible.index("gap") < visible.index("D")
+    assert visible.index("unclear") < visible.index("E")
     assert "supplied" in visible.lower()
     assert "low" in visible.lower()
     assert "unclear" in visible.lower()
