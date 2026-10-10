@@ -774,7 +774,7 @@ def enrich_metadata(ir: InscriptionIR, root: ET.Element) -> InscriptionIR:
                     )
                 fallback_text = _metadata_text(fallback[0])
                 key = key_for(element)
-                features = {
+                features: dict[str, str | int] = {
                     "source_key": key,
                     "include_resolved": "0",
                 }
@@ -798,8 +798,11 @@ def enrich_metadata(ir: InscriptionIR, root: ET.Element) -> InscriptionIR:
                     _scalar(
                         "publication authority",
                         [
-                            inscription_features.get("publication_authority", ""),
-                            _metadata_text(element) or "",
+                            value for value in (
+                                inscription_features.get("publication_authority"),
+                                _metadata_text(element),
+                            )
+                            if isinstance(value, str) and value
                         ],
                     ),
                 )
@@ -929,7 +932,10 @@ def enrich_metadata(ir: InscriptionIR, root: ET.Element) -> InscriptionIR:
     replacement = replace(
         replacement, features=tuple(sorted(inscription_features.items()))
     )
-    nodes[0] = replacement
+    nodes = [
+        replacement if node.key == inscription.key else node
+        for node in nodes
+    ]
 
     # Physical support children in source order.
     for support in root.findall(
