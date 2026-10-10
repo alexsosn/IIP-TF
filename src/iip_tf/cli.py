@@ -7,7 +7,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from iip_tf import __version__
-from iip_tf.release_gate import inventory_source_files
+from iip_tf.release_gate import inventory_source_files, require_empty_output_directory
 from iip_tf.text_parser import parse_epidoc_file
 from iip_tf.tf_writer import write_tf_corpus
 
@@ -38,6 +38,7 @@ def _convert(args: argparse.Namespace) -> int:
     converter_commit: str = args.converter_commit
 
     paths, _excluded = inventory_source_files(source, source_revision=source_revision)
+    require_empty_output_directory(output)
     irs = tuple(
         parse_epidoc_file(path, source_revision=source_revision)
         for path in paths
