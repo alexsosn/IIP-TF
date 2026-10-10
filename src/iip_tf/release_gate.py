@@ -25,7 +25,7 @@ def _git_blob_oid(path: Path) -> bytes:
     """Hash source bytes with Git's blob-object framing (SHA-1)."""
     size = path.stat().st_size
     digest = hashlib.sha1()
-    digest.update(f"blob {size}\\0".encode("ascii"))
+    digest.update(f"blob {size}\0".encode("ascii"))
     with path.open("rb") as stream:
         while chunk := stream.read(1024 * 1024):
             digest.update(chunk)
@@ -47,9 +47,9 @@ def git_source_tree_sha(source_dir: Path) -> str:
     for path in paths:
         if path.is_symlink() or not path.is_file() or path.suffix != ".xml":
             raise ReproducibilityError(f"unexpected source tree entry: {path.name}")
-        chunks.append(b"100644 " + path.name.encode("utf-8") + b"\\0" + _git_blob_oid(path))
+        chunks.append(b"100644 " + path.name.encode("utf-8") + b"\0" + _git_blob_oid(path))
     content = b"".join(chunks)
-    return hashlib.sha1(b"tree " + str(len(content)).encode("ascii") + b"\\0" + content).hexdigest()
+    return hashlib.sha1(b"tree " + str(len(content)).encode("ascii") + b"\0" + content).hexdigest()
 
 
 def require_source_tree_sha(source_dir: Path, *, expected_sha: str) -> str:
