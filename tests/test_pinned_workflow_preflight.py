@@ -36,7 +36,8 @@ def test_pinned_full_build_depends_on_all_fast_code_gates() -> None:
         assert check in preflight
     assert "Build and reload complete native TF corpus" not in preflight
     assert "needs: preflight" in validate
-    assert "if: always()" in validate
+    # After a failed prerequisite it must run, but cancellation must stop old builds.
+    assert "always() && !cancelled()" in validate
 
 
 def test_pinned_dependency_failure_fails_required_job_before_network_or_build() -> None:
