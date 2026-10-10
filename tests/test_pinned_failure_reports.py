@@ -10,6 +10,7 @@ from typing import Any
 
 import pytest
 
+from iip_tf.source_repair import PINNED_IIP_REVISION
 from scripts import validate_pinned_tf as pinned
 
 
@@ -48,7 +49,7 @@ def test_parse_failure_persists_exact_file_stage_and_unprocessed(
         sys,
         "argv",
         ["validate_pinned_tf.py", str(source_dir), str(output_dir),
-         "--revision", pinned.PINNED_IIP_REVISION, "--converter-commit", "test-sha"],
+         "--revision", PINNED_IIP_REVISION, "--converter-commit", "test-sha"],
     )
     with pytest.raises(ValueError, match="invalid source"):
         pinned.main()
@@ -96,7 +97,7 @@ def test_tf_write_failure_reports_no_converted_records(
     monkeypatch.setattr(
         sys, "argv",
         ["validate_pinned_tf.py", str(source_dir), str(tmp_path / "native-tf"),
-         "--revision", pinned.PINNED_IIP_REVISION, "--converter-commit", "test-sha"],
+         "--revision", PINNED_IIP_REVISION, "--converter-commit", "test-sha"],
     )
     with pytest.raises(OSError, match="disk full"):
         pinned.main()
