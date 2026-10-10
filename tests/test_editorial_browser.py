@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from html.parser import HTMLParser
 import runpy
-from types import SimpleNamespace
+from html.parser import HTMLParser
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
