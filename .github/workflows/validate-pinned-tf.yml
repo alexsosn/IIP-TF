@@ -5,6 +5,7 @@ on:
     paths:
       - "src/iip_tf/tf_writer.py"
       - "src/iip_tf/cli.py"
+      - "src/iip_tf/release_gate.py"
       - "src/iip_tf/ir.py"
       - "src/iip_tf/text_parser.py"
       - "src/iip_tf/metadata_parser.py"
@@ -19,6 +20,7 @@ on:
     paths:
       - "src/iip_tf/tf_writer.py"
       - "src/iip_tf/cli.py"
+      - "src/iip_tf/release_gate.py"
       - "src/iip_tf/ir.py"
       - "src/iip_tf/text_parser.py"
       - "src/iip_tf/metadata_parser.py"
