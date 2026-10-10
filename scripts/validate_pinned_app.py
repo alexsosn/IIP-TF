@@ -11,8 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from tf.app import use  # type: ignore[import-untyped]
-from tf.browser.kernel import makeTfKernel  # type: ignore[import-untyped]
-from tf.browser.web import Web, factory  # type: ignore[import-untyped]
+from tf.browser import kernel, web  # type: ignore[import-untyped]
 from tf.fabric import Fabric  # type: ignore[import-untyped]
 
 
@@ -71,8 +70,8 @@ def main() -> int:
 
     # Exercise real native browser route creation and returned HTML against the
     # full corpus, without spawning another process or loading the corpus twice.
-    kernel = makeTfKernel(app, f"app:{APP_DIR}")
-    webapp = factory(Web(kernel))
+    browser_kernel = kernel.makeTfKernel(app, f"app:{APP_DIR}")
+    webapp = web.factory(web.Web(browser_kernel))
     with webapp.test_client() as client:
         response = client.get("/")
         if response.status_code != 200:
