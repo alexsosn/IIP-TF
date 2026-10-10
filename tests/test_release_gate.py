@@ -10,6 +10,8 @@ from iip_tf.release_gate import (
     ReproducibilityError,
     compare_tf_feature_hashes,
     inventory_source_files,
+    git_source_tree_sha,
+    require_source_tree_sha,
     require_empty_output_directory,
     tf_feature_hashes,
     validate_oslots_mapping,
@@ -213,3 +215,44 @@ def test_oslots_mapping_blocks_orphans_and_wrong_feature_domain(
 ) -> None:
     with pytest.raises(ReproducibilityError, match=error):
         validate_oslots_mapping(edges, sign_count=3, node_count=3)
+
+
+def test_git_source_tree_fingerprint_matches_independent_git_write_tree(tmp_path: Path) -> None:
+    # Independently generated via git init; git add epidoc-files/; git write-tree;
+    # git ls-tree <root_sha> epidoc-files -> d93d77737d2778b65ebb493f153bbbb05120ccbd.
+    (tmp_path / "aaTestFile.xml").write_bytes(b"<TEI/>\n")
+    (tmp_path / "abil0001.xml").write_bytes(b"<TEI><text>ABC</text></TEI>\n")
+    expected = "d93d77737d2778b65ebb493f153bbbb05120ccbd"
+    assert git_source_tree_sha(tmp_path) == expected
+    assert require_source_tree_sha(tmp_path, expected_sha=expected) == expected
+
+
+def test_pinned_source_fingerprint_rejects_same_shape_reading_changes(tmp_path: Path) -> None:
+    (tmp_path / "aaTestFile.xml").write_bytes(b"<TEI/>\n")
+    inscription = tmp_path / "abil0001.xml"
+    inscription.write_bytes(b"<TEI><text>ABC</text></TEI>\n")
+    expected = git_source_tree_sha(tmp_path)
+    inscription.write_bytes(b"<TEI><text>ABD</text></TEI>\n")
+    with pytest.raises(ReproducibilityError, match="source tree"):
+        require_source_tree_sha(tmp_path, expected_sha=expected)
+
+
+@pytest.mark.parametrize("change", ["missing", "extra", "symlink", "nested"])
+def test_source_tree_fingerprint_fails_closed_on_untracked_paths(
+    tmp_path: Path, change: str
+) -> None:
+    (tmp_path / "aaTestFile.xml").write_bytes(b"<TEI/>\n")
+    inscription = tmp_path / "abil0001.xml"
+    inscription.write_bytes(b"<TEI><text>ABC</text></TEI>\n")
+    expected = git_source_tree_sha(tmp_path)
+    if change == "missing":
+        inscription.unlink()
+    elif change == "extra":
+        (tmp_path / "untracked.txt").write_text("unexpected", encoding="utf-8")
+    elif change == "symlink":
+        inscription.unlink()
+        inscription.symlink_to(tmp_path / "aaTestFile.xml")
+    else:
+        (tmp_path / "nested").mkdir()
+    with pytest.raises(ReproducibilityError):
+        require_source_tree_sha(tmp_path, expected_sha=expected)
