@@ -1,5 +1,7 @@
 """#54 RED: selected Aramaic word language must outrank paragraph's script code."""
 
+# ruff: noqa: I001  # During RED missing resolver module changes import classification
+
 from __future__ import annotations
 
 from dataclasses import replace
