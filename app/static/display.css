@@ -15,3 +15,9 @@
 .iip-source-sign {
   white-space: pre-wrap;
 }
+
+/* A closing boundary is visually distinct from an opening source note.
+   It is a direction-isolated UI marker, never part of a TF sign. */
+.iip-editorial-end {
+  border-style: solid;
+}
