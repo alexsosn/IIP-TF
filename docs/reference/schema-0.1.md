@@ -133,6 +133,23 @@ features preserve the source token/inline attribute independently of the
 sign it annotates. Existing `lang`, `lang_source`, `script`, TF text and source
 glyph/slot identity are unchanged; #54 and #57 remain open.
 
+## Amendment #54-C — selected source-word language precedence
+
+For an Aramaic inscription with a transcription paragraph declaring
+`xml:lang=heb` as a script-like label, a **drift-free, source-backed,
+selected segmented** `word` with `lang=arc` can relabel its aligned
+Hebrew-encoded letter signs to `lang=arc` and
+`lang_source=transcription_segmented`. `lang_original=heb` and
+`lang_origin=p` still preserve the source paragraph declaration,
+and the independent `script=Hebr` remains the encoded alphabet.
+A conflicting overlapping projected word language fails the build.
+
+An explicit `foreign` annotation, `p` with no projected token,
+a source-drift token, punctuation, a technical glyph/gap, any other
+text layer and non-Aramaic record remain unchanged. This limited
+rule does **not** promise ISO 639-3 normalization or complete Aramaic
+coverage; #54, #52 and #57 remain open.
+
 ## Slot features
 
 Core features include `glyph`, `after`, `layer`, `lang`, `lang_source`, `script`,
