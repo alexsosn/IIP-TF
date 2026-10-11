@@ -711,6 +711,7 @@ def main() -> int:
                 raise SystemExit("pinned native IIP personal-name resolution coverage changed")
             for record_id, person_id, expected_sex, expected_faith in (
                 ("beth0001", "beth0001p01", "1", "Jewish"),
+                ("beth0002", "beth0002p01", "2", "Jewish"),
                 ("beth0042", "beth0042p01", "1", "Jewish"),
             ):
                 root = api.T.nodeFromSection((record_id,))
@@ -735,6 +736,8 @@ def main() -> int:
                 ]
                 if not linked:
                     raise SystemExit(f"{record_id}: person edge or original ref lost")
+                if record_id == "beth0002" and api.F.religion.v(root) != "#jewish":
+                    raise SystemExit("beth0002: Jewish inscription classification lost")
                 person_canaries[record_id] = person_id
         report = {
             **actual,
