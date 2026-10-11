@@ -26,6 +26,7 @@ class NodeType(StrEnum):
     LINE = "line"
     MARKUP = "markup"
     ENTITY = "entity"
+    PERSON = "person"
     BIBL = "bibl"
     BIBL_SCOPE = "bibl_scope"
     HAND = "hand"
@@ -51,6 +52,7 @@ class EdgeType(StrEnum):
     IN_INSCRIPTION = "in_inscription"
     CORRESPONDS_TO = "corresponds_to"
     CITES = "cites"
+    PERSON_REF = "person_ref"
     SEGMENTATION_OF = "segmentation_of"
     TOKEN_FROM = "token_from"
 
