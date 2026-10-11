@@ -210,6 +210,8 @@ class _MutableSign:
     layer: Layer
     lang: str | None
     lang_source: str
+    lang_original: str | None
+    lang_origin: str | None
     reading_role: str
     synthetic_kind: str | None
     after: str = ""
@@ -219,6 +221,8 @@ class _MutableSign:
 class _Lang:
     value: str | None
     source: str
+    original: str | None = None
+    origin: str | None = None
 
 
 @dataclass
@@ -251,13 +255,16 @@ def _clean_lang(value: str | None) -> str | None:
 
 
 def _child_lang(element: ET.Element, parent: _Lang) -> _Lang:
-    explicit = _clean_lang(element.attrib.get(XML_LANG))
+    raw = element.attrib.get(XML_LANG)
+    explicit = _clean_lang(raw)
     if explicit is not None:
-        return _Lang(explicit, "xml:lang")
+        # Retain the parser-visible attribute and declaring tag separately
+        # from the effective code and direct-vs-inherited provenance.
+        return _Lang(explicit, "xml:lang", raw, _local(element.tag))
     if parent.value is None:
         return _Lang(None, "none")
     if parent.source in {"xml:lang", "inherited"}:
-        return _Lang(parent.value, "inherited")
+        return _Lang(parent.value, "inherited", parent.original, parent.origin)
     return parent
 
 
@@ -345,6 +352,8 @@ class _Builder:
                 layer=layer,
                 lang=lang.value,
                 lang_source=lang.source,
+                lang_original=lang.original,
+                lang_origin=lang.origin,
                 reading_role=role,
                 synthetic_kind=synthetic_kind,
             )
@@ -420,6 +429,8 @@ class _Builder:
                 layer=sign.layer,
                 lang=sign.lang,
                 lang_source=sign.lang_source,
+                lang_original=sign.lang_original,
+                lang_origin=sign.lang_origin,
                 reading_role=sign.reading_role,
                 synthetic_kind=sign.synthetic_kind,
                 after=sign.after,
@@ -479,6 +490,8 @@ def _mapped_features(
         if attr == "xml:lang":
             features["lang"] = value.strip()
             features["lang_source"] = "xml:lang"
+            features["lang_original"] = value
+            features["lang_origin"] = name
             continue
         if entity:
             mapped = _ENTITY_ATTR_FEATURE.get((name, attr))
@@ -490,6 +503,10 @@ def _mapped_features(
     if lang.value is not None and "lang" not in features:
         features["lang"] = lang.value
         features["lang_source"] = lang.source
+        if lang.original is not None:
+            features["lang_original"] = lang.original
+        if lang.origin is not None:
+            features["lang_origin"] = lang.origin
     return features
 
 
