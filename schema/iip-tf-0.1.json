@@ -437,6 +437,31 @@
       "value_type": "str",
       "semantics": "ISO 639-3 or other/unknown classification of a source-explicit translation persName origin. Never the spoken language of the English translation characters. Bounded issue #55-A."
     },
+    "person_id": {
+      "domain": "person",
+      "value_type": "str",
+      "semantics": "Exact matching Brown persons.xml person/@xml:id, unique to a source inscription; not a global identity."
+    },
+    "person_name": {
+      "domain": "person",
+      "value_type": "str",
+      "semantics": "First attested persons.xml person/persName textual form, not copied from inscription text."
+    },
+    "person_name_variants": {
+      "domain": "person",
+      "value_type": "str",
+      "semantics": "Additional source register personal-name spellings separated by ' | '; no equivalence inference."
+    },
+    "sex": {
+      "domain": "person",
+      "value_type": "str",
+      "semantics": "Literal source ISO 5218 sex code, 1 or 2 if present; absent is not interpreted."
+    },
+    "faith": {
+      "domain": "person",
+      "value_type": "str",
+      "semantics": "Verbatim register person/faith free text if present; not normalized, and not inscription classification."
+    },
     "name_lang_original": {
       "domain": "entity",
       "value_type": "str",
