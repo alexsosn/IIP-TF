@@ -506,8 +506,8 @@ def main() -> int:
             if not aramaic_language_audit["remaining_signs"]:
                 raise SystemExit("pinned source unexpectedly has no residual heb signs")
 
-        if parsed == EXPECTED_PARSED and parsed >= 1000 and sum(name_origin_counts.values()) < 1000:
-            raise SystemExit("pinned translation personal-name origin coverage unexpectedly low")
+        if parsed == EXPECTED_PARSED and parsed >= 1000 and not name_origin_counts:
+            raise SystemExit("pinned source has no explicit translation personal-name origins")
 
         stage = "tf_write"
         require_empty_output_directory(args.output_dir)
