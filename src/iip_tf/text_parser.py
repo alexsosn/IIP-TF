@@ -666,6 +666,18 @@ def _parse_inline(
             if description:
                 features["description"] = description
 
+    # _parse_inline runs before the parent's subsequent child.tail.
+    # The last sign's normalized after-space therefore belongs to this
+    # element iff it is already present at this exact closing boundary.
+    # Sparse source provenance, not an additional sign/whitespace slot.
+    if (
+        node_type == NodeType.MARKUP
+        and len(builder.signs) > start
+        and builder.signs[-1].layer == layer
+        and builder.signs[-1].after == " "
+    ):
+        features["source_trailing_space_inside"] = "yes"
+
     builder.add_node(
         key=key,
         node_type=node_type,
