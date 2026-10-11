@@ -14,6 +14,7 @@ from typing import Any
 from tf.fabric import Fabric  # type: ignore[import-untyped]
 
 from iip_tf.ir import NodeType
+from iip_tf.language_audit import AramaicLanguageAudit
 from iip_tf.release_gate import (
     PINNED_EPIDOC_SOURCE_TREE,
     compare_tf_feature_hashes,
@@ -389,8 +390,7 @@ def main() -> int:
             ir = parse_epidoc_file(path, source_revision=args.revision)
             irs.append(ir)
             parsed_files.append(path.name)
-            # Synthetic failure-ledger tests deliberately replace canonical IR
-            # with a one-record object that has no node-type API.
+            # Failure-report tests use a synthetic one-record IR without node API.
             if len(selected) >= 1000:
                 _validate_name_origins_from_ir(ir, name_origin_counts)
             sign_count += len(ir.signs)
@@ -464,6 +464,22 @@ def main() -> int:
                 "pinned Aramaic source-backed sign correction coverage unexpectedly low: "
                 f"{corrected_heb_script_signs}"
             )
+
+        # Independent, source-provenance-aware *post-resolution* audit.
+        # Only the full authenticated pinned source is eligible: synthetic
+        # failure-ledger tests intentionally substitute one-record fake IR.
+        aramaic_language_audit: dict[str, Any] | None = None
+        if parsed == EXPECTED_PARSED and parsed >= 1000:
+            coverage = AramaicLanguageAudit()
+            for ir in irs:
+                coverage.ingest(ir)
+            aramaic_language_audit = coverage.report()
+            if aramaic_language_audit["corrected_signs"] != corrected_heb_script_signs:
+                raise SystemExit("independent Aramaic correction audit count disagrees")
+            if aramaic_language_audit["corrected_signs"] != 5159:
+                raise SystemExit("pinned source Aramaic correction count changed")
+            if not aramaic_language_audit["remaining_signs"]:
+                raise SystemExit("pinned source unexpectedly has no residual heb signs")
 
         if parsed == EXPECTED_PARSED and parsed >= 1000 and sum(name_origin_counts.values()) < 1000:
             raise SystemExit("pinned translation personal-name origin coverage unexpectedly low")
@@ -542,6 +558,7 @@ def main() -> int:
             "name_origin_codes": dict(sorted(name_origin_counts.items())),
             "name_origin_canaries": name_origin_canaries,
             "corrected_heb_script_transcription_signs": corrected_heb_script_signs,
+            "aramaic_transcription_language_audit": aramaic_language_audit,
             "node_counts": dict(sorted(node_counts.items())),
             "edge_counts": dict(sorted(edge_counts.items())),
             "tf_files": len(tuple(args.output_dir.glob("*.tf"))),
