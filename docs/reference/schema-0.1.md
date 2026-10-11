@@ -402,3 +402,7 @@ Examples:
 - `p@xml:lang` -> paragraph `lang`.
 
 A source element/attribute missing from the frozen mapping is a schema error, not a silent drop.
+
+## Linked IIP person register (issue #63)
+
+When `data-keep/persons.xml` is available, `person` is a native non-slot node attached to attested personal-name signs; the native edge `person_ref` runs from the source-text `entity` to that `person`. `person_id` is the literal register `xml:id`; `person_name` is the first attested spelling, `person_name_variants` includes additional spellings, and `sex` is a **source ISO 5218 string** (`1` or `2`) with missing values absent. `faith` is verbatim register free text (`Jewish-pagan` and `Jewish` remain different); it is **not** a normalized corpus religion category. Names with only a contributor reference, missing register record or a different inscription do not gain a person node. Original entity `ref`, textual `lang`, separate `name_lang`, and every source sign remain untouched. Use `E.person_ref.f(entity_node)`; see the quickstart for worked queries. Pinned provenance verifies Git blob `bce14d6d33ddfa06b4b6d1a4ccbf43e19390ac62`.
