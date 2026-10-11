@@ -150,6 +150,17 @@ text layer and non-Aramaic record remain unchanged. This limited
 rule does **not** promise ISO 639-3 normalization or complete Aramaic
 coverage; #54, #52 and #57 remain open.
 
+## Amendment #90 — division-origin Aramaic source precedence
+
+For `main_lang=arc` *transcription* Hebrew-encoded letters with original
+source `xml:lang=heb` declared by a `p` or edition `div`, an
+explicit, selected drift-free aligned `w@xml:lang=arc` outranks
+script-like container `heb` in the effective sign `lang` only.
+The literal `lang_original`, declaring `lang_origin`, encoding-derived
+`script`, and original glyph remain independently queryable. No inference
+for unaligned signs or questionable/contradictory segmented evidence.
+See #54, #90, ADR-0001.
+
 ## Slot features
 
 Core features include `glyph`, `after`, `layer`, `lang`, `lang_source`, `script`,
