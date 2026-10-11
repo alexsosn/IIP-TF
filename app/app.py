@@ -65,6 +65,19 @@ def _annotation_label(app: Any, markup: int) -> str:
 
 
 _SPAN_KINDS = frozenset({"supplied", "unclear", "abbr", "ex"})
+# Native otext composes these features after the actual glyph/ref token.
+# A source-tail space may attach to the sign BEFORE an editor's end boundary;
+# the boundary must precede that space while retaining its exact bytes.
+_AFTER_FEATURE = {
+    "text-orig-full": "primary_after",
+    "text-orig-refs-full": "primary_after",
+    "text-layer-full": "after",
+    "text-source-full": "source_after",
+    "text-transcription-full": "transcription_after",
+    "text-diplomatic-full": "diplomatic_after",
+    "text-translation-full": "translation_after",
+    "text-commentary-full": "commentary_after",
+}
 
 
 def _markup_depth(app: Any, markup: int) -> int:
@@ -181,8 +194,23 @@ def render_sign(app: Any, options: Any, chunk: Any, n_type: str, outer: bool) ->
         )
     else:
         ends = ""
-    # Ordinary native source signs are never replaced or re-encoded.
-    return f'{note_html}<span class="iip-source-sign">{material}</span>{ends}'
+    # EpiDoc tail whitespace *after* </supplied> is often stored as the
+    # preceding sign's native `after` feature. Close the editorial span
+    # after the actual sign, but BEFORE that following whitespace.
+    after_html = ""
+    if ends:
+        after_feature_name = _AFTER_FEATURE.get(display_fmt)
+        after_feature = (
+            getattr(app.api.F, after_feature_name, None)
+            if after_feature_name is not None else None
+        )
+        after_value = after_feature.v(node) if after_feature is not None else None
+        if isinstance(after_value, str) and after_value and str(original).endswith(after_value):
+            material = escape(str(original)[:-len(after_value)])
+            after_html = f'<span class="iip-source-sign">{escape(after_value)}</span>'
+    # All native reading bytes remain in order, even when an end boundary
+    # falls between a glyph/ref token and its source-tail whitespace.
+    return f'{note_html}<span class="iip-source-sign">{material}</span>{ends}{after_html}'
 
 
 def install_editorial_renderer(app: Any) -> None:
