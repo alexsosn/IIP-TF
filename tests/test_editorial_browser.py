@@ -182,3 +182,66 @@ def test_native_markup_slot_mapping_is_renderable(corpus: tuple[Any, Any]) -> No
         assert any(row["selected"] and row["notes"] for row in diag), (
             f"Markup kind={api.F.kind.v(m)} slots={slots} not visible: {diag!r}"
         )
+
+
+def test_opt_in_source_reference_format_keeps_native_editorial_notes(
+    corpus: tuple[Any, Any],
+) -> None:
+    """A registered primary format must not be mistaken for an unknown layer."""
+    api, _ = corpus
+    app_functions = runpy.run_path(str(APP / "app.py"))
+    proxy = SimpleNamespace(
+        api=api,
+        context=SimpleNamespace(textFormat="text-orig-refs-full"),
+    )
+    options = SimpleNamespace(fmt="text-orig-refs-full")
+    annotated = api.T.nodeFromSection(("annotated",))
+    assert annotated is not None
+
+    for kind, marker in (
+        ("supplied", "reason=lost"),
+        ("gap", "extent=unknown"),
+        ("unclear", "unclear"),
+    ):
+        markup = next(
+            node
+            for node in api.L.d(annotated, otype="markup")
+            if api.F.kind.v(node) == kind
+        )
+        slot = api.E.oslots.s(markup)[0]
+        assert app_functions["_is_selected_sign"](proxy, slot, "text-orig-refs-full")
+        rendered = app_functions["render_sign"](
+            proxy, options, (slot,), "sign", False
+        )
+        assert marker in rendered
+        assert f"⟦{kind}" in rendered
+
+    glyph = api.T.nodeFromSection(("glyphonly",))
+    assert glyph is not None
+    assert api.T.text(glyph, fmt="text-orig-full") == ""
+    assert api.T.text(glyph, fmt="text-orig-refs-full") == "((phoen-gaml))"
+    glyph_slot = api.L.d(glyph, otype="sign")[0]
+    assert api.F.glyph.v(glyph_slot) is None
+    rendered_glyph = app_functions["render_sign"](
+        proxy, options, (glyph_slot,), "sign", False
+    )
+    assert "⟦glyph ref=phoen-gaml⟧" in rendered_glyph
+    assert "((phoen-gaml))" in rendered_glyph
+
+
+def test_opt_in_reference_view_follows_normalized_not_source_role(
+    corpus: tuple[Any, Any],
+) -> None:
+    """Annotation selection is identical for both normalized primary formats."""
+    api, _ = corpus
+    app_functions = runpy.run_path(str(APP / "app.py"))
+    proxy = SimpleNamespace(api=api)
+    for record_id in ("annotated", "glyphonly", "clean"):
+        owner = api.T.nodeFromSection((record_id,))
+        assert owner is not None
+        for slot in api.L.d(owner, otype="sign"):
+            original = app_functions["_is_selected_sign"](proxy, slot, "text-orig-full")
+            with_refs = app_functions["_is_selected_sign"](
+                proxy, slot, "text-orig-refs-full"
+            )
+            assert original == with_refs, (record_id, slot)

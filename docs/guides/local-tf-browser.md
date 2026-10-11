@@ -73,12 +73,26 @@ this development snapshot still have known source-versus-display problems
 tracked in [#57](https://github.com/alexsosn/IIP-TF/issues/57).
 
 **Known reading limitations:** some non-primary sections render as empty in
-the default format ([#51](https://github.com/alexsosn/IIP-TF/issues/51));
-empty `<g ref=.../>` glyph references currently render invisibly
-([#58](https://github.com/alexsosn/IIP-TF/issues/58)). For now query their
-native markup `kind=glyph` and `ref` features rather than treating an empty
-display as an empty inscription. The app does not infer missing text or
-normalize undeciphered marks.
+the default format ([#51](https://github.com/alexsosn/IIP-TF/issues/51)).
+The default `text-orig-full` displays **only attested source characters**
+and remains empty for inscriptions containing exclusively empty
+`<g ref=.../>` elements. To inspect their **source identifiers**, choose
+the opt-in `text-orig-refs-full` format; it shows explicit `((ref))`
+display tokens, not Unicode characters or supplied decipherments:
+
+```python
+masada = app.api.T.nodeFromSection(("masa0286",))
+print(app.api.T.text(masada, fmt="text-orig-refs-full"))
+# ((phoen-gaml))((phoen-delt))
+```
+
+The standard IIP-TF browser's editorial annotations (gap, supplied,
+unclear, glyph ref) remain available when this registered source-reference
+format is selected. Native `markup` nodes and their raw `kind=glyph` /
+`ref` features are authoritative; labels are a convenience, not a
+replacement for source-critical data. Nonprimary references and glyphs
+without source identifiers remain limitations of [#58](https://github.com/alexsosn/IIP-TF/issues/58).
+The app does not infer missing text or normalize undeciphered marks.
 
 Original IIP texts are © their respective owners and supplied under the
 source project's terms (CC BY-NC 4.0); see `LICENSE_SCOPE.md`.
