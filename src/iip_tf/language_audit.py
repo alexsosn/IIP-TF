@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from iip_tf.encoded_script import encoded_script
-from iip_tf.ir import InscriptionIR, IRNode, IRSign, Layer, NodeType
+from iip_tf.ir import EdgeType, InscriptionIR, IRNode, IRSign, Layer, NodeType
 
 # Report labels describe reasons *not to correct automatically*, not proven
 # mistakes. Source attribute provenance takes precedence over word guesses.
@@ -142,6 +142,72 @@ def _source_word_details(
     ))[:max_words]
 
 
+
+_EDITORIAL_BRANCHES = frozenset({"orig", "reg", "sic", "corr", "lemma", "reading"})
+_EDITORIAL_CONTAINERS = frozenset({"choice", "apparatus"})
+
+
+def _uncovered_editorial_context(
+    ir: InscriptionIR, sign_key: str, *, selected_index: int | None,
+) -> tuple[str, str, bool, str]:
+    """Trace an uncovered sign to a direct editorial branch and sibling token.
+
+    A word anywhere else in the paragraph cannot establish a sibling.
+    Even a genuine sibling word is diagnostic, never linguistic authority.
+    """
+    nodes = {node.key: node for node in ir.nodes}
+    parents = {
+        edge.source: edge.target for edge in ir.edges
+        if edge.edge_type == EdgeType.PARENT
+    }
+    branches = sorted(
+        (
+            node for node in ir.nodes_of_type(NodeType.MARKUP)
+            if node.feature("kind") in _EDITORIAL_BRANCHES
+            and sign_key in node.sign_keys
+        ),
+        key=lambda node: (len(node.sign_keys), node.key),
+    )
+    for branch in branches:
+        parent_key = parents.get(branch.key)
+        parent = nodes.get(parent_key) if parent_key is not None else None
+        if parent is None or parent.node_type != NodeType.MARKUP:
+            continue
+        kind = parent.feature("kind")
+        if kind not in _EDITORIAL_CONTAINERS:
+            continue
+        # Require a different direct branch under this same editorial
+        # container. The token must be projected onto that sibling, not
+        # merely elsewhere within the original paragraph.
+        siblings = [
+            other for other in ir.nodes_of_type(NodeType.MARKUP)
+            if other.key != branch.key
+            and parents.get(other.key) == parent.key
+            and other.feature("kind") in _EDITORIAL_BRANCHES
+        ]
+        words = sorted(
+            (
+                word for word in ir.nodes_of_type(NodeType.WORD)
+                if selected_index is not None
+                and word.feature("candidate_index") == selected_index
+                and word.feature("segmentation_status") == "projected"
+                and any(
+                    set(word.sign_keys) <= set(sibling.sign_keys)
+                    and bool(word.sign_keys)
+                    for sibling in siblings
+                )
+            ),
+            key=lambda node: (str(node.feature("source_id") or ""), node.key),
+        )
+        return (
+            str(branch.feature("kind")),
+            str(kind),
+            bool(words),
+            str(words[0].feature("source_id") or "") if words else "",
+        )
+    return ("none", "none", False, "")
+
+
 @dataclass
 class AramaicLanguageAudit:
     """Accumulate a deterministic source-backed corpus-level language inventory."""
@@ -159,6 +225,11 @@ class AramaicLanguageAudit:
     _unaligned_records: Counter[str] = field(default_factory=Counter)
     _unaligned_examples: dict[str, list[dict[str, str]]] = field(default_factory=dict)
     _drift_source_evidence: list[dict[str, Any]] = field(default_factory=list)
+    _uncovered_reading_roles: Counter[str] = field(default_factory=Counter)
+    _uncovered_markup_branches: Counter[str] = field(default_factory=Counter)
+    _uncovered_alternate_word_signs: int = 0
+    _uncovered_records: Counter[str] = field(default_factory=Counter)
+    _uncovered_editorial_examples: list[dict[str, Any]] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         if self.max_examples < 1:
@@ -225,6 +296,30 @@ class AramaicLanguageAudit:
                 evidence_samples.append(example)
                 evidence_samples.sort(key=lambda row: (row["record"], row["sign_key"]))
                 del evidence_samples[self.max_examples:]
+                if category == "selected_words_do_not_cover_sign":
+                    branch, container, sibling_word, sibling_id = (
+                        _uncovered_editorial_context(
+                            ir, sign.key, selected_index=index
+                        )
+                    )
+                    self._uncovered_reading_roles[sign.reading_role] += 1
+                    self._uncovered_markup_branches[branch] += 1
+                    self._uncovered_alternate_word_signs += int(sibling_word)
+                    self._uncovered_records[ir.identity.inscription_id] += 1
+                    self._uncovered_editorial_examples.append({
+                        "record": ir.identity.inscription_id,
+                        "sign_key": sign.key,
+                        "glyph": sign.glyph,
+                        "reading_role": sign.reading_role,
+                        "markup_branch": branch,
+                        "editorial_container": container,
+                        "alternate_branch_has_projected_word": sibling_word,
+                        "alternate_source_id": sibling_id,
+                    })
+                    self._uncovered_editorial_examples.sort(
+                        key=lambda row: (row["record"], row["sign_key"])
+                    )
+                    del self._uncovered_editorial_examples[self.max_examples:]
             elif reason == "drift_or_uncertain_word_overlap":
                 self._drift_source_evidence.append({
                     "record": ir.identity.inscription_id,
@@ -261,6 +356,13 @@ class AramaicLanguageAudit:
             raise ValueError("unreconciled residual language bucket counts")
         if sum(self._unaligned_reasons.values()) != self._reasons["no_selected_word"]:
             raise ValueError("unaligned source candidate counts do not reconcile")
+        if (
+            sum(self._uncovered_reading_roles.values())
+            != self._unaligned_reasons["selected_words_do_not_cover_sign"]
+            or sum(self._uncovered_markup_branches.values())
+            != self._unaligned_reasons["selected_words_do_not_cover_sign"]
+        ):
+            raise ValueError("selected uncovered editorial evidence does not reconcile")
         return {
             "records_scanned": self.records_scanned,
             "corrected_signs": self.corrected_signs,
@@ -282,6 +384,22 @@ class AramaicLanguageAudit:
                     for name, count in sorted(
                         self._unaligned_records.items(),
                         key=lambda pair: (-pair[1], pair[0]),
+                    )[:10]
+                ],
+            },
+            "selected_uncovered_editorial_evidence": {
+                "signs": sum(self._uncovered_reading_roles.values()),
+                "reading_roles": dict(sorted(self._uncovered_reading_roles.items())),
+                "markup_branches": dict(sorted(self._uncovered_markup_branches.items())),
+                "alternate_branch_has_projected_word": (
+                    self._uncovered_alternate_word_signs
+                ),
+                "examples": [dict(row) for row in self._uncovered_editorial_examples],
+                "most_affected_records": [
+                    {"record": name, "signs": count}
+                    for name, count in sorted(
+                        self._uncovered_records.items(),
+                        key=lambda item: (-item[1], item[0]),
                     )[:10]
                 ],
             },
