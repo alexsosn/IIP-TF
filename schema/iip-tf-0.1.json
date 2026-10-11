@@ -411,7 +411,7 @@
     "lang": {
       "domain": "sign|word|markup|entity",
       "value_type": "str",
-      "semantics": "Effective source language code without silently collapsing IIP distinctions such as he/heb/hbo."
+      "semantics": "Effective text language code, still source-valued except for converter-inferred English prose and conservative #54 selected-word Aramaic precedence on script-like Hebrew source paragraphs. ISO normalization remains pending."
     },
     "lang_source": {
       "domain": "sign|word|markup|entity",
@@ -421,7 +421,8 @@
         "textLang.mainLang",
         "inherited",
         "none",
-        "source_override"
+        "source_override",
+        "transcription_segmented"
       ]
     },
     "lang_original": {
