@@ -152,6 +152,14 @@ def test_missing_sex_and_faith_stay_unset(tmp_path: Path) -> None:
     '<listPerson><person sex="1"><persName>A</persName></person></listPerson>',
     '<listPerson><person xml:id="p"><faith>Jewish</faith></person></listPerson>',
     '<listPerson><person xml:id="p"><persName>A</persName></person>',
+    '<listPerson><person xml:id="p"><persName>A</persName>'
+    '<birth when="1200"/></person></listPerson>',
+    '<listPerson><person xml:id="p" invented="yes"><persName>A</persName>'
+    '</person></listPerson>',
+    '<listPerson><person xml:id="p"><persName type="unverified">A'
+    '</persName></person></listPerson>',
+    '<evil:listPerson xmlns:evil="urn:forged"><evil:person xml:id="p">'
+    '<evil:persName>A</evil:persName></evil:person></evil:listPerson>',
 ])
 def test_malformed_or_ambiguous_register_fails_closed(
     tmp_path: Path, xml: str,
