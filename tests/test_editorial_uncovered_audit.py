@@ -122,7 +122,7 @@ def test_apparatus_lem_rdg_sibling_is_not_a_sign_language_override() -> None:
     audit.ingest(ir)
     result = audit.report()["selected_uncovered_editorial_evidence"]
     assert result["reading_roles"] == {"both": 1}
-    assert result["markup_branches"] == {"rdg": 1}
+    assert result["markup_branches"] == {"reading": 1}
     assert result["alternate_branch_has_projected_word"] == 1
     assert result["examples"][0]["editorial_container"] == "apparatus"
 
@@ -217,3 +217,32 @@ def test_suppressed_candidate_word_cannot_count_as_selected_sibling() -> None:
     assert result["signs"] == 1
     assert result["alternate_branch_has_projected_word"] == 0
     assert result["examples"][0]["alternate_source_id"] == ""
+
+
+def test_actual_epidoc_apparatus_lem_rdg_kind_uses_parser_features(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "apparatus.xml"
+    path.write_text(
+        '<TEI xmlns="http://www.tei-c.org/ns/1.0">'
+        '<teiHeader><fileDesc><sourceDesc><msDesc><msContents>'
+        '<textLang mainLang="arc"/></msContents></msDesc></sourceDesc>'
+        '</fileDesc></teiHeader><text><body>'
+        '<div type="edition" subtype="transcription">'
+        '<p xml:lang="heb"><app><lem>אב</lem><rdg>גב</rdg></app></p>'
+        '</div><div type="edition" subtype="transcription_segmented">'
+        '<p><w xml:id="apparatus-lem" xml:lang="arc">אב</w></p>'
+        '</div></body></text></TEI>', encoding="utf-8",
+    )
+    ir = parse_epidoc_file(path, source_revision="fixture")
+    markup_kinds = {
+        str(node.feature("kind"))
+        for node in ir.nodes_of_type(NodeType.MARKUP)
+    }
+    assert {"apparatus", "lemma", "reading"} <= markup_kinds
+    audit = AramaicLanguageAudit()
+    audit.ingest(ir)
+    data = audit.report()["selected_uncovered_editorial_evidence"]
+    assert data["signs"] == 2
+    assert data["markup_branches"] == {"reading": 2}
+    assert data["alternate_branch_has_projected_word"] == 2
