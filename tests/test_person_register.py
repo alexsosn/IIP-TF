@@ -111,8 +111,9 @@ def test_person_register_links_canonical_entities_and_survives_tf_reload(
     }
     for entity in api.F.otype.s("entity"):
         if api.F.ref.v(entity) == "persons.xml#beth0001p01":
-            assert len(entity_to_person.f(entity)) == 1
-            person = entity_to_person.f(entity)[0]
+            linked_people = tuple(entity_to_person.f(entity))
+            assert len(linked_people) == 1
+            person = linked_people[0]
             assert api.F.person_id.v(person) == "beth0001p01"
     inscription = api.T.nodeFromSection(("beth0001",))
     assert inscription is not None
