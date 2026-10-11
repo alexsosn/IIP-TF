@@ -70,7 +70,9 @@ def _reason(
     languages = {language for _, language in evidence}
     if "arc" in languages:
         if len(languages) != 1:
-            raise ValueError(f"{sign.key}: conflicting selected arc language with {sorted(languages)}")
+            raise ValueError(
+                f"{sign.key}: conflicting selected arc language with {sorted(languages)}"
+            )
         raise ValueError(f"{sign.key}: aligned clean arc word but sign still heb")
     if _LANGUAGE_UNKNOWN in languages:
         return "selected_word_without_lang"
