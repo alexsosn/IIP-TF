@@ -121,6 +121,33 @@ Layer-specific formats use derived slot features that are undefined outside that
 is ordinary Text-Fabric format behavior. #8 may add normal TF app styling, but no separate web
 application is part of the architecture.
 
+## Amendment #54-A — encoded Unicode script provenance (additive)
+
+Native `script` is now an **optional** ISO 15924 value on sign and projected
+word nodes. Native `script_source=encoded_unicode` records its only currently
+supported derivation. A one-character Unicode *letter* is classified by an
+explicit, conservative Unicode character-name prefix map; unsupported
+alphabets, combining marks, numbers, symbols, and zero-width technical
+positions get no script. A word receives the code only if **every** supported
+letter in its aligned sign slots agrees; mixed or unknown alphabetic scripts
+remain unclassified. Original Unicode glyphs, TF slot identities, text formats,
+source `lang`, and all source EpiDoc `xml:lang` evidence remain unchanged.
+
+**This is the writing system of encoded/transliterated text, never a claim
+about the historical stone.** In pinned Brown `chor0001`, Aramaic words written
+with Hebrew characters produce `Hebr` while the uncorrected inherited source
+`lang=heb` still requires #54 follow-up. In `beth0023`,
+`arc-Grek` text has `script=Grek`. In `sina0114`, Latin-transliterated
+Nabataean/Thamudic material is `Latn` *as encoded*, not as original epigraphic
+writing. This additive feature is safe for researchers who explicitly query
+Unicode representation, not a replacement for language/stone-script modeling.
+
+Issue #54 remains open for the separate change to sign `lang`, segmented
+word priority, `lang_original`, a source-backed script-patterner inventory,
+and a pinned Aramaic mismatch gate; issues #55 and #52 follow those language
+decisions. Changing `lang` semantics later requires another explicit,
+separately tested amendment.
+
 ## Text-Fabric feature value types
 
 Every emitted TF feature has exactly one `@valueType`. Raw source attributes are preserved as
