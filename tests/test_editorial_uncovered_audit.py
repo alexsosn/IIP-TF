@@ -184,3 +184,36 @@ def test_actual_epidoc_orig_reg_role_and_word_projection(tmp_path: Path) -> None
         for sign in ir.signs if sign.reading_role == "normalized"
         and sign.glyph
     )
+
+
+def test_suppressed_candidate_word_cannot_count_as_selected_sibling() -> None:
+    # A forged/stale WORD from candidate 1 must not lend authority to an
+    # uncovered reg when the selected source candidate index is 0.
+    signs = (
+        _sign("s1", role="source", lang="grc"),
+        _sign("s2", role="normalized"),
+        _sign("outside", role="both", lang="arc"),
+    )
+    nodes = (
+        _candidate(),
+        _node("choice", "choice", ("s1", "s2")),
+        _node("orig", "orig", ("s1",)),
+        _node("reg", "reg", ("s2",)),
+        _word(("outside",), source_id="genuine-selected"),
+        IRNode(
+            key="suppressed-word", node_type=NodeType.WORD, sign_keys=("s1",),
+            features=(("candidate_index", 1),
+                      ("segmentation_status", "projected"),
+                      ("source_id", "suppressed-foreign-word")),
+        ),
+    )
+    edges = (
+        IREdge(EdgeType.PARENT, "orig", "choice"),
+        IREdge(EdgeType.PARENT, "reg", "choice"),
+    )
+    audit = AramaicLanguageAudit()
+    audit.ingest(_ir("suppressed", signs, nodes, edges))
+    result = audit.report()["selected_uncovered_editorial_evidence"]
+    assert result["signs"] == 1
+    assert result["alternate_branch_has_projected_word"] == 0
+    assert result["examples"][0]["alternate_source_id"] == ""
