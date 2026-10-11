@@ -396,6 +396,8 @@ def write_tf_corpus(
             _set_feature(node_features, "layer", slot, sign.layer.value)
             _set_feature(node_features, "lang", slot, sign.lang)
             _set_feature(node_features, "lang_source", slot, sign.lang_source)
+            _set_feature(node_features, "lang_original", slot, sign.lang_original)
+            _set_feature(node_features, "lang_origin", slot, sign.lang_origin)
             _set_feature(node_features, "reading_role", slot, sign.reading_role)
             _set_feature(node_features, "synthetic_kind", slot, sign.synthetic_kind)
         _add_view_features(node_features, ir=ir, slot_by_key=slot_by_key)

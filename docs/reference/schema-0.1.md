@@ -111,9 +111,27 @@ The edition/paragraph markup retains its native source language annotation.
 
 This bounded correction does **not** yet reinterpret the origin of names
 marked with `persName@xml:lang` (#55), distinguish container script
-from spoken language (#54), or normalize codes and add complete
-`lang_original` fields (#52/#57). Those source values remain
-separately queryable and require their own documented migrations.
+from spoken language (#54), or normalize codes (#52/#57). The additive
+#54 provenance slice described below retains parser-visible raw attributes,
+but source `lang` values are still not ISO-normalized or corrected.
+
+## Amendment #54-B — explicit XML language-source provenance
+
+`lang_original` is the **literal source `xml:lang` attribute value exposed by the
+XML parser**, including leading/trailing spaces, where there was an explicit
+source language declaration. It is propagated to descendants of that element,
+but is **absent** when `lang` was inherited only from record `textLang/@mainLang`
+or inferred as English from a translation/commentary layer. XML normalization
+(such as entity expansion) means this is not a reconstruction of raw XML bytes.
+
+`lang_origin` records the local TEI name of the nearest declaring element,
+for example `p`, `foreign`, `div`, `w` or `num`. It survives descendant
+`lang_source=inherited`, so a later safe #54 correction can distinguish
+paragraph script-like declarations from explicit foreign-language content.
+For aligned segmented `word` nodes and projected segmented markup, the two
+features preserve the source token/inline attribute independently of the
+sign it annotates. Existing `lang`, `lang_source`, `script`, TF text and source
+glyph/slot identity are unchanged; #54 and #57 remain open.
 
 ## Slot features
 

@@ -143,10 +143,24 @@ writing. This additive feature is safe for researchers who explicitly query
 Unicode representation, not a replacement for language/stone-script modeling.
 
 Issue #54 remains open for the separate change to sign `lang`, segmented
-word priority, `lang_original`, a source-backed script-patterner inventory,
-and a pinned Aramaic mismatch gate; issues #55 and #52 follow those language
-decisions. Changing `lang` semantics later requires another explicit,
-separately tested amendment.
+word priority, a source-backed script-pattern inventory, and a pinned
+Aramaic mismatch gate; issues #55 and #52 follow those language decisions.
+Changing `lang` semantics later requires another separately tested amendment.
+
+## Amendment #54-B — loss-preventing TEI language provenance
+
+Native sign, source language-bearing container/inline nodes, selected segmented
+words and annotations additionally retain **sparse** `lang_original` with the
+literal XML-parser-visible `xml:lang` attribute and `lang_origin` with the
+source element tag of its nearest declaration. If language was inherited from
+an enclosing explicit attribute, `lang_source` remains `inherited` and its
+origin and original value remain traceable. Record `textLang` fallback and
+converter-inferred English prose have **no** invented `lang_original`.
+XML parser attribute normalization is already applied; this is provenance
+of the attribute as parsed, not a byte-for-byte serialization of EpiDoc.
+This amendment adds no text slots, does not reassign language or names,
+and does not normalize codes. The legacy `lang=heb` mismatch for Aramaic
+persists until the separate semantic correction in #54.
 
 ## Text-Fabric feature value types
 

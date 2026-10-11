@@ -79,6 +79,8 @@ class IRSign:
     layer: Layer
     lang: str | None = None
     lang_source: str = "none"
+    lang_original: str | None = None
+    lang_origin: str | None = None
     reading_role: str = "both"
     synthetic_kind: str | None = None
     after: str = ""

@@ -266,6 +266,8 @@ def _annotation_features(
         if attr == "xml:lang":
             features["lang"] = raw_value.strip()
             features["lang_source"] = "transcription_segmented"
+            features["lang_original"] = raw_value
+            features["lang_origin"] = name
             continue
         mapped = _ATTR_FEATURE.get(attr)
         if mapped:
@@ -972,6 +974,8 @@ _POINT_FEATURE_IGNORE: Final = frozenset(
         "token_kind",
         "lang",
         "lang_source",
+        "lang_original",
+        "lang_origin",
         "layer",
     }
 )
@@ -1420,6 +1424,8 @@ def enrich_segmentation(
         if lang:
             word_features["lang"] = lang.strip()
             word_features["lang_source"] = "transcription_segmented"
+            word_features["lang_original"] = lang
+            word_features["lang_origin"] = _local(token.tag)
         if "value" in token.attrib:
             word_features["value"] = token.attrib["value"]
         nodes.append(
