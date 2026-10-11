@@ -12,12 +12,18 @@ from collections import Counter
 from dataclasses import dataclass, replace
 from pathlib import Path
 from types import MappingProxyType
-from typing import Mapping
+from typing import Mapping, TypedDict
 
 from iip_tf.ir import EdgeType, IREdge, IRNode, InscriptionIR, NodeType
 
 XML_ID = "{http://www.w3.org/XML/1998/namespace}id"
 PINNED_PERSONS_BLOB = "bce14d6d33ddfa06b4b6d1a4ccbf43e19390ac62"
+
+
+class PersonLinkAudit(TypedDict):
+    resolved_entities: int
+    distinct_people: int
+    unresolved_targets: dict[str, int]
 
 
 class PersonRegisterError(ValueError):
@@ -91,7 +97,7 @@ def read_person_register(
 
 def attach_person_register(
     ir: InscriptionIR, register: Mapping[str, PersonRecord],
-) -> tuple[InscriptionIR, dict[str, object]]:
+) -> tuple[InscriptionIR, PersonLinkAudit]:
     """Link real name entities within their *own* inscription; never invent people."""
     if ir.nodes_of_type(NodeType.PERSON):
         raise PersonRegisterError("person register already attached")
