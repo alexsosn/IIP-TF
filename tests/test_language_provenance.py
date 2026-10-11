@@ -38,7 +38,7 @@ def test_language_provenance_tracks_nearest_explicit_tag_and_source_spaces(
     )
     ir = parse_epidoc_file(source, source_revision="fixture-pin")
     trans = [s for s in ir.signs if s.layer.value == "transcription" and s.glyph]
-    assert "".join(s.glyph for s in trans) == "אבגדβαרה"
+    assert "".join(s.glyph for s in trans) == "אבגדβαρה"
     assert [(s.lang, s.lang_source) for s in trans] == [
         ("heb", "xml:lang"),
         ("heb", "xml:lang"),
@@ -85,7 +85,7 @@ def test_language_provenance_tracks_nearest_explicit_tag_and_source_spaces(
     assert [api.F.lang_origin.v(sign) for sign in slots] == [
         *["p"] * 4, *["foreign"] * 3, "p"
     ]
-    assert api.T.text(owner, fmt="text-orig-full") == "אבגדβαרה"
+    assert api.T.text(owner, fmt="text-orig-full") == "אבגדβαρה"
 
 
 def test_segmented_word_retains_own_attribute_source_without_changing_signs(
