@@ -21,6 +21,14 @@ from tf.fabric import Fabric  # type: ignore[import-untyped]
 
 PINNED_TAXONOMY_BLOB = "c273ee4f0c8e751fca3274c7ce2d1e6ec5d60637"
 PINNED_SOURCE_REVISION = "0b7dc8358ccdfd0c9391f049da4839fbd91c26e5"
+# Observed from the authenticated full 5,535-record Brown corpus in CI #176.
+# These classify *source attribute occurrences*, not distinct inscriptions.
+EXPECTED_PINNED_MULTIVALUE = {
+    "fully_resolved": 402,
+    "partially_resolved": 126,
+    "no_resolved": 2,
+}
+
 _TEI = "http://www.tei-c.org/ns/1.0"
 _XML_ID = "{http://www.w3.org/XML/1998/namespace}id"
 _NS = {"tei": _TEI}
@@ -137,16 +145,32 @@ def audit_values(
     if set(observed) != set(FEATURE_TAXONOMIES):
         raise TaxonomyError("missing or unexpected taxonomy-backed feature")
     fields: dict[str, dict[str, Any]] = {}
+    total_multi: Counter[str] = Counter()
     for feature, taxonomy_id in sorted(FEATURE_TAXONOMIES.items()):
-        rows: list[dict[str, str | int]] = []
+        rows: list[dict[str, Any]] = []
         statuses: Counter[str] = Counter()
+        multi: Counter[str] = Counter()
         for raw, count in sorted(observed[feature].items()):
             if not isinstance(raw, str) or not isinstance(count, int) or count <= 0:
                 raise TaxonomyError(f"{feature}: invalid raw value or count")
             resolution = _resolution(registry, feature, raw)
             status = resolution["status"]
             statuses[status] += count
-            rows.append({"raw": raw, "count": count, **resolution})
+            # TEI @ana/@class can be repeatable whitespace-separated IDREFS.
+            # Analyze *each* token but keep the whole raw source field exact.
+            token_data: list[dict[str, str | int]] = [
+                {"index": index, "raw": token, **_resolution(registry, feature, token)}
+                for index, token in enumerate(raw.split())
+            ]
+            if len(token_data) > 1:
+                valid = sum(item["status"] == "resolved" for item in token_data)
+                key = (
+                    "fully_resolved" if valid == len(token_data)
+                    else "partially_resolved" if valid else "no_resolved"
+                )
+                multi[key] += count
+                total_multi[key] += count
+            rows.append({"raw": raw, "count": count, **resolution, "tokens": token_data})
         fields[feature] = {
             "taxonomy_id": taxonomy_id,
             "observed_count": sum(observed[feature].values()),
@@ -155,6 +179,9 @@ def audit_values(
             "unresolved_count": sum(
                 n for status, n in statuses.items() if status != "resolved"
             ),
+            "multivalue_resolution": {
+                key: multi[key] for key in EXPECTED_PINNED_MULTIVALUE
+            },
             "values": rows,
         }
     return {
@@ -170,6 +197,9 @@ def audit_values(
             for name, categories in registry.taxonomies.items()
         },
         "fields": fields,
+        "multivalue_resolution": {
+            key: total_multi[key] for key in EXPECTED_PINNED_MULTIVALUE
+        },
     }
 
 
@@ -203,6 +233,11 @@ def main() -> int:
     if not api:
         raise TaxonomyError("cannot load native Text-Fabric corpus")
     report = audit_native_taxonomies(api, registry)
+    if report["multivalue_resolution"] != EXPECTED_PINNED_MULTIVALUE:
+        raise TaxonomyError(
+            "pinned multi-valued source classification partition changed: "
+            + json.dumps(report["multivalue_resolution"], sort_keys=True)
+        )
     destination = args.report_json
     destination.parent.mkdir(parents=True, exist_ok=True)
     content = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
@@ -221,6 +256,10 @@ def main() -> int:
             f"{feature}: {data['distinct_value_count']} distinct, "
             f"{data['unresolved_count']} unresolved source records"
         )
+    print(
+        "Pinned multi-valued source classifications: "
+        + json.dumps(report["multivalue_resolution"], sort_keys=True)
+    )
     return 0
 
 
