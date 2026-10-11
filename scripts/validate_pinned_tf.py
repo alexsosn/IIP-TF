@@ -266,6 +266,85 @@ def _validate_language_source_provenance(api: Any) -> dict[str, int]:
     }
 
 
+_NAME_LANG_CODES = {
+    "x-Nabatean": "arc",
+    "x-Palmyran": "arc",
+    "x-Arabic": "ara",
+    "x-Semitic": "other",
+    "x-greek-hebrew": "other",
+    "x-unknown": "unknown",
+    "he": "heb",
+    "heb": "heb",
+    "la": "lat",
+    "hbo": "hbo",
+    "grc": "grc",
+    "arc": "arc",
+    "egy": "egy",
+    "xcl": "xcl",
+}
+
+
+def _validate_name_origins_from_ir(ir: Any, counts: Counter[str]) -> None:
+    """Validate every explicit translation persName origin independently."""
+    for entity in ir.nodes_of_type(NodeType.ENTITY):
+        if (
+            entity.feature("entity_kind") != "person"
+            or entity.feature("layer") != "translation"
+        ):
+            continue
+        raw = entity.feature("name_lang_original")
+        if raw is None:
+            if entity.feature("lang_origin") == "persName":
+                raise SystemExit("missing name_lang_original on explicit translation name")
+            continue
+        if not isinstance(raw, str) or raw.strip() not in _NAME_LANG_CODES:
+            raise SystemExit("unmapped explicit translation name-language source code")
+        if (
+            entity.feature("name_lang") != _NAME_LANG_CODES[raw.strip()]
+            or entity.feature("lang") is not None
+            or entity.feature("lang_source") is not None
+            or entity.feature("lang_original") != raw
+            or entity.feature("lang_origin") != "persName"
+        ):
+            raise SystemExit("translation name origin overlaps effective text language")
+        counts[raw.strip()] += 1
+
+
+def _validate_native_name_origins(api: Any) -> dict[str, int]:
+    """Check three authentic pinned Brown translation names after TF reload."""
+    canaries = (
+        ("caes0044", "egy ", "egy"),
+        ("hamm0054", "x-Arabic ", "ara"),
+        ("beth0117", "x-Nabatean ", "arc"),
+    )
+    verified: dict[str, int] = {}
+    for record, raw, mapped in canaries:
+        owner = api.T.nodeFromSection((record,))
+        if owner is None:
+            raise SystemExit(f"missing name-origin canary {record}")
+        entities = [
+            node for node in api.L.d(owner, otype="entity")
+            if api.F.entity_kind.v(node) == "person"
+            and api.F.name_lang_original.v(node) == raw
+            and api.F.name_lang.v(node) == mapped
+            and api.F.lang.v(node) is None
+            and api.F.lang_original.v(node) == raw
+            and api.F.lang_origin.v(node) == "persName"
+        ]
+        if not entities:
+            raise SystemExit(f"{record}: translation name origin lost")
+        verified[record] = len(entities)
+        if record == "caes0044":
+            letters = [
+                slot
+                for node in entities for slot in api.L.d(node, otype="sign")
+                if (glyph := api.F.glyph.v(slot)) and glyph.isalpha()
+            ]
+            if not letters or any(api.F.lang.v(slot) != "eng" for slot in letters):
+                raise SystemExit("caes0044: English translated name mislabeled Egyptian")
+    return verified
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("source_dir", type=Path)
@@ -299,6 +378,7 @@ def main() -> int:
         edge_counts: Counter[str] = Counter()
         slot_languages: Counter[str] = Counter()
         corrected_heb_script_signs = 0
+        name_origin_counts: Counter[str] = Counter()
         slot_kinds: Counter[str] = Counter()
         sign_count = 0
         point_count = 0
@@ -310,6 +390,9 @@ def main() -> int:
             ir = parse_epidoc_file(path, source_revision=args.revision)
             irs.append(ir)
             parsed_files.append(path.name)
+            # Failure-report tests use a synthetic one-record IR without node API.
+            if len(selected) >= 1000:
+                _validate_name_origins_from_ir(ir, name_origin_counts)
             sign_count += len(ir.signs)
             for sign in ir.signs:
                 slot_languages[sign.lang or "und"] += 1
@@ -398,6 +481,9 @@ def main() -> int:
             if not aramaic_language_audit["remaining_signs"]:
                 raise SystemExit("pinned source unexpectedly has no residual heb signs")
 
+        if parsed == EXPECTED_PARSED and parsed >= 1000 and not name_origin_counts:
+            raise SystemExit("pinned source has no explicit translation personal-name origins")
+
         stage = "tf_write"
         require_empty_output_directory(args.output_dir)
         write_tf_corpus(
@@ -464,10 +550,13 @@ def main() -> int:
 
         metadata_queries = _validate_native_metadata_queries(api)
         language_sources = _validate_language_source_provenance(api)
+        name_origin_canaries = _validate_native_name_origins(api)
         report = {
             **actual,
             "metadata_queries": metadata_queries,
             "language_source_canaries": language_sources,
+            "name_origin_codes": dict(sorted(name_origin_counts.items())),
+            "name_origin_canaries": name_origin_canaries,
             "corrected_heb_script_transcription_signs": corrected_heb_script_signs,
             "aramaic_transcription_language_audit": aramaic_language_audit,
             "node_counts": dict(sorted(node_counts.items())),

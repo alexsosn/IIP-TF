@@ -150,6 +150,19 @@ text layer and non-Aramaic record remain unchanged. This limited
 rule does **not** promise ISO 639-3 normalization or complete Aramaic
 coverage; #54, #52 and #57 remain open.
 
+## Amendment #55-A — name origin is not text language
+
+For a translation `persName` with direct source `xml:lang`, the
+entity's `name_lang` carries the reviewed normalized *origin* code
+and `name_lang_original` carries the exact source code, including
+whitespace. Entity `lang`/`lang_source` are absent for these
+source-explicit name origins, while `lang_original` and
+`lang_origin=persName` preserve the raw EpiDoc attribute's provenance.
+Text signs inside the name retain the parent translation language
+(normally `eng`), unless actual nested language markup such as
+`foreign` overrides it. Encoded `script` still describes Unicode
+characters and is unaffected. See #55, ADR-0001 #55-A.
+
 ## Slot features
 
 Core features include `glyph`, `after`, `layer`, `lang`, `lang_source`, `script`,
