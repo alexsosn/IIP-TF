@@ -183,6 +183,27 @@ Unicode alone, normalize mixed BCP 47/ISO codes (#52), or disentangle
 personal name-origin annotations (#55). #54/#57 remain OPEN pending
 corpus-wide pattern audit and decisions about unsegmented source text.
 
+## Amendment #55-A — source-explicit translation personal-name origins
+
+On a **translation-layer** `persName` only, explicit `xml:lang` is interpreted as
+name *origin*, not the language of the translated characters. Entity
+`name_lang` is the strictly enumerated and source-backed normalized code
+(`x-Nabatean`/`x-Palmyran`→`arc`, `x-Arabic`→`ara`,
+`x-Semitic`/`x-greek-hebrew`→`other`, `x-unknown`→`unknown`,
+`he`/`heb`→`heb`, `la`→`lat`, native `grc`/`hbo`/`arc`/
+`egy`/`xcl` unchanged). Entity `name_lang_original` retains the
+parser-visible exact `xml:lang`, including trailing spaces. The original
+source `lang_original` and `lang_origin=persName` stay available on
+the entity independently, but entity `lang`/`lang_source` are absent:
+a name-origin code must not match entity text-language queries.
+
+Name sign slots inherit their *parent's* text language (normally English
+`eng`); explicit nested `foreign` still takes linguistic precedence
+on its own signs. This is **not** automatic text-language or script
+inference. Source text, TF topology and original attributes are unchanged.
+The rule does not cover `rs`, `name`, or a non-translation `persName`,
+which need separate corpus inventories. #55/#57 remain open.
+
 ## Text-Fabric feature value types
 
 Every emitted TF feature has exactly one `@valueType`. Raw source attributes are preserved as
