@@ -411,7 +411,7 @@
     "lang": {
       "domain": "sign|word|markup|entity",
       "value_type": "str",
-      "semantics": "Effective text language code, still source-valued except for converter-inferred English prose and conservative #54 selected-word Aramaic precedence on script-like Hebrew source paragraphs. ISO normalization remains pending."
+      "semantics": "Effective text language code, still source-valued except for converter-inferred English prose and conservative #54/#90 selected-word Aramaic precedence on script-like Hebrew source paragraphs or edition divisions. ISO normalization remains pending."
     },
     "lang_source": {
       "domain": "sign|word|markup|entity",

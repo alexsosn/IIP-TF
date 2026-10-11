@@ -203,6 +203,20 @@ def validate_real_canaries(files: tuple[Path, ...], output_dir: Path) -> None:
     ]
     if len(corrected) < 10:
         raise RuntimeError("chor0001: projected word language not applied to source letters")
+    abil = api.T.nodeFromSection(("abil0001",))
+    if abil is None:
+        raise RuntimeError("abil0001: missing real division-scope Aramaic inscription")
+    selected_division_signs = [
+        sign for sign in api.L.d(abil, otype="sign")
+        if api.F.layer.v(sign) == "transcription"
+        and api.F.lang_original.v(sign) == "heb"
+        and api.F.lang_origin.v(sign) == "div"
+        and api.F.script.v(sign) == "Hebr"
+        and api.F.lang.v(sign) == "arc"
+        and api.F.lang_source.v(sign) == "transcription_segmented"
+    ]
+    if len(selected_division_signs) < 5:
+        raise RuntimeError("abil0001: source-backed division Aramaic language lost")
     caes = api.T.nodeFromSection(("caes0260",))
     if caes is None:
         raise RuntimeError("caes0260: missing real Greek inscription")

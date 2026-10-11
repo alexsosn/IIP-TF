@@ -204,6 +204,23 @@ inference. Source text, TF topology and original attributes are unchanged.
 The rule does not cover `rs`, `name`, or a non-translation `persName`,
 which need separate corpus inventories. #55/#57 remain open.
 
+## Amendment #90 — selected division-level Aramaic language precedence
+
+Real IIP Aramaic inscriptions may declare `xml:lang="heb"` on the
+`div type="edition" subtype="transcription"` container rather than
+on the paragraph. If an authentic, **selected, drift-free** segmented source
+word explicitly gives `xml:lang="arc"` and projects onto a Hebrew-Unicode
+**alphabetic** sign, the effective sign `lang` is `arc` with
+`lang_source=transcription_segmented`, while source provenance remains
+`lang_original=heb,lang_origin=div`. An identical narrow rule
+previously existed only for `lang_origin=p` (#87). Unsegmented
+and doubtful overlap, explicit embedded `foreign`, other record languages,
+non-Hebrew-encoded glyphs, technical slots, and other layers abstain.
+No Unicode-script-based language inference or changes to slots/edges/text
+are introduced. The read-only Aramaic audit (#88) checks both source scopes
+separately and preserves the 45,162-sign initial population reconciliation.
+#54 remains open for unsupported residuals and other layers.
+
 ## Text-Fabric feature value types
 
 Every emitted TF feature has exactly one `@valueType`. Raw source attributes are preserved as

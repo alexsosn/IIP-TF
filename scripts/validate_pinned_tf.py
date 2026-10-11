@@ -184,10 +184,11 @@ def _validate_language_source_provenance(api: Any) -> dict[str, int]:
     """Pinned authentic Brown evidence: source lang tags survive native TF reload."""
     F, L, T = api.F, api.L, api.T
 
+    abil = T.nodeFromSection(("abil0001",))
     chor = T.nodeFromSection(("chor0001",))
     beth = T.nodeFromSection(("beth0023",))
     caes = T.nodeFromSection(("caes0044",))
-    if chor is None or beth is None or caes is None:
+    if abil is None or chor is None or beth is None or caes is None:
         raise SystemExit("missing pinned language provenance canary record")
 
     # Actual p@xml:lang=heb must remain traceable even if authoritative
@@ -233,6 +234,20 @@ def _validate_language_source_provenance(api: Any) -> dict[str, int]:
     if len(corrected) < 10:
         raise SystemExit("chor0001 source-backed sign language coverage is too low")
 
+    # Genuine div/@xml:lang=heb over source-backed Aramaic words is
+    # independently present in authenticated Brown abil0001.
+    div_aramaic = [
+        n for n in L.d(abil, otype="sign")
+        if F.layer.v(n) == "transcription"
+        and F.lang_original.v(n) == "heb"
+        and F.lang_origin.v(n) == "div"
+        and F.script.v(n) == "Hebr"
+        and F.lang.v(n) == "arc"
+        and F.lang_source.v(n) == "transcription_segmented"
+    ]
+    if len(div_aramaic) < 5:
+        raise SystemExit("abil0001 selected division-scope Aramaic signs not corrected")
+
     # Explicit Aramaic written in Greek letters is a distinct kind of source
     # declaration: a future container override must not erase it.
     greek_aramaic = [
@@ -261,6 +276,7 @@ def _validate_language_source_provenance(api: Any) -> dict[str, int]:
         "chor0001_aramaic_signs_with_source_p": len(aramaic),
         "chor0001_corrected_selected_arc_signs": len(corrected),
         "chor0001_segmented_arc_words": len(arc_words),
+        "abil0001_corrected_div_arc_signs": len(div_aramaic),
         "beth0023_explicit_foreign_greek_signs": len(greek_aramaic),
         "caes0044_egyptian_name_origin_sources": len(egyptian_names),
     }
@@ -379,6 +395,7 @@ def main() -> int:
         slot_languages: Counter[str] = Counter()
         corrected_heb_script_signs = 0
         name_origin_counts: Counter[str] = Counter()
+        corrected_by_origin: Counter[str] = Counter()
         slot_kinds: Counter[str] = Counter()
         sign_count = 0
         point_count = 0
@@ -390,7 +407,6 @@ def main() -> int:
             ir = parse_epidoc_file(path, source_revision=args.revision)
             irs.append(ir)
             parsed_files.append(path.name)
-            # Failure-report tests use a synthetic one-record IR without node API.
             if len(selected) >= 1000:
                 _validate_name_origins_from_ir(ir, name_origin_counts)
             sign_count += len(ir.signs)
@@ -400,11 +416,12 @@ def main() -> int:
                     sign.layer.value == "transcription"
                     and sign.lang == "arc"
                     and sign.lang_source == "transcription_segmented"
-                    and sign.lang_origin == "p"
+                    and sign.lang_origin in {"p", "div"}
                     and sign.lang_original is not None
                     and sign.lang_original.strip() == "heb"
                 ):
                     corrected_heb_script_signs += 1
+                    corrected_by_origin[sign.lang_origin or "<unknown>"] += 1
                 slot_kinds[sign.synthetic_kind or "visible"] += 1
             for node in ir.nodes:
                 node_counts[node.node_type.value] += 1
@@ -476,8 +493,16 @@ def main() -> int:
             aramaic_language_audit = coverage.report()
             if aramaic_language_audit["corrected_signs"] != corrected_heb_script_signs:
                 raise SystemExit("independent Aramaic correction audit count disagrees")
-            if aramaic_language_audit["corrected_signs"] != 5159:
-                raise SystemExit("pinned source Aramaic correction count changed")
+            if aramaic_language_audit["corrected_by_source_origin"] != dict(
+                sorted(corrected_by_origin.items())
+            ):
+                raise SystemExit("pinned Aramaic source-origin correction counts disagree")
+            if corrected_by_origin["p"] != 5159:
+                raise SystemExit("pinned paragraph-scope Aramaic corrections changed")
+            if corrected_heb_script_signs + aramaic_language_audit["remaining_signs"] != 45162:
+                raise SystemExit("pinned Aramaic script-like population did not reconcile")
+            if corrected_by_origin["div"] < 1000:
+                raise SystemExit("pinned division-scope Aramaic evidence coverage too low")
             if not aramaic_language_audit["remaining_signs"]:
                 raise SystemExit("pinned source unexpectedly has no residual heb signs")
 
@@ -558,6 +583,7 @@ def main() -> int:
             "name_origin_codes": dict(sorted(name_origin_counts.items())),
             "name_origin_canaries": name_origin_canaries,
             "corrected_heb_script_transcription_signs": corrected_heb_script_signs,
+            "corrected_heb_script_signs_by_origin": dict(sorted(corrected_by_origin.items())),
             "aramaic_transcription_language_audit": aramaic_language_audit,
             "node_counts": dict(sorted(node_counts.items())),
             "edge_counts": dict(sorted(edge_counts.items())),
