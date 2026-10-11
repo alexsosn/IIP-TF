@@ -186,6 +186,8 @@
         "layer",
         "lang",
         "lang_source",
+        "lang_original",
+        "lang_origin",
         "cert"
       ]
     },
@@ -208,6 +210,8 @@
       "layer",
       "lang",
       "lang_source",
+      "lang_original",
+      "lang_origin",
       "script",
       "script_source",
       "reading_role",
@@ -233,6 +237,8 @@
       "layer",
       "lang",
       "lang_source",
+      "lang_original",
+      "lang_origin",
       "reason",
       "cert",
       "unit",
@@ -417,6 +423,16 @@
         "none",
         "source_override"
       ]
+    },
+    "lang_original": {
+      "domain": "sign|word|markup|entity|edition|textpart|paragraph",
+      "value_type": "str",
+      "semantics": "Parser-visible exact original xml:lang attribute spelling including leading/trailing spaces, on its source scope and descendants; absent for converter-inferred languages. No ISO normalization implied."
+    },
+    "lang_origin": {
+      "domain": "sign|word|markup|entity|edition|textpart|paragraph",
+      "value_type": "str",
+      "semantics": "Local name of nearest source element with an explicit xml:lang, e.g. p, div, foreign, w. Inherited language retains origin without turning lang_source into xml:lang."
     },
     "script": {
       "domain": "sign|word",
