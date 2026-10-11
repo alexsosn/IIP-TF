@@ -9,6 +9,7 @@ from typing import Any
 import pytest
 from tf.fabric import Fabric  # type: ignore[import-untyped]
 
+from iip_tf.cli import main as cli_main
 from iip_tf.ir import EdgeType, NodeType
 from iip_tf.person_register import (
     PersonRegisterError,
@@ -219,3 +220,34 @@ def test_literal_reference_must_be_exact_not_fuzzy(
     assert report["unresolved_targets"][
         "persons.xml#beth0001p02 another.xml#beth0001p01"
     ] == 1
+
+
+def test_cli_autodiscovers_sibling_brown_register(tmp_path: Path) -> None:
+    source_dir = tmp_path / "epidoc-files"
+    source_dir.mkdir()
+    _source(source_dir)
+    data_keep = tmp_path / "data-keep"
+    data_keep.mkdir()
+    _register(data_keep)
+
+    output = tmp_path / "native"
+    assert cli_main([
+        "convert", str(source_dir), str(output),
+        "--source-revision", "fixture",
+        "--converter-commit", "test",
+    ]) == 0
+    api: Any = Fabric(locations=str(output), silent=True).loadAll(silent=True)
+    assert len(api.F.otype.s("person")) == 2
+    assert sum(len(api.E.person_ref.f(n)) for n in api.F.otype.s("entity")) == 3
+
+
+def test_cli_requires_explicit_register_if_requested(tmp_path: Path) -> None:
+    source = tmp_path / "sources"
+    source.mkdir()
+    _source(source)
+    with pytest.raises(ValueError, match="persons register"):
+        cli_main([
+            "convert", str(source), str(tmp_path / "native"),
+            "--source-revision", "fixture", "--converter-commit", "test",
+            "--persons-register", str(tmp_path / "missing.xml"),
+        ])
