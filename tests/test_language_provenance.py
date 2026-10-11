@@ -88,7 +88,7 @@ def test_language_provenance_tracks_nearest_explicit_tag_and_source_spaces(
     assert api.T.text(owner, fmt="text-orig-full") == "אבגדβαρה"
 
 
-def test_segmented_word_retains_own_attribute_source_without_changing_signs(
+def test_segmented_word_retains_source_provenance_when_sign_language_is_corrected(
     tmp_path: Path,
 ) -> None:
     source = _xml(
@@ -109,7 +109,8 @@ def test_segmented_word_retains_own_attribute_source_without_changing_signs(
     assert word.feature("lang_origin") == "w"
     for key in word.sign_keys:
         sign = ir.sign(key)
-        assert sign.lang == "heb"
+        assert sign.lang == "arc"
+        assert sign.lang_source == "transcription_segmented"
         assert (sign.lang_original, sign.lang_origin) == ("heb", "p")
 
     out = tmp_path / "native"
