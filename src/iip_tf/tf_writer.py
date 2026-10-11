@@ -13,6 +13,7 @@ from typing import Any
 from tf.fabric import Fabric  # type: ignore[import-untyped]
 
 from iip_tf import __version__
+from iip_tf.encoded_script import encoded_script, uniform_encoded_script
 from iip_tf.ir import InscriptionIR, IRSign, Layer, NodeType
 
 _NODE_TYPE_ORDER = (
@@ -387,6 +388,10 @@ def write_tf_corpus(
         for sign in ir.signs:
             slot = slot_by_key[sign.key]
             _set_feature(node_features, "glyph", slot, sign.glyph)
+            encoded = encoded_script(sign.glyph)
+            if encoded is not None:
+                _set_feature(node_features, "script", slot, encoded)
+                _set_feature(node_features, "script_source", slot, "encoded_unicode")
             _set_feature(node_features, "after", slot, sign.after)
             _set_feature(node_features, "layer", slot, sign.layer.value)
             _set_feature(node_features, "lang", slot, sign.lang)
@@ -404,6 +409,20 @@ def write_tf_corpus(
                 raise TFWriterError(f"{node.key}: duplicate feature {name!r}")
             seen_names.add(name)
             _set_feature(node_features, name, tf_node, value)
+
+        if node.node_type == NodeType.WORD:
+            # Segmented words share the inscription's actual sign warp:
+            # derive only from encoded letters in those matched slots.
+            # Ambiguous or mixed-script words must remain unclassified.
+            word_script = uniform_encoded_script(
+                tuple(
+                    str(node_features["glyph"].get(slot_by_key[key], ""))
+                    for key in node.sign_keys
+                )
+            )
+            if word_script is not None:
+                _set_feature(node_features, "script", tf_node, word_script)
+                _set_feature(node_features, "script_source", tf_node, "encoded_unicode")
 
         if node.sign_keys:
             slots = {slot_by_key[key] for key in node.sign_keys}
