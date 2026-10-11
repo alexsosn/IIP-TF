@@ -89,6 +89,7 @@ class AramaicLanguageAudit:
     remaining_signs: int = 0
     _reasons: Counter[str] = field(default_factory=Counter)
     _remaining_by_record: Counter[str] = field(default_factory=Counter)
+    _clean_word_languages: Counter[str] = field(default_factory=Counter)
     _examples: dict[str, list[dict[str, str]]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -133,12 +134,19 @@ class AramaicLanguageAudit:
             self.remaining_signs += 1
             self._reasons[reason] += 1
             self._remaining_by_record[ir.identity.inscription_id] += 1
+            # One vote per sign/language, even if overlapping words repeat.
+            self._clean_word_languages.update({
+                lang for status, lang in evidence if status == "projected"
+            })
             sample = {
                 "record": ir.identity.inscription_id,
                 "sign_key": sign.key,
                 "glyph": sign.glyph,
                 "lang_origin": sign.lang_origin or "",
                 "lang_original": sign.lang_original or "",
+                "aligned_word_evidence": ";".join(
+                    f"{status}:{lang}" for status, lang in sorted(set(evidence))
+                ),
             }
             bucket = self._examples.setdefault(reason, [])
             bucket.append(sample)
@@ -154,6 +162,9 @@ class AramaicLanguageAudit:
             "corrected_signs": self.corrected_signs,
             "remaining_signs": self.remaining_signs,
             "reasons": dict(sorted(self._reasons.items())),
+            "clean_word_languages_for_remaining": dict(
+                sorted(self._clean_word_languages.items())
+            ),
             "examples": {
                 reason: [dict(item) for item in samples]
                 for reason, samples in sorted(self._examples.items())
