@@ -150,13 +150,16 @@ def _sign_annotations(
     return [entry[3] for entry in sorted(candidates)]
 
 
-def _end_annotations(app: Any, node: int, fmt: str) -> list[str]:
-    """Close a true source span after its last visible sign, inner first.
+def _end_annotations(app: Any, node: int, fmt: str) -> list[tuple[str, bool]]:
+    """Close inner scopes first; source whitespace ownership decides placement.
 
-    Zero-width source events have no span boundary and are never closed.
+    Trailing space attached to a sign can be XML-inside or XML-outside a
+    markup node. The sparse native feature preserves this otherwise-lost
+    distinction without changing the code-point slot or text format.
     """
     api = app.api
-    candidates: list[tuple[int, int, int, str]] = []
+    ownership = getattr(api.F, "source_trailing_space_inside", None)
+    candidates: list[tuple[int, int, int, str, bool]] = []
     for markup in api.L.u(node, otype="markup"):
         kind = api.F.kind.v(markup)
         if kind not in _SPAN_KINDS:
@@ -164,9 +167,11 @@ def _end_annotations(app: Any, node: int, fmt: str) -> list[str]:
         slots = _eligible_slots(app, markup, fmt)
         if not slots or slots[-1] != node:
             continue
-        # Deeper/shorter nested source spans close before their outer scope.
-        candidates.append((-_markup_depth(app, markup), len(slots), markup, kind))
-    return [entry[3] for entry in sorted(candidates)]
+        inside = ownership is not None and ownership.v(markup) == "yes"
+        candidates.append(
+            (-_markup_depth(app, markup), len(slots), markup, kind, inside)
+        )
+    return [(entry[3], entry[4]) for entry in sorted(candidates)]
 
 
 def render_sign(app: Any, options: Any, chunk: Any, n_type: str, outer: bool) -> str:
@@ -191,18 +196,14 @@ def render_sign(app: Any, options: Any, chunk: Any, n_type: str, outer: bool) ->
                 f"⟦{escape(label)}⟧"
                 "</span>"
             )
-        ends = "".join(
-            '<span class="iip-editorial-note iip-editorial-end" role="note" '
-            f'aria-label="End of {escape(kind)}">⟦/{escape(kind)}⟧</span>'
-            for kind in _end_annotations(app, node, display_fmt)
-        )
+        closings = _end_annotations(app, node, display_fmt)
     else:
-        ends = ""
-    # EpiDoc tail whitespace *after* </supplied> is often stored as the
-    # preceding sign's native `after` feature. Close the editorial span
-    # after the actual sign, but BEFORE that following whitespace.
+        closings = []
+
+    # Text-Fabric's after-space can belong either inside or outside the
+    # source markup; it is not represented by a separate sign slot.
     after_html = ""
-    if ends:
+    if closings:
         after_feature_name = (
             f"{layer}_after" if display_fmt == "text-section-normalized-full"
             and (layer := app.api.F.layer.v(node)) in {
@@ -218,10 +219,23 @@ def render_sign(app: Any, options: Any, chunk: Any, n_type: str, outer: bool) ->
         if isinstance(after_value, str) and after_value and str(original).endswith(after_value):
             material = escape(str(original)[:-len(after_value)])
             after_html = f'<span class="iip-source-sign">{escape(after_value)}</span>'
-    # All native reading bytes remain in order, even when an end boundary
-    # falls between a glyph/ref token and its source-tail whitespace.
-    return f'{note_html}<span class="iip-source-sign">{material}</span>{ends}{after_html}'
 
+    def closing_label(kind: str) -> str:
+        escaped = escape(kind)
+        return (
+            '<span class="iip-editorial-note iip-editorial-end" role="note" '
+            f'aria-label="End of {escaped}">⟦/{escaped}⟧</span>'
+        )
+
+    # For nested spans, source ownership necessarily closes the *inner*
+    # non-owning spans before this space, then the owning outer spans
+    # after the same space. Never invent or duplicate any whitespace.
+    early = "".join(closing_label(kind) for kind, inside in closings if not inside)
+    late = "".join(closing_label(kind) for kind, inside in closings if inside)
+    return (
+        f'{note_html}<span class="iip-source-sign">{material}</span>'
+        f'{early}{after_html}{late}'
+    )
 
 def install_editorial_renderer(app: Any) -> None:
     """Register one sign-only renderer in TF's existing method registry."""
