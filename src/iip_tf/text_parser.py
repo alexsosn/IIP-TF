@@ -79,6 +79,26 @@ _ENTITY_KIND: Final = {
     "placeName": "place",
     "rs": "reference_string",
 }
+
+# Maintainer-approved #55 mappings, explicitly scoped to *name origin* in
+# English translation persName. Never normalize actual source text language.
+_NAME_LANG: Final[dict[str, str]] = {
+    "x-Nabatean": "arc",
+    "x-Palmyran": "arc",
+    "x-Arabic": "ara",
+    "x-Semitic": "other",
+    "x-greek-hebrew": "other",
+    "x-unknown": "unknown",
+    "he": "heb",
+    "heb": "heb",
+    "la": "lat",
+    "hbo": "hbo",
+    "grc": "grc",
+    "arc": "arc",
+    "egy": "egy",
+    "xcl": "xcl",
+}
+
 _ZERO_WIDTH_KIND: Final = {
     "cb": "column_break",
     "gap": "gap",
@@ -267,6 +287,15 @@ def _child_lang(element: ET.Element, parent: _Lang) -> _Lang:
     if parent.source in {"xml:lang", "inherited"}:
         return _Lang(parent.value, "inherited", parent.original, parent.origin)
     return parent
+
+
+def _name_origin_code(raw: str, *, source_file: str) -> str:
+    code = raw.strip()
+    if code not in _NAME_LANG:
+        raise UnsupportedTextualConstructError(
+            f"{source_file}: unmapped translation personal-name origin {code!r}"
+        )
+    return _NAME_LANG[code]
 
 
 def _combine_role(parent: str, local: str) -> str:
@@ -591,7 +620,15 @@ def _parse_inline(
             f"{builder.identity.source_file}: unsupported inline element {name!r}"
         )
     _validate_attrs(element, source_file=builder.identity.source_file)
-    child_lang = _child_lang(element, lang)
+    name_origin = (
+        name == "persName"
+        and layer == Layer.TRANSLATION
+        and XML_LANG in element.attrib
+    )
+    # Translation persName/@xml:lang marks etymological name origin,
+    # NOT the spoken language of its English characters. Preserve the
+    # enclosing text language, including any authentic parent foreign.
+    child_lang = lang if name_origin else _child_lang(element, lang)
     local_role = _ROLE.get(name, "both")
     child_role = _combine_role(role, local_role)
     key = builder.node_key(element)
@@ -671,6 +708,18 @@ def _parse_inline(
     if name in _ENTITY_KIND:
         features["entity_kind"] = _ENTITY_KIND[name]
         node_type = NodeType.ENTITY
+        if name_origin:
+            original = element.attrib[XML_LANG]
+            features["name_lang"] = _name_origin_code(
+                original, source_file=builder.identity.source_file
+            )
+            features["name_lang_original"] = original
+            # _mapped_features must retain exact source origin, but the
+            # entity's text-language feature must not inherit name origin.
+            features.pop("lang", None)
+            features.pop("lang_source", None)
+            features["lang_original"] = original
+            features["lang_origin"] = "persName"
     else:
         features["kind"] = _MARKUP_KIND[name]
         node_type = NodeType.MARKUP
