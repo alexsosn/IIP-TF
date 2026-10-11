@@ -133,6 +133,24 @@ bounds, precision, ref, value, rend, type, place, evidence, break, and hand refe
 
 Raw source values remain available when a typed/derived value is also supplied.
 
+**Inline whitespace ownership.** A sparse native `markup` feature
+`source_trailing_space_inside=yes` distinguishes
+`<supplied>BC </supplied>D` from `<supplied>BC</supplied> D` when
+both normalize to the same source reading `BC D` and the same
+`C.after=" "`. It records that the **normalized trailing space was
+already present when that source element closed**, before its
+surrounding `tail` was consumed. Query the markup node's feature
+directly; the standard TF browser places closing labels after an
+inside-owned space and before an outside-owned space, with nested
+inner-before-outer order preserved.
+
+This is **not** a character-for-character copy of the original XML
+whitespace: tabs, multiple spaces and newlines are governed by the
+existing source-space normalization, and no whitespace slots or new
+raw-text sidecars are introduced. The original `glyph`, `after`
+and all Text-Fabric `fmt` outputs remain unchanged. The feature is
+absent on markup where no such normalized inside space exists.
+
 ## Markup kinds
 
 The frozen vocabulary includes `supplied`, `unclear`, `gap`, `choice`, `sic`, `corr`, `orig`,
