@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """#78: native inline editorial whitespace ownership (RED before fix)."""
 
 from __future__ import annotations
