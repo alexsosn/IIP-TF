@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import replace
 
 from iip_tf.encoded_script import encoded_script
-from iip_tf.ir import IRSign, InscriptionIR, Layer, NodeType
+from iip_tf.ir import InscriptionIR, IRSign, Layer, NodeType
 
 
 class LanguageResolutionError(ValueError):
