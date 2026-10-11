@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -176,3 +177,45 @@ def test_empty_source_register_does_not_forge_link(tmp_path: Path) -> None:
     assert not enriched.nodes_of_type(NodeType.PERSON)
     assert not any(e.edge_type == EdgeType.PERSON_REF for e in enriched.edges)
     assert audit["resolved_entities"] == 0
+
+
+def test_foreign_inscription_cannot_claim_another_record_person(
+    tmp_path: Path,
+) -> None:
+    register = read_person_register(_register(tmp_path))
+    ir = parse_epidoc_file(_source(tmp_path), source_revision="fixture")
+    renamed = replace(ir, identity=replace(ir.identity, inscription_id="other0001"))
+    linked, report = attach_person_register(renamed, register)
+    assert linked.nodes_of_type(NodeType.PERSON) == ()
+    assert not [e for e in linked.edges if e.edge_type == EdgeType.PERSON_REF]
+    assert report["resolved_entities"] == 0
+    assert report["unresolved_targets"]["persons.xml#beth0001p01"] == 2
+
+
+def test_register_blob_authentication_rejects_altered_source(
+    tmp_path: Path,
+) -> None:
+    path = _register(tmp_path)
+    with pytest.raises(PersonRegisterError, match="blob mismatch"):
+        read_person_register(path, expected_git_sha1="0" * 40)
+    valid = read_person_register(path)
+    assert len(valid) == 3
+    assert "beth0001p01" in valid
+
+
+def test_literal_reference_must_be_exact_not_fuzzy(
+    tmp_path: Path,
+) -> None:
+    source = _source(tmp_path)
+    xml = source.read_text(encoding="utf-8").replace(
+        'ref="persons.xml#beth0001p02"',
+        'ref="persons.xml#beth0001p02 another.xml#beth0001p01"',
+    )
+    source.write_text(xml, encoding="utf-8")
+    ir = parse_epidoc_file(source, source_revision="fixture")
+    linked, report = attach_person_register(ir, read_person_register(_register(tmp_path)))
+    assert len(linked.nodes_of_type(NodeType.PERSON)) == 1
+    assert report["resolved_entities"] == 2
+    assert report["unresolved_targets"][
+        "persons.xml#beth0001p02 another.xml#beth0001p01"
+    ] == 1
