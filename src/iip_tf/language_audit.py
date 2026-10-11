@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from iip_tf.encoded_script import encoded_script
-from iip_tf.ir import InscriptionIR, IRSign, Layer, NodeType
+from iip_tf.ir import InscriptionIR, IRNode, IRSign, Layer, NodeType
 
 # Report labels describe reasons *not to correct automatically*, not proven
 # mistakes. Source attribute provenance takes precedence over word guesses.
