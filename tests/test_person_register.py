@@ -15,6 +15,7 @@ from iip_tf.person_register import (
     PersonRegisterError,
     attach_person_register,
     read_person_register,
+    unresolved_contributor_refs,
 )
 from iip_tf.text_parser import parse_epidoc_file
 from iip_tf.tf_writer import write_tf_corpus
@@ -261,3 +262,19 @@ def test_cli_requires_explicit_register_if_requested(tmp_path: Path) -> None:
             "--source-revision", "fixture", "--converter-commit", "test",
             "--persons-register", str(tmp_path / "missing.xml"),
         ])
+
+
+def test_header_revision_contributor_ref_is_unresolved_not_a_person(
+    tmp_path: Path,
+) -> None:
+    source = _source(tmp_path)
+    ir = parse_epidoc_file(source, source_revision="fixture")
+    register = read_person_register(_register(tmp_path))
+    assert unresolved_contributor_refs(ir, register) == {
+        "persons.xml#editor123": 1
+    }
+    linked, _ = attach_person_register(ir, register)
+    assert not any(
+        node.feature("person_id") == "editor123"
+        for node in linked.nodes_of_type(NodeType.PERSON)
+    )
