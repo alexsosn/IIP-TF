@@ -162,6 +162,27 @@ This amendment adds no text slots, does not reassign language or names,
 and does not normalize codes. The legacy `lang=heb` mismatch for Aramaic
 persists until the separate semantic correction in #54.
 
+## Amendment #54-C — selected-word precedence for script-like Aramaic paragraphs
+
+When a record declares `textLang.mainLang=arc`, and a **transcription**
+Hebrew-encoded letter was annotated by `p@xml:lang=heb` (visible as
+`lang_origin=p` and `lang_original=heb`), an unambiguous selected,
+drift-free `transcription_segmented` word actually aligned to that slot
+and explicitly labeled `arc` wins on **effective sign language**:
+`lang=arc`, `lang_source=transcription_segmented`. `lang_original`
+and `lang_origin` remain the original paragraph's attribute and tag.
+Native encoded-script `script=Hebr` is unchanged. Contradictory
+overlapping selected-word languages fail closed; missing, uncertain or
+drifted alignment is not guessed.
+
+This narrowly evidenced correction **never** relabels explicit
+`foreign` spans, English translation/commentary, synthetics,
+non-Hebrew encoded letters, diplomatic editions, records not declaring
+Aramaic, or uncovered source material. It does not infer language from
+Unicode alone, normalize mixed BCP 47/ISO codes (#52), or disentangle
+personal name-origin annotations (#55). #54/#57 remain OPEN pending
+corpus-wide pattern audit and decisions about unsegmented source text.
+
 ## Text-Fabric feature value types
 
 Every emitted TF feature has exactly one `@valueType`. Raw source attributes are preserved as

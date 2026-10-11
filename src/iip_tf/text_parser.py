@@ -23,6 +23,7 @@ from iip_tf.ir import (
     SourceIdentity,
     SourceProvenance,
 )
+from iip_tf.language_resolution import resolve_sign_languages
 from iip_tf.metadata_parser import enrich_metadata
 from iip_tf.segmentation_projection import enrich_segmentation
 from iip_tf.source_repair import SourceConflictError, repair_source_file
@@ -1130,11 +1131,12 @@ def parse_epidoc_file(path: Path, *, source_revision: str) -> InscriptionIR:
     )
     builder.finalize_corresp()
     enriched = enrich_metadata(builder.freeze(), root)
-    return enrich_segmentation(
+    segmented = enrich_segmentation(
         enriched,
         root,
         source_revision=source_revision,
     )
+    return resolve_sign_languages(segmented)
 
 
 def validate_text_directory(

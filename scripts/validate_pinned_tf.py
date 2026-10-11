@@ -189,12 +189,11 @@ def _validate_language_source_provenance(api: Any) -> dict[str, int]:
     if chor is None or beth is None or caes is None:
         raise SystemExit("missing pinned language provenance canary record")
 
-    # Script-like p@xml:lang=heb must be separately identifiable from a
-    # linguistic reading. The semantic correction belongs to later #54.
+    # Actual p@xml:lang=heb must remain traceable even if authoritative
+    # aligned segmented Aramaic word evidence corrects its effective language.
     aramaic = [
         n for n in L.d(chor, otype="sign")
         if F.layer.v(n) == "transcription"
-        and F.lang.v(n) == "heb"
         and F.lang_original.v(n) == "heb"
         and F.lang_origin.v(n) == "p"
         and F.script.v(n) == "Hebr"
@@ -211,6 +210,27 @@ def _validate_language_source_provenance(api: Any) -> dict[str, int]:
         raise SystemExit("chor0001 aligned Aramaic word source provenance was lost")
     if not any(set(L.d(w, otype="sign")).intersection(aramaic) for w in arc_words):
         raise SystemExit("chor0001 segmented words no longer align with native signs")
+
+    # Stronger than an isolated canary: every source paragraph Hebrew-letter
+    # sign covered by drift-free selected 'arc' tokens must now answer 'arc'.
+    source_signs = set(aramaic)
+    corrected: set[int] = set()
+    for word in arc_words:
+        if F.segmentation_status.v(word) != "projected":
+            continue
+        for sign in L.d(word, otype="sign"):
+            if sign not in source_signs:
+                continue
+            if (
+                F.lang.v(sign) != "arc"
+                or F.lang_source.v(sign) != "transcription_segmented"
+            ):
+                raise SystemExit(
+                    f"chor0001 selected Aramaic word still has mislabeled sign {sign}"
+                )
+            corrected.add(sign)
+    if len(corrected) < 10:
+        raise SystemExit("chor0001 source-backed sign language coverage is too low")
 
     # Explicit Aramaic written in Greek letters is a distinct kind of source
     # declaration: a future container override must not erase it.
@@ -238,6 +258,7 @@ def _validate_language_source_provenance(api: Any) -> dict[str, int]:
 
     return {
         "chor0001_aramaic_signs_with_source_p": len(aramaic),
+        "chor0001_corrected_selected_arc_signs": len(corrected),
         "chor0001_segmented_arc_words": len(arc_words),
         "beth0023_explicit_foreign_greek_signs": len(greek_aramaic),
         "caes0044_egyptian_name_origin_sources": len(egyptian_names),
@@ -276,6 +297,7 @@ def main() -> int:
         node_counts: Counter[str] = Counter()
         edge_counts: Counter[str] = Counter()
         slot_languages: Counter[str] = Counter()
+        corrected_heb_script_signs = 0
         slot_kinds: Counter[str] = Counter()
         sign_count = 0
         point_count = 0
@@ -290,6 +312,15 @@ def main() -> int:
             sign_count += len(ir.signs)
             for sign in ir.signs:
                 slot_languages[sign.lang or "und"] += 1
+                if (
+                    sign.layer.value == "transcription"
+                    and sign.lang == "arc"
+                    and sign.lang_source == "transcription_segmented"
+                    and sign.lang_origin == "p"
+                    and sign.lang_original is not None
+                    and sign.lang_original.strip() == "heb"
+                ):
+                    corrected_heb_script_signs += 1
                 slot_kinds[sign.synthetic_kind or "visible"] += 1
             for node in ir.nodes:
                 node_counts[node.node_type.value] += 1
@@ -340,6 +371,14 @@ def main() -> int:
             raise SystemExit(
                 "pinned canonical IR accounting changed: "
                 + json.dumps({"expected": expected, "actual": actual}, sort_keys=True)
+            )
+
+        # Corpus-wide coverage is a pinned-source gate, not a requirement of
+        # synthetic one-record failure-accounting tests.
+        if parsed == EXPECTED_PARSED and parsed >= 1000 and corrected_heb_script_signs < 1000:
+            raise SystemExit(
+                "pinned Aramaic source-backed sign correction coverage unexpectedly low: "
+                f"{corrected_heb_script_signs}"
             )
 
         stage = "tf_write"
@@ -412,6 +451,7 @@ def main() -> int:
             **actual,
             "metadata_queries": metadata_queries,
             "language_source_canaries": language_sources,
+            "corrected_heb_script_transcription_signs": corrected_heb_script_signs,
             "node_counts": dict(sorted(node_counts.items())),
             "edge_counts": dict(sorted(edge_counts.items())),
             "tf_files": len(tuple(args.output_dir.glob("*.tf"))),
