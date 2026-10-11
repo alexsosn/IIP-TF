@@ -210,6 +210,6 @@ def test_multivalue_taxonomy_tokens_preserve_order_duplicates_and_unknowns() -> 
 
 def test_pinned_multivalue_snapshot_is_source_authenticated() -> None:
     import iip_tf.taxonomy_audit as taxonomy_audit
-    assert getattr(taxonomy_audit, 'EXPECTED_PINNED_MULTIVALUE') == {
+    assert vars(taxonomy_audit)["EXPECTED_PINNED_MULTIVALUE"] == {
         "fully_resolved": 402, "partially_resolved": 126, "no_resolved": 2,
     }
