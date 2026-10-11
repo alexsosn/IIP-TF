@@ -148,7 +148,7 @@ def test_translation_rs_and_nontranslation_person_keep_existing_text_language(
     assert {ir.sign(key).lang for key in translation.sign_keys} == {"eng"}
     family = next(
         node for node in ir.nodes_of_type(NodeType.ENTITY)
-        if node.feature("entity_kind") == "family"
+        if node.feature("entity_kind") == "reference_string"
     )
     assert family.feature("lang") == "arc"
     assert all(ir.sign(key).layer == Layer.TRANSLATION for key in family.sign_keys)
