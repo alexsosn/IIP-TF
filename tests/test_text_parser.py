@@ -105,7 +105,14 @@ def test_translation_entities_keep_nested_spans_and_attributes(tmp_path: Path) -
 
     person = next(node for node in entities if node.feature("entity_kind") == "person")
     assert person.feature("ref") == "persons.xml#p1"
-    assert person.feature("lang") == "grc"
+    # A translated personal name's xml:lang encodes its *origin*;
+    # its visible letters remain in the parent English text language.
+    assert person.feature("lang") is None
+    assert person.feature("name_lang") == "grc"
+    assert person.feature("name_lang_original") == "grc "
+    assert person.feature("lang_original") == "grc "
+    assert person.feature("lang_origin") == "persName"
+    assert all(ir.sign(key).lang == "eng" for key in person.sign_keys)
     assert ir.text(person.sign_keys) == "Maria"
 
     name = next(node for node in entities if node.feature("entity_kind") == "name")
