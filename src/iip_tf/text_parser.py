@@ -79,6 +79,7 @@ _ENTITY_KIND: Final = {
     "placeName": "place",
     "rs": "reference_string",
 }
+
 # Maintainer-approved #55 mappings, explicitly scoped to *name origin* in
 # English translation persName. Never normalize actual source text language.
 _NAME_LANG: Final[dict[str, str]] = {
