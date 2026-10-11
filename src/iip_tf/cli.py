@@ -7,6 +7,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from iip_tf import __version__
+from iip_tf.person_register import attach_person_register, read_person_register
 from iip_tf.release_gate import inventory_source_files, require_empty_output_directory
 from iip_tf.text_parser import parse_epidoc_file
 from iip_tf.tf_writer import write_tf_corpus
@@ -28,6 +29,7 @@ def build_parser() -> argparse.ArgumentParser:
     convert.add_argument("output", type=Path)
     convert.add_argument("--source-revision", required=True)
     convert.add_argument("--converter-commit", required=True)
+    convert.add_argument("--persons-register", type=Path)
     return parser
 
 
@@ -38,11 +40,17 @@ def _convert(args: argparse.Namespace) -> int:
     converter_commit: str = args.converter_commit
 
     paths, _excluded = inventory_source_files(source, source_revision=source_revision)
+    register_path = args.persons_register or (source.parent / "data-keep" / "persons.xml")
+    register = read_person_register(register_path) if register_path.is_file() else None
+    if args.persons_register is not None and register is None:
+        raise ValueError(f"explicit persons register does not exist: {register_path}")
     require_empty_output_directory(output)
-    irs = tuple(
-        parse_epidoc_file(path, source_revision=source_revision)
-        for path in paths
-    )
+    def records():
+        for path in paths:
+            ir = parse_epidoc_file(path, source_revision=source_revision)
+            yield attach_person_register(ir, register)[0] if register is not None else ir
+
+    irs = tuple(records())
     write_tf_corpus(irs, output, converter_commit=converter_commit)
     return 0
 
