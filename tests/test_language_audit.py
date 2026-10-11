@@ -109,6 +109,12 @@ def test_residual_reason_partition_has_no_double_counting() -> None:
         "synthetic": 1,
     }
     assert sum(report["reasons"].values()) == report["remaining_signs"]
+    assert report["clean_word_languages_for_remaining"] == {
+        "arc": 2, "grc": 1, "<untagged>": 1
+    }
+    assert report["examples"]["selected_non_arc_word"][0][
+        "aligned_word_evidence"
+    ] == "projected:grc"
     assert all(len(rows) <= 1 for rows in report["examples"].values())
     assert report["most_affected_records"] == [
         {"record": "fixture", "remaining_signs": 9}
