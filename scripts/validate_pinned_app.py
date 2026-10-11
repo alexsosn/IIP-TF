@@ -219,6 +219,58 @@ def main() -> int:
             or query_payload.get("nResults") != 1
         ):
             raise RuntimeError(f"pinned browser exact-ID search failed: {query_payload!r}")
+    # Nonprimary section browser visibility, grounded in pinned Brown
+    # EpiDoc. The core TF default remains the primary-only source view;
+    # the browser must instead show the chosen textpart's normalized layer.
+    if api.T.defaultFormat != "text-orig-full":
+        raise RuntimeError("core TF default primary reading changed unexpectedly")
+    for record_id, layer, source_snippet in (
+        ("haif0003", "diplomatic", "ΜΝΗΣΘΗ"),
+        ("bloy0002", "translation", "Moriah"),
+    ):
+        owner = api.T.nodeFromSection((record_id,))
+        if owner is None:
+            raise RuntimeError(f"{record_id}: missing pinned nonprimary record")
+        if api.F.primary_layer.v(owner) == layer:
+            raise RuntimeError(f"{record_id}: expected {layer} to be nonprimary")
+        textparts = [
+            n for n in api.L.d(owner, otype="textpart")
+            if api.F.layer.v(n) == layer
+        ]
+        matches = [
+            line for part in textparts for line in api.L.d(part, otype="line")
+            if source_snippet in api.T.text(
+                line, fmt="text-section-normalized-full"
+            )
+        ]
+        if not matches:
+            raise RuntimeError(
+                f"{record_id}: existing {layer} text missing from normalized layer format"
+            )
+        target_line = matches[0]
+        if api.T.text(target_line, fmt="text-orig-full").strip():
+            raise RuntimeError(
+                f"{record_id}: the primary-only core format silently changed"
+            )
+        section = api.T.sectionFromNode(target_line)
+        with webapp.test_client() as client:
+            result = client.post(
+                "/passage", data={"sec0": record_id, "sec1": str(section[1])}
+            )
+        payload = result.get_json()
+        if result.status_code != 200 or not isinstance(payload, dict):
+            raise RuntimeError(f"{record_id}: nonprimary browser route failed")
+        html = payload.get("table")
+        if not isinstance(html, str):
+            raise RuntimeError(f"{record_id}: nonprimary browser HTML missing")
+        extracted = VisibleText()
+        extracted.feed(html)
+        if source_snippet not in "".join(extracted.parts):
+            raise RuntimeError(
+                f"{record_id}: browser still hides {layer} content"
+            )
+    print("Pinned normalized-per-section browser: diplomatic and translation visible")
+
     # Source-critical reading: choose the textpart containing the actual
     # editorial node, not a guessed section index or a synthetic placeholder.
     for record_id, kind, expected in (

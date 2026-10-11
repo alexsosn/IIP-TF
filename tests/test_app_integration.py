@@ -37,7 +37,8 @@ APP = ROOT / "app"
 def test_app_config_uses_only_documented_advanced_tf_settings() -> None:
     config = yaml.safe_load((APP / "config.yaml").read_text(encoding="utf-8"))
     assert config["apiVersion"] == 3
-    assert config["dataDisplay"]["textFormat"] == "text-orig-full"
+    # Browser navigation is section-scoped; native TF T.defaultFormat stays primary-only.
+    assert config["dataDisplay"]["textFormat"] == "text-section-normalized-full"
     assert config["provenanceSpec"]["version"] == ""
     assert config["provenanceSpec"]["corpus"]
     assert "org" not in config["provenanceSpec"]

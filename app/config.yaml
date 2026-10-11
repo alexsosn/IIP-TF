@@ -5,7 +5,7 @@ provenanceSpec:
   # Intentionally no org/repo: the browser must not fetch unpublished TF data.
   # Source and converter provenance live in the native TF header features.
 dataDisplay:
-  textFormat: text-orig-full
+  textFormat: text-section-normalized-full
   browseNavLevel: 2
   exampleSection: abil0001
   browseContentPretty: false

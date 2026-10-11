@@ -40,6 +40,8 @@ def _is_selected_sign(app: Any, node: int, fmt: str | None) -> bool:
             return False
         allowed = {"both", "source"} if fmt == "text-source-full" else {"both", "normalized"}
         return role in allowed
+    if fmt == "text-section-normalized-full":
+        return layer in layer_for_format.values() and role in {"both", "normalized"}
     if fmt in layer_for_format:
         return layer == layer_for_format[fmt] and role in {"both", "normalized"}
     if fmt == "text-layer-full":
@@ -177,7 +179,9 @@ def render_sign(app: Any, options: Any, chunk: Any, n_type: str, outer: bool) ->
     display_fmt = fmt or getattr(app.context, "textFormat", None)
     if display_fmt is None:
         display_fmt = app.api.T.defaultFormat
-    original = app.api.T.text(node, fmt=fmt)
+    # The app may select a non-corpus-default format while options.fmt=None.
+    # Use the SAME effective format for text and source-critical badges.
+    original = app.api.T.text(node, fmt=display_fmt)
     material = escape("" if original is None else str(original))
     note_html = ""
     if _is_selected_sign(app, node, display_fmt):
@@ -199,7 +203,13 @@ def render_sign(app: Any, options: Any, chunk: Any, n_type: str, outer: bool) ->
     # after the actual sign, but BEFORE that following whitespace.
     after_html = ""
     if ends:
-        after_feature_name = _AFTER_FEATURE.get(display_fmt)
+        after_feature_name = (
+            f"{layer}_after" if display_fmt == "text-section-normalized-full"
+            and (layer := app.api.F.layer.v(node)) in {
+                "transcription", "diplomatic", "translation", "commentary"
+            }
+            else _AFTER_FEATURE.get(display_fmt)
+        )
         after_feature = (
             getattr(app.api.F, after_feature_name, None)
             if after_feature_name is not None else None
