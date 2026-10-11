@@ -165,7 +165,7 @@
     "textpart": "Explicit or implicit layer-aware section part.",
     "line": "Layer-aware source line derived from lb boundaries.",
     "word": "IIP segmented token (w/num/orig) projected to primary source-text slots; never guessed.",
-    "markup": "Structured inline EpiDoc/editorial phenomenon, including zero-width events; kind is enumerated.",
+    "markup": "Structured inline EpiDoc/editorial phenomenon, including zero-width events; kind is enumerated. Sparse source_trailing_space_inside=yes marks a normalized after-space consumed before the source element ended, enabling exact inside/outside ownership at a sign boundary without new slots.",
     "entity": "Text-anchored named/reference entity in translation or other textual layers.",
     "segmentation": "Provenance node for each transcription_segmented candidate and its #20 resolution status.",
     "bibl": "One source bibliography entry.",
