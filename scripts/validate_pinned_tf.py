@@ -512,6 +512,38 @@ def main() -> int:
                 or aramaic_language_audit["reasons"].get("no_selected_word") != 1786
             ):
                 raise SystemExit("authenticated unaligned Aramaic signs failed reconciliation")
+            editorial = aramaic_language_audit["selected_uncovered_editorial_evidence"]
+            if (
+                editorial["signs"] != 179
+                or sum(editorial["reading_roles"].values()) != 179
+                or sum(editorial["markup_branches"].values()) != 179
+                or not 0 <= editorial["alternate_branch_has_projected_word"] <= 179
+            ):
+                raise SystemExit("authenticated uncovered editorial partition disagrees")
+            bshe = next(
+                (ir for ir in irs if ir.identity.inscription_id == "bshe0157"),
+                None,
+            )
+            if bshe is None:
+                raise SystemExit("missing original Brown editorial canary bshe0157")
+            bshe_words = {
+                key for word in bshe.nodes_of_type(NodeType.WORD)
+                for key in word.sign_keys
+            }
+            bshe_reg_keys = {
+                key for node in bshe.nodes_of_type(NodeType.MARKUP)
+                if node.feature("kind") == "reg" for key in node.sign_keys
+            }
+            if not any(
+                sign.key in bshe_reg_keys
+                and sign.key not in bshe_words
+                and sign.lang == "heb"
+                and sign.reading_role == "normalized"
+                and sign.lang_original == "heb"
+                for sign in bshe.signs
+                if sign.layer.value == "transcription" and sign.glyph
+            ):
+                raise SystemExit("bshe0157 source-only orig/normalized reg canary lost")
             drift = aramaic_language_audit["drift_source_evidence"]
             if (
                 aramaic_language_audit["reasons"].get(
