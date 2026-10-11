@@ -186,8 +186,6 @@
         "layer",
         "lang",
         "lang_source",
-      "script",
-      "script_source",
         "cert"
       ]
     },
@@ -210,6 +208,8 @@
       "layer",
       "lang",
       "lang_source",
+      "script",
+      "script_source",
       "reading_role",
       "synthetic_kind",
       "primary_glyph",
