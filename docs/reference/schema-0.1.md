@@ -56,6 +56,7 @@ needed for uniqueness.
 |---|---|
 | `text-orig-full` | Default primary text |
 | `text-orig-refs-full` | Explicit primary reading with source-empty glyph identifiers in IIP `((ref))` notation; these tokens are **not attested source letters**, nor Unicode substitutions |
+| `text-section-normalized-full` | Normalized signs in **each selected textpart/line**, including secondary diplomatic, translation and commentary; browser default only; inscription-level aggregation concatenates distinct layers and is **not a unified primary reading** |
 | `text-source-full` | Source-oriented primary reading |
 | `text-layer-full` | Literal stored-slot view of one edition/textpart/line; may expose both editorial branches |
 | `text-transcription-full` | Normalized transcription layer |
@@ -64,7 +65,18 @@ needed for uniqueness.
 | `text-commentary-full` | Commentary layer |
 | `word-default` | Word-node display |
 
-The default uses `primary_glyph` / `primary_after`, undefined on non-primary slots.
+The **core corpus default** remains `text-orig-full` and uses
+`primary_glyph` / `primary_after`, undefined on non-primary slots.
+The **standard TF browser** chooses the additive
+`text-section-normalized-full` view for the selected textpart/line.
+It concatenates the four existing, mutually layer-exclusive,
+**normalized-only** per-layer glyph/after pairs. This reveals the
+non-primary diplomatic text of `haif0003` and translation of
+`bloy0002` without duplicating `orig/reg` alternatives. It adds no
+source glyph data and does not modify `api.T.defaultFormat` or existing
+Text-Fabric MCP/API results. Query an entire inscription with this
+format only if you intentionally want *all* its textual layers
+concatenated, not one inscription reading.
 
 The **opt-in** `text-orig-refs-full` uses
 `{primary_glyph}{primary_ref_token}{primary_after}` and retains primary
