@@ -1,7 +1,7 @@
 """Source-backed, deliberately narrow sign-language precedence for IIP #54.
 
-Only an explicitly projected source word may supersede a paragraph's
-script-like xml:lang=heb for Hebrew-encoded letters of Aramaic transcription.
+Only an explicitly projected source word may supersede a paragraph or
+edition-division script-like xml:lang=heb for Hebrew-encoded Aramaic transcription.
 This must never infer language from Unicode script alone.
 """
 
@@ -24,13 +24,13 @@ def _eligible(sign: IRSign) -> bool:
         and sign.lang_source in {"xml:lang", "inherited"}
         and sign.lang_original is not None
         and sign.lang_original.strip() == "heb"
-        and sign.lang_origin == "p"
+        and sign.lang_origin in {"p", "div"}
         and encoded_script(sign.glyph) == "Hebr"
     )
 
 
 def resolve_sign_languages(ir: InscriptionIR) -> InscriptionIR:
-    """Apply verified segmented Aramaic words only to script-like paragraph signs.
+    """Apply verified segmented Aramaic words to script-like source scope signs.
 
     Unsegmented/unknown/drifted words, synthetic slots, non-Aramaic records,
     diplomatic and translation layers, explicit foreign spans and unsupported
@@ -74,7 +74,7 @@ def resolve_sign_languages(ir: InscriptionIR) -> InscriptionIR:
             )
         if langs == {"arc"} and sign.key not in unreliable:
             # lang_original and lang_origin continue to describe the original
-            # source paragraph, not the selected word that won precedence.
+            # source paragraph/edition division, not the winning word.
             new_signs.append(
                 replace(sign, lang="arc", lang_source="transcription_segmented")
             )
