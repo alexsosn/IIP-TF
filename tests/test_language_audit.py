@@ -186,3 +186,31 @@ def test_real_parser_projected_word_and_unsegmented_paragraph(tmp_path: Path) ->
     }
     assert report["most_affected_records"][0]["record"] == "bare"
     assert report["most_affected_records"][0]["remaining_signs"] == 4
+
+
+def test_actual_untagged_selected_word_is_not_mistaken_for_missing_word(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "untagged.xml"
+    path.write_text(
+        '<TEI xmlns="http://www.tei-c.org/ns/1.0">'
+        '<teiHeader><fileDesc><sourceDesc><msDesc><msContents>'
+        '<textLang mainLang="arc"/></msContents></msDesc></sourceDesc>'
+        '</fileDesc></teiHeader><text><body>'
+        '<div type="edition" subtype="transcription">'
+        '<p xml:lang="heb">אב</p></div>'
+        '<div type="edition" subtype="transcription_segmented">'
+        '<p><w xml:id="untagged-w1">אב</w></p></div>'
+        '</body></text></TEI>',
+        encoding="utf-8",
+    )
+    ir = parse_epidoc_file(path, source_revision="fixture")
+    words = ir.nodes_of_type(NodeType.WORD)
+    assert len(words) == 1
+    assert words[0].feature("lang_source") is None
+    audit = AramaicLanguageAudit()
+    audit.ingest(ir)
+    report = audit.report()
+    assert report["remaining_signs"] == 2
+    assert report["reasons"] == {"selected_word_without_lang": 2}
+    assert report["clean_word_languages_for_remaining"] == {"<untagged>": 2}
