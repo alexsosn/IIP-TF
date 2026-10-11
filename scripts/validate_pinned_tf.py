@@ -179,6 +179,71 @@ def _validate_native_metadata_queries(api: Any) -> dict[str, int]:
     }
 
 
+def _validate_language_source_provenance(api: Any) -> dict[str, int]:
+    """Pinned authentic Brown evidence: source lang tags survive native TF reload."""
+    F, L, T = api.F, api.L, api.T
+
+    chor = T.nodeFromSection(("chor0001",))
+    beth = T.nodeFromSection(("beth0023",))
+    caes = T.nodeFromSection(("caes0044",))
+    if chor is None or beth is None or caes is None:
+        raise SystemExit("missing pinned language provenance canary record")
+
+    # Script-like p@xml:lang=heb must be separately identifiable from a
+    # linguistic reading. The semantic correction belongs to later #54.
+    aramaic = [
+        n for n in L.d(chor, otype="sign")
+        if F.layer.v(n) == "transcription"
+        and F.lang.v(n) == "heb"
+        and F.lang_original.v(n) == "heb"
+        and F.lang_origin.v(n) == "p"
+        and F.script.v(n) == "Hebr"
+    ]
+    if len(aramaic) < 10:
+        raise SystemExit("chor0001 source paragraph language provenance was lost")
+    arc_words = [
+        w for w in L.d(chor, otype="word")
+        if F.lang.v(w) == "arc"
+        and F.lang_original.v(w) == "arc"
+        and F.lang_origin.v(w) == "w"
+    ]
+    if not arc_words:
+        raise SystemExit("chor0001 aligned Aramaic word source provenance was lost")
+    if not any(set(L.d(w, otype="sign")).intersection(aramaic) for w in arc_words):
+        raise SystemExit("chor0001 segmented words no longer align with native signs")
+
+    # Explicit Aramaic written in Greek letters is a distinct kind of source
+    # declaration: a future container override must not erase it.
+    greek_aramaic = [
+        n for n in L.d(beth, otype="sign")
+        if F.glyph.v(n) == "β"
+        and F.lang.v(n) == "arc-Grek"
+        and F.lang_original.v(n) == "arc-Grek"
+        and F.lang_origin.v(n) == "foreign"
+        and F.script.v(n) == "Grek"
+    ]
+    if not greek_aramaic:
+        raise SystemExit("beth0023 explicit foreign Aramaic language lost")
+
+    # Actual trailing source whitespace must survive both the parser and TF's
+    # string feature file serialization (not merely the in-memory IR).
+    egyptian_names = [
+        n for n in L.d(caes, otype="entity")
+        if F.entity_kind.v(n) == "person"
+        and F.lang_original.v(n) == "egy "
+        and F.lang_origin.v(n) == "persName"
+    ]
+    if not egyptian_names:
+        raise SystemExit("caes0044 source xml:lang trailing whitespace was lost")
+
+    return {
+        "chor0001_aramaic_signs_with_source_p": len(aramaic),
+        "chor0001_segmented_arc_words": len(arc_words),
+        "beth0023_explicit_foreign_greek_signs": len(greek_aramaic),
+        "caes0044_egyptian_name_origin_sources": len(egyptian_names),
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("source_dir", type=Path)
@@ -342,9 +407,11 @@ def main() -> int:
                 raise SystemExit(f"volatile dateWritten remains in {path.name}")
 
         metadata_queries = _validate_native_metadata_queries(api)
+        language_sources = _validate_language_source_provenance(api)
         report = {
             **actual,
             "metadata_queries": metadata_queries,
+            "language_source_canaries": language_sources,
             "node_counts": dict(sorted(node_counts.items())),
             "edge_counts": dict(sorted(edge_counts.items())),
             "tf_files": len(tuple(args.output_dir.glob("*.tf"))),
