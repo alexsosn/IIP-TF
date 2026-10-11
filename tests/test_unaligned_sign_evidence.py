@@ -204,3 +204,19 @@ def test_non_aramaic_and_diplomatic_signs_are_not_included() -> None:
     audit.ingest(_ir("hebrew", (_sign("h"),), main_lang="hbo"))
     audit.ingest(_ir("diplomatic", (_sign("d", layer=Layer.DIPLOMATIC),)))
     assert audit.report()["no_selected_word_evidence"]["signs"] == 0
+
+
+def test_drift_word_evidence_is_bounded_even_with_many_overlaps() -> None:
+    nodes = (_candidate(0, 1, 12),) + tuple(
+        _word(
+            f"w{i}", ("s",), status="projected_with_source_drift",
+            source_id=f"token-{i:02}",
+        ) for i in range(12)
+    )
+    audit = AramaicLanguageAudit(max_examples=2)
+    audit.ingest(_ir("many-overlaps", (_sign("s"),), nodes))
+    evidence = audit.report()["drift_source_evidence"]
+    assert len(evidence) == 1
+    assert [w["source_id"] for w in evidence[0]["words"]] == [
+        "token-00", "token-01"
+    ]
