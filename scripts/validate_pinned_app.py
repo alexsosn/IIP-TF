@@ -90,6 +90,62 @@ def validate_native_reference_tokens(api: Any) -> int:
     return matched
 
 
+
+def validate_prose_languages(api: Any) -> dict[str, int]:
+    """Fail the full pinned corpus if translated prose inherits source language."""
+    F = api.F
+    inferred: dict[str, int] = {"translation": 0, "commentary": 0}
+    for slot in F.otype.s("sign"):
+        layer = F.layer.v(slot)
+        if layer not in inferred:
+            continue
+        source = F.lang_source.v(slot)
+        lang = F.lang.v(slot)
+        if source == "textLang.mainLang":
+            raise RuntimeError(
+                f"source inscription language leaked into {layer} sign {slot}"
+            )
+        if source == f"layer:{layer}":
+            if lang != "eng":
+                raise RuntimeError(
+                    f"converter-inferred {layer} sign {slot} has {lang!r}, not eng"
+                )
+            inferred[layer] += 1
+
+    # Both source layer types are extensive in this pinned IIP corpus.
+    if any(count < 1_000 for count in inferred.values()):
+        raise RuntimeError(f"pinned English prose coverage unexpectedly low: {inferred}")
+    for record_id in ("abil0001", "bloy0002"):
+        owner = api.T.nodeFromSection((record_id,))
+        if owner is None:
+            raise RuntimeError(f"missing source English-prose example: {record_id}")
+        for layer in ("translation", "commentary"):
+            parts = [
+                node for node in api.L.d(owner, otype="textpart")
+                if F.layer.v(node) == layer
+            ]
+            if not parts:
+                raise RuntimeError(f"{record_id}: {layer} textpart not found")
+            slots = [
+                sign for node in parts for sign in api.L.d(node, otype="sign")
+                if F.glyph.v(sign)
+            ]
+            if not slots or not any(
+                F.lang.v(sign) == "eng"
+                and F.lang_source.v(sign) == f"layer:{layer}"
+                for sign in slots
+            ):
+                raise RuntimeError(
+                    f"{record_id}: missing converted English {layer} signs"
+                )
+    print(
+        "Pinned prose language: "
+        f"{inferred['translation']} translation, "
+        f"{inferred['commentary']} commentary signs assigned eng"
+    )
+    return inferred
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("tf_dir", type=Path)
@@ -139,6 +195,7 @@ def main() -> int:
         raise RuntimeError("paleo-Hebrew inscription glyph reference was lost")
 
     validate_native_reference_tokens(api)
+    validate_prose_languages(api)
 
     # The opt-in ref view uses precisely the primary normalized sign
     # selection and must not suppress source-critical notes in the TF app.

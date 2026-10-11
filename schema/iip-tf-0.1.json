@@ -8,6 +8,21 @@
     "zero_span_research": "docs/research/zero-span-points.md",
     "contributor_provenance_research": "docs/research/issue-49-responsibilities.md"
   },
+  "language_policy": {
+    "issue": 53,
+    "scope": "textual_signs_in_translation_and_commentary_layers",
+    "source_text_layers": ["transcription", "diplomatic"],
+    "source_inscription_language_feature": "main_lang",
+    "inferred_prose_language": "eng",
+    "inferred_provenance": {
+      "translation": "layer:translation",
+      "commentary": "layer:commentary"
+    },
+    "provenance_semantics": "converter inference, not source-declared language",
+    "source_override": "explicit xml:lang on edition, paragraph or inline element wins, with xml:lang/inherited lang_source as applicable",
+    "pending_separate_issues": [52, 54, 55, 57],
+    "source_glyphs_unchanged": true
+  },
   "warp": {
     "slot_type": "sign",
     "slot_granularity": "one Unicode code point for visible text; one synthetic sign for a source-critical zero-width event",

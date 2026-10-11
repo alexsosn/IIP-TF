@@ -862,7 +862,16 @@ def _parse_edition(
     inscription_key: str,
 ) -> None:
     _validate_attrs(element, source_file=builder.identity.source_file)
-    edition_lang = _child_lang(element, header_lang)
+    # IIP textLang describes the inscription, not the English prose in
+    # translation/commentary divisions. This is a converter inference,
+    # explicitly recorded in lang_source, never a source-declared language.
+    # A division-level xml:lang still wins through _child_lang().
+    fallback_lang = (
+        _Lang("eng", f"layer:{layer.value}")
+        if layer in {Layer.TRANSLATION, Layer.COMMENTARY}
+        else header_lang
+    )
+    edition_lang = _child_lang(element, fallback_lang)
     key = builder.node_key(element)
     source_id = element.attrib.get(XML_ID)
     start = len(builder.signs)

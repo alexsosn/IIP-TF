@@ -93,6 +93,28 @@ the explicit format, and use `markup kind=glyph ref=...` to query the
 source annotation. Glyphs missing a source `ref` are not fabricated;
 nonprimary textparts still need an explicit layer format (#51).
 
+## Text language provenance (issue #53)
+
+The `lang` feature on a sign denotes its textual language, not
+necessarily the language of the inscription's `textLang/@mainLang`.
+Inscription-level `main_lang` remains source-valued and applies by
+default only to source `transcription` / `diplomatic` editions.
+
+For `translation` and `commentary`, which in this pinned IIP corpus
+are English prose unless explicitly marked otherwise, the converter assigns
+`lang=eng` and **`lang_source=layer:translation`** or
+**`layer:commentary`**. This is a *converter inference*, not a
+source-declared ISO language. An explicit `xml:lang` on a division,
+paragraph, or inline foreign-language span takes precedence and has
+`lang_source=xml:lang` or `inherited` at the sign, as applicable.
+The edition/paragraph markup retains its native source language annotation.
+
+This bounded correction does **not** yet reinterpret the origin of names
+marked with `persName@xml:lang` (#55), distinguish container script
+from spoken language (#54), or normalize codes and add complete
+`lang_original` fields (#52/#57). Those source values remain
+separately queryable and require their own documented migrations.
+
 ## Slot features
 
 Core features include `glyph`, `after`, `layer`, `lang`, `lang_source`, `reading_role`,

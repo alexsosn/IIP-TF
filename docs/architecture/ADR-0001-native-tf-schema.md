@@ -223,3 +223,27 @@ mappings point to explicit typed/raw features and resolved edges where appropria
 CI compares these mapping keys directly against `docs/research/iip-inventory.json`. A future
 source revision that introduces a new textual element or attribute therefore fails the mapping
 gate instead of being silently ignored.
+
+
+## Amendment — sign languages in English prose layers (issue #53)
+
+Accepted incremental semantic correction for the pinned 0.1 corpus.
+IIP `textLang/@mainLang` describes the inscription's original language,
+not the English content in `translation` or `commentary` divisions.
+For these two layers, lacking an explicit `xml:lang`, the converter
+assigns `lang=eng` on signs, with provenance
+`lang_source=layer:translation` or `layer:commentary`.
+Such assignments are explicitly marked as **converter inference**;
+they do not claim to reflect a source EpiDoc language declaration.
+
+An explicit `xml:lang` overrides the default at its scope and stays
+available on the EpiDoc-derived native node. The inscription-level raw
+`main_lang` and source transcription/diplomatic signs remain unchanged.
+The full pinned acceptance gate checks all prose-layer signs for leaked
+`textLang.mainLang` provenance and validates both inferred English
+layer categories. The converter does not alter signs, textual formats,
+source XML, metadata edges or critical apparatus.
+
+This staged amendment intentionally leaves separate open issues for
+writing system vs language (#54), the origin of personal names (#55)
+and explicit normalization/`_original` mappings (#52/#57).
