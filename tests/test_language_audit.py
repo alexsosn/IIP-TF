@@ -8,9 +8,9 @@ from pathlib import Path
 import pytest
 
 from iip_tf.ir import (
+    InscriptionIR,
     IRNode,
     IRSign,
-    InscriptionIR,
     Layer,
     NodeType,
     SourceIdentity,
