@@ -505,6 +505,48 @@ def main() -> int:
                 raise SystemExit("pinned division-scope Aramaic evidence coverage too low")
             if not aramaic_language_audit["remaining_signs"]:
                 raise SystemExit("pinned source unexpectedly has no residual heb signs")
+            unaligned = aramaic_language_audit["no_selected_word_evidence"]
+            if (
+                unaligned["signs"] != 1786
+                or sum(unaligned["reasons"].values()) != 1786
+                or aramaic_language_audit["reasons"].get("no_selected_word") != 1786
+            ):
+                raise SystemExit("authenticated unaligned Aramaic signs failed reconciliation")
+            drift = aramaic_language_audit["drift_source_evidence"]
+            if (
+                aramaic_language_audit["reasons"].get(
+                    "drift_or_uncertain_word_overlap"
+                ) != 2
+                or len(drift) != 2
+                or {row["record"] for row in drift} != {"idum0375"}
+                or {row["sign_key"] for row in drift}
+                != {"idum0375#s19", "idum0375#s20"}
+                or any(
+                    not any(
+                        w["source_id"] == "idum0375-8"
+                        and w["status"] == "projected_with_source_drift"
+                        for w in row["words"]
+                    )
+                    for row in drift
+                )
+            ):
+                raise SystemExit("authenticated source-drift ambiguity inventory changed")
+            anun = next(
+                (ir for ir in irs if ir.identity.inscription_id == "anun0005"),
+                None,
+            )
+            if (
+                anun is None
+                or anun.identity.main_lang != "arc"
+                or anun.nodes_of_type(NodeType.SEGMENTATION)
+                or not any(
+                    sign.glyph and sign.lang == "heb"
+                    and sign.lang_origin == "div"
+                    for sign in anun.signs
+                    if sign.layer.value == "transcription"
+                )
+            ):
+                raise SystemExit("anun0005 missing authentic absent-segmentation canary")
 
         if parsed == EXPECTED_PARSED and parsed >= 1000 and not name_origin_counts:
             raise SystemExit("pinned source has no explicit translation personal-name origins")
