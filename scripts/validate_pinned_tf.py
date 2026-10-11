@@ -373,7 +373,9 @@ def main() -> int:
                 + json.dumps({"expected": expected, "actual": actual}, sort_keys=True)
             )
 
-        if corrected_heb_script_signs < 1000:
+        # Corpus-wide coverage is a pinned-source gate, not a requirement of
+        # synthetic one-record failure-accounting tests.
+        if parsed == EXPECTED_PARSED and parsed >= 1000 and corrected_heb_script_signs < 1000:
             raise SystemExit(
                 "pinned Aramaic source-backed sign correction coverage unexpectedly low: "
                 f"{corrected_heb_script_signs}"
