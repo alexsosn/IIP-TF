@@ -73,9 +73,9 @@ def corpus(tmp_path: Path) -> tuple[Any, Any, dict[str, Any]]:
 def _markup(api: Any, record_id: str, kind: str) -> int:
     n = api.T.nodeFromSection((record_id,))
     assert n is not None
-    return next(
+    return int(next(
         m for m in api.L.d(n, otype="markup") if api.F.kind.v(m) == kind
-    )
+    ))
 
 
 def _visible(corpus: tuple[Any, Any, dict[str, Any]], record_id: str) -> str:
