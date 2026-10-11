@@ -60,8 +60,8 @@ def _reason(
         return "nonletter"
     if encoded_script(sign.glyph) != "Hebr":
         return "non_hebrew_encoded_letter"
-    if sign.lang_origin != "p":
-        return "non_paragraph_source"
+    if sign.lang_origin not in {"p", "div"}:
+        return "unsupported_source_scope"
     if sign.lang_original is None or sign.lang_original.strip() != "heb":
         return "source_label_not_heb"
     if not evidence:
