@@ -389,6 +389,7 @@
       "in_inscription",
       "corresponds_to",
       "cites",
+      "person_ref",
       "segmentation_of",
       "token_from"
     ]
