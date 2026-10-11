@@ -219,10 +219,10 @@ class AramaicLanguageAudit:
                     "selected_token_count": "" if count is None else str(count),
                     "resolution_status": status,
                 }
-                sample = self._unaligned_examples.setdefault(category, [])
-                sample.append(example)
-                sample.sort(key=lambda row: (row["record"], row["sign_key"]))
-                del sample[self.max_examples:]
+                evidence_samples = self._unaligned_examples.setdefault(category, [])
+                evidence_samples.append(example)
+                evidence_samples.sort(key=lambda row: (row["record"], row["sign_key"]))
+                del evidence_samples[self.max_examples:]
             elif reason == "drift_or_uncertain_word_overlap":
                 self._drift_source_evidence.append({
                     "record": ir.identity.inscription_id,
