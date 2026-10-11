@@ -9,12 +9,13 @@ from __future__ import annotations
 import hashlib
 import xml.etree.ElementTree as ET
 from collections import Counter
+from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from pathlib import Path
 from types import MappingProxyType
-from typing import Mapping, TypedDict
+from typing import TypedDict
 
-from iip_tf.ir import EdgeType, IREdge, IRNode, InscriptionIR, NodeType
+from iip_tf.ir import EdgeType, InscriptionIR, IREdge, IRNode, NodeType
 
 XML_ID = "{http://www.w3.org/XML/1998/namespace}id"
 PINNED_PERSONS_BLOB = "bce14d6d33ddfa06b4b6d1a4ccbf43e19390ac62"
