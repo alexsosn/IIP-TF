@@ -144,3 +144,72 @@ def test_guide_discusses_comment_inflation_and_no_silent_normalization() -> None
     assert "23" in guide
     assert "taxonomy-audit.json" in guide
     assert "does not normalize" in guide.lower()
+
+
+def test_multivalue_taxonomy_tokens_preserve_order_duplicates_and_unknowns() -> None:
+    # The source refs are TEI IDREFS lists, not scalar categories.
+    source = _source().replace(
+        b'<category xml:id="jewish">',
+        (
+            b'<category xml:id="other_religion">'
+            b'<catDesc>Other</catDesc></category><category xml:id="jewish">'
+        ),
+    )
+    registry = parse_taxonomies(source)
+    report = audit_values(
+        registry,
+        {
+            "genre": Counter({"#dedicatory #Quotation": 1}),
+            "material": Counter({"clay": 1}),
+            "religion": Counter(
+                {"#jewish #other_religion": 2, "jewish jewish": 1}
+            ),
+            "object_type": Counter(
+                {"block block": 1, "#jewish block": 1, "alien nonexistent": 1}
+            ),
+            "condition": Counter({"complete": 1}),
+        },
+    )
+    religion = report["fields"]["religion"]
+    row = next(v for v in religion["values"] if v["raw"] == "#jewish #other_religion")
+    assert row["status"] == "multiple_tokens"  # preserve previous report shape
+    assert row["tokens"] == [
+        {"index": 0, "raw": "#jewish", "status": "resolved", "category_id": "jewish"},
+        {
+            "index": 1, "raw": "#other_religion",
+            "status": "resolved", "category_id": "other_religion",
+        },
+    ]
+    duplicated = next(v for v in religion["values"] if v["raw"] == "jewish jewish")
+    assert duplicated["tokens"][0]["category_id"] == "jewish"
+    assert duplicated["tokens"][1]["category_id"] == "jewish"
+    assert [v["index"] for v in duplicated["tokens"]] == [0, 1]
+    assert religion["multivalue_resolution"] == {
+        "fully_resolved": 3, "partially_resolved": 0, "no_resolved": 0,
+    }
+    genre = report["fields"]["genre"]
+    assert genre["multivalue_resolution"]["partially_resolved"] == 1
+    assert genre["values"][0]["tokens"][1] == {
+        "index": 1, "raw": "#Quotation", "status": "unresolved",
+    }
+    object_type = report["fields"]["object_type"]
+    assert object_type["multivalue_resolution"] == {
+        "fully_resolved": 1, "partially_resolved": 1, "no_resolved": 1,
+    }
+    mixed = next(v for v in object_type["values"] if v["raw"] == "#jewish block")
+    assert [v["status"] for v in mixed["tokens"]] == [
+        "wrong_taxonomy", "resolved",
+    ]
+    assert report["multivalue_resolution"] == {
+        "fully_resolved": 4, "partially_resolved": 2, "no_resolved": 1,
+    }
+    assert report["fields"]["material"]["multivalue_resolution"] == {
+        "fully_resolved": 0, "partially_resolved": 0, "no_resolved": 0,
+    }
+
+
+def test_pinned_multivalue_snapshot_is_source_authenticated() -> None:
+    import iip_tf.taxonomy_audit as taxonomy_audit
+    assert vars(taxonomy_audit)["EXPECTED_PINNED_MULTIVALUE"] == {
+        "fully_resolved": 402, "partially_resolved": 126, "no_resolved": 2,
+    }
