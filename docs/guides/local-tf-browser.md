@@ -64,9 +64,18 @@ inscription = app.api.T.nodeFromSection(("abil0001",))
 print(app.api.T.text(inscription, fmt="text-orig-full"))
 ```
 
-The section hierarchy is inscription → textpart → line. The default
-`text-orig-full` format selects the **primary** inscription layer. To inspect
-other layers, request the appropriate format explicitly:
+The section hierarchy is inscription → textpart → line. The **core TF
+`T.text` default** remains `text-orig-full` and selects the
+**primary** inscription layer. Unlike the core default, the standard
+browser now uses `text-section-normalized-full` to display the
+normalized reading of **each selected textpart/line**, even when it is
+nonprimary. This includes the diplomatic textpart in `haif0003` and
+the translation in `bloy0002`. It excludes alternate `orig` branches
+when the normalized `reg` branch is present. An **entire inscription**
+queried with `text-section-normalized-full` concatenates distinct
+editions/translations/commentary; do not cite that as a unified
+source reading. To inspect other layers, request the appropriate
+format explicitly:
 `text-transcription-full`, `text-diplomatic-full`,
 `text-translation-full`, or `text-commentary-full`. The `lang` values in
 this development snapshot still have known source-versus-display problems
