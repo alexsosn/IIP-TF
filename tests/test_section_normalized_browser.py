@@ -59,7 +59,7 @@ def _textpart(api: Any, layer: str) -> int:
         if api.F.layer.v(node) == layer
     ]
     assert len(matching) == 1
-    return matching[0]
+    return int(matching[0])
 
 
 def _browse(native: tuple[Any, Any], layer: str) -> str:
