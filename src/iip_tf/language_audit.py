@@ -123,7 +123,9 @@ def _selected_segmented_state(
     )
 
 
-def _source_word_details(ir: InscriptionIR, sign_key: str) -> list[dict[str, str]]:
+def _source_word_details(
+    ir: InscriptionIR, sign_key: str, *, max_words: int,
+) -> list[dict[str, str]]:
     """Provide only bounded source labels for ambiguous projected words."""
     result: list[dict[str, str]] = []
     for node in ir.nodes_of_type(NodeType.WORD):
@@ -137,7 +139,7 @@ def _source_word_details(ir: InscriptionIR, sign_key: str) -> list[dict[str, str
         })
     return sorted(result, key=lambda row: (
         row["source_id"], row["source_key"], row["status"], row["lang"]
-    ))
+    ))[:max_words]
 
 
 @dataclass
@@ -228,7 +230,7 @@ class AramaicLanguageAudit:
                     "record": ir.identity.inscription_id,
                     "sign_key": sign.key,
                     "glyph": sign.glyph,
-                    "words": _source_word_details(ir, sign.key),
+                    "words": _source_word_details(ir, sign.key, max_words=self.max_examples),
                 })
                 self._drift_source_evidence.sort(
                     key=lambda row: (row["record"], row["sign_key"])
