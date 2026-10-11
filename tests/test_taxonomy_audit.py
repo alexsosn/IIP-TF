@@ -51,7 +51,7 @@ def _source(
         'xmlns:xml="http://www.w3.org/XML/1998/namespace">'
         "<!-- <category xml:id=\"clay.terracotta\"><catDesc>NOT ACTIVE</catDesc></category> -->"
         f"{body}</classDecl>"
-    ).encode("utf-8")
+    ).encode()
 
 
 def test_parses_only_active_taxonomies_and_excludes_xml_comments() -> None:
