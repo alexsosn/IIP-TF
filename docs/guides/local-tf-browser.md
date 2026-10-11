@@ -87,8 +87,17 @@ print(app.api.T.text(masada, fmt="text-orig-refs-full"))
 ```
 
 The standard IIP-TF browser's editorial annotations (gap, supplied,
-unclear, glyph ref) remain available when this registered source-reference
-format is selected. Native `markup` nodes and their raw `kind=glyph` /
+unclear, glyph ref, abbreviation and expansion) remain available when this
+registered source-reference format is selected. **Multi-character editorial
+spans now have separate start and end markers**. For example
+`A⟦supplied reason=lost⟧BC⟦/supplied⟧D` identifies precisely which
+characters are supplied; `⟦unclear⟧…⟦/unclear⟧`,
+`⟦abbr⟧…⟦/abbr⟧` and `⟦ex⟧…⟦/ex⟧` work similarly.
+The labels are presentational and **not source letters**: copying/querying
+`api.T.text` never includes them. Source-tail whitespace remains outside
+the marked span. Zero-width `gap` and source `glyph ref` events show only
+a point note, not an invented closing delimiter. Source Hebrew/RTL glyph
+order is unchanged and editorial labels are direction-isolated. Native `markup` nodes and their raw `kind=glyph` /
 `ref` features are authoritative; labels are a convenience, not a
 replacement for source-critical data. Nonprimary references and glyphs
 without source identifiers remain limitations of [#58](https://github.com/alexsosn/IIP-TF/issues/58).
