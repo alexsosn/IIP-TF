@@ -20,9 +20,9 @@ from iip_tf.ir import InscriptionIR, IRSign, Layer, NodeType
 _LANGUAGE_UNKNOWN = "<untagged>"
 
 
-def _paragraph_hebrew(sign: IRSign) -> bool:
+def _source_scoped_hebrew(sign: IRSign) -> bool:
     return (
-        sign.lang_origin == "p"
+        sign.lang_origin in {"p", "div"}
         and sign.lang_original is not None
         and sign.lang_original.strip() == "heb"
     )
@@ -87,6 +87,7 @@ class AramaicLanguageAudit:
     max_examples: int = 3
     records_scanned: int = 0
     corrected_signs: int = 0
+    _corrected_by_source_origin: Counter[str] = field(default_factory=Counter)
     remaining_signs: int = 0
     _reasons: Counter[str] = field(default_factory=Counter)
     _remaining_by_record: Counter[str] = field(default_factory=Counter)
@@ -116,7 +117,7 @@ class AramaicLanguageAudit:
                 # Independent check: an override must have been supported by
                 # uncontested source words and authentic paragraph provenance.
                 if (
-                    not _paragraph_hebrew(sign)
+                    not _source_scoped_hebrew(sign)
                     or encoded_script(sign.glyph) != "Hebr"
                     or not evidence
                     or any(status != "projected" or lang != "arc"
@@ -129,6 +130,9 @@ class AramaicLanguageAudit:
                     )
                     raise ValueError(f"{sign.key}: {qualifier}")
                 self.corrected_signs += 1
+                if sign.lang_origin is None:
+                    raise ValueError(f"{sign.key}: corrected sign lacks source origin")
+                self._corrected_by_source_origin[sign.lang_origin] += 1
             if sign.lang != "heb":
                 continue
             reason = _reason(sign, evidence)
@@ -161,6 +165,9 @@ class AramaicLanguageAudit:
         return {
             "records_scanned": self.records_scanned,
             "corrected_signs": self.corrected_signs,
+            "corrected_by_source_origin": dict(
+                sorted(self._corrected_by_source_origin.items())
+            ),
             "remaining_signs": self.remaining_signs,
             "reasons": dict(sorted(self._reasons.items())),
             "clean_word_languages_for_remaining": dict(
