@@ -10,8 +10,8 @@ import pytest
 from tf.fabric import Fabric  # type: ignore[import-untyped]
 
 from iip_tf.ir import IRNode, NodeType
-from iip_tf.language_resolution import LanguageResolutionError, resolve_sign_languages
 from iip_tf.language_audit import AramaicLanguageAudit
+from iip_tf.language_resolution import LanguageResolutionError, resolve_sign_languages
 from iip_tf.text_parser import parse_epidoc_file
 from iip_tf.tf_writer import write_tf_corpus
 
