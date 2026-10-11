@@ -224,6 +224,8 @@ def main() -> int:
     for record_id, kind, expected in (
         ("abil0001", "gap", "gap"),
         ("abil0001", "supplied", "supplied"),
+        ("abil0001", "unclear", "unclear"),
+        ("caes0260", "abbr", "abbr"),
         ("caes0260", "ex", "ex"),
         ("masa0286", "glyph", "phoen-gaml"),
     ):
@@ -263,6 +265,16 @@ def main() -> int:
         if expected not in " ".join(visible_note.parts):
             raise RuntimeError(
                 f"{record_id}: {kind} source evidence invisible in browser"
+            )
+        if kind in {"supplied", "unclear", "abbr", "ex"}:
+            closing_marker = f"⟦/{kind}⟧"
+            if closing_marker not in "".join(visible_note.parts):
+                raise RuntimeError(
+                    f"{record_id}: native {kind} editorial end boundary invisible"
+                )
+        elif kind in {"gap", "glyph"} and f"⟦/{kind}⟧" in "".join(visible_note.parts):
+            raise RuntimeError(
+                f"{record_id}: a zero-width {kind} point was falsely given an end boundary"
             )
     # Brown bshe0146: an authored transcription <g ref=cross/> shares
     # its slot with a transcription_segmented <g/>. Both native markup

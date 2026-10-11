@@ -1,0 +1,12 @@
+# Issue #76 — exact source editorial span boundaries in TF browser
+
+## Research (native TF 13.1 + pinned Brown)
+The current sign-only `TfApp.plainCustom(sign)` preserves normal text and adds the start badge before the **first** markup-covered sign. Native `api.E.oslots.s(markup)` already stores the complete ordered sign-slot set; `api.L.u(sign,otype="markup")` discovers all containing span nodes. The source `abil0001.xml` includes multi-letter Hebrew RTL `supplied` and `unclear`, a low-cert supplied span and zero-width `gap`. `caes0260` includes `abbr` and `ex`. Existing browse tests cover badges but **not end boundaries**, so they are ambiguous.
+
+## Research–plan–RED–implement–tests–independent review
+1. Create RED native EpiDoc→IR→TF→Flask `/passage` tests for multi-sign `supplied`, `unclear`, `abbr/ex`, equal-boundary nested spans, different-boundary nested spans, zero-width gap, RTL text and clean control. The same native text after stripping *only* UI labels must remain unchanged. Validate HTML escaping and no extra glyph/segmentation badges.
+2. Extend sign-only renderer: closing `⟦/kind⟧` badges immediately **after the last covered eligible sign**, never for technical zero-width `gap/glyph` point events. Start badges on the first eligible covered sign. Order same-start spans outer-first, same-end spans inner-first using native slot coverage. Do not suppress children, fabricate glyphs, or add TF semantic sidecars.
+3. Account for selection: normalized primary, opt-in source refs and source variant must not leak badges from signs they do not render; nonprimary layer is explicit. No implicit change to corpus `otext` formats or default `T.text`. Section boundaries need truthful markers; no invented end on a hidden or truncated reading.
+4. Reuse the already-loaded pinned 5,535-record corpus in `scripts/validate_pinned_app.py` to check actual `abil0001` and `caes0260` opening/closing labels on native browser `/passage`, RTL HTML, and untouched source-only text. Keep existing `bshe0146` segmented-glyph guard.
+5. Run Ruff, strict MyPy, all pytest, six authenticated Brown-source canaries and full pinned native TF double-build/reproducibility/browser report. Separate skeptical code/data audit per final exact PR head before merge.
+6. If cross-line or nested noncontiguous source annotations cannot be presented accurately in sign-level plain mode, explicitly document as limitation and leave #76 open; never silently label a different source span.
