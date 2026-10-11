@@ -198,7 +198,11 @@ def test_opt_in_source_reference_format_keeps_native_editorial_notes(
     annotated = api.T.nodeFromSection(("annotated",))
     assert annotated is not None
 
-    for kind, marker in (("supplied", "reason=lost"), ("gap", "extent=unknown"), ("unclear", "unclear")):
+    for kind, marker in (
+        ("supplied", "reason=lost"),
+        ("gap", "extent=unknown"),
+        ("unclear", "unclear"),
+    ):
         markup = next(
             node
             for node in api.L.d(annotated, otype="markup")
