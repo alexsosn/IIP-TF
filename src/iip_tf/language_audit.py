@@ -148,7 +148,7 @@ _EDITORIAL_CONTAINERS = frozenset({"choice", "apparatus"})
 
 
 def _uncovered_editorial_context(
-    ir: InscriptionIR, sign_key: str,
+    ir: InscriptionIR, sign_key: str, *, selected_index: int | None,
 ) -> tuple[str, str, bool, str]:
     """Trace an uncovered sign to a direct editorial branch and sibling token.
 
@@ -188,7 +188,9 @@ def _uncovered_editorial_context(
         words = sorted(
             (
                 word for word in ir.nodes_of_type(NodeType.WORD)
-                if word.feature("segmentation_status") == "projected"
+                if selected_index is not None
+                and word.feature("candidate_index") == selected_index
+                and word.feature("segmentation_status") == "projected"
                 and any(
                     set(word.sign_keys) <= set(sibling.sign_keys)
                     and bool(word.sign_keys)
@@ -296,7 +298,9 @@ class AramaicLanguageAudit:
                 del evidence_samples[self.max_examples:]
                 if category == "selected_words_do_not_cover_sign":
                     branch, container, sibling_word, sibling_id = (
-                        _uncovered_editorial_context(ir, sign.key)
+                        _uncovered_editorial_context(
+                            ir, sign.key, selected_index=index
+                        )
                     )
                     self._uncovered_reading_roles[sign.reading_role] += 1
                     self._uncovered_markup_branches[branch] += 1
