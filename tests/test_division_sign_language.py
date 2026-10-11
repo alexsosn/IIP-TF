@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
 import pytest
 from tf.fabric import Fabric  # type: ignore[import-untyped]
 
-from iip_tf.ir import NodeType
+from iip_tf.ir import IRNode, NodeType
+from iip_tf.language_resolution import LanguageResolutionError, resolve_sign_languages
 from iip_tf.language_audit import AramaicLanguageAudit
 from iip_tf.text_parser import parse_epidoc_file
 from iip_tf.tf_writer import write_tf_corpus
@@ -142,3 +144,38 @@ def test_div_technical_and_non_transcription_layer_never_mapped(
     ), source_revision="fixture")
     assert all(s.lang == "heb" for s in ir.signs if s.synthetic_kind)
     assert len([s for s in _visible(ir) if s.lang == "arc"]) == 2
+
+
+def test_div_drift_overlap_abstains_and_contradictory_words_fail_closed(
+    tmp_path: Path,
+) -> None:
+    parsed = parse_epidoc_file(_epidoc(
+        tmp_path, "div-conflict", transcription="אב",
+        segmented='<w xml:id="divc-w1" xml:lang="arc">אב</w>',
+    ), source_revision="fixture")
+    (word,) = parsed.nodes_of_type(NodeType.WORD)
+    baseline = replace(parsed, signs=tuple(
+        replace(sign, lang="heb", lang_source="inherited")
+        for sign in parsed.signs
+    ))
+    drift = replace(word, features=tuple(
+        (k, "projected_with_source_drift" if k == "segmentation_status" else v)
+        for k, v in word.features
+    ))
+    ambiguous = replace(baseline, nodes=tuple(
+        drift if node.key == word.key else node for node in baseline.nodes
+    ))
+    assert {sign.lang for sign in _visible(resolve_sign_languages(ambiguous))} == {"heb"}
+
+    contradictory = IRNode(
+        key="div-conflict#other",
+        node_type=NodeType.WORD,
+        sign_keys=word.sign_keys,
+        features=(
+            ("lang", "heb"),
+            ("lang_source", "transcription_segmented"),
+            ("segmentation_status", "projected"),
+        ),
+    )
+    with pytest.raises(LanguageResolutionError, match="conflicting"):
+        resolve_sign_languages(replace(baseline, nodes=baseline.nodes + (contradictory,)))
