@@ -102,7 +102,7 @@ def test_residual_reason_partition_has_no_double_counting() -> None:
         "selected_non_arc_word": 1,
         "selected_word_without_lang": 1,
         "drift_or_uncertain_word_overlap": 1,
-        "non_paragraph_source": 1,
+        "unsupported_source_scope": 1,
         "source_label_not_heb": 1,
         "non_hebrew_encoded_letter": 1,
         "nonletter": 1,
