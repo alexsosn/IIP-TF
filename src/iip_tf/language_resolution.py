@@ -47,7 +47,11 @@ def resolve_sign_languages(ir: InscriptionIR) -> InscriptionIR:
     observed: dict[str, set[str]] = {}
     unreliable: set[str] = set()
     for word in ir.nodes_of_type(NodeType.WORD):
+        # Every selected WORD projected by the segmentation pass is evidence.
+        # A source w without xml:lang has no lang_source: it must BLOCK an
+        # overlapping clean arc token, not disappear from consideration.
         if word.feature("lang_source") != "transcription_segmented":
+            unreliable.update(key for key in word.sign_keys if key in candidates)
             continue
         if word.feature("segmentation_status") != "projected":
             # A drifted or unclassified word overlapping otherwise reliable
