@@ -45,11 +45,14 @@ def resolve_sign_languages(ir: InscriptionIR) -> InscriptionIR:
         return ir
 
     observed: dict[str, set[str]] = {}
+    unreliable: set[str] = set()
     for word in ir.nodes_of_type(NodeType.WORD):
-        if (
-            word.feature("lang_source") != "transcription_segmented"
-            or word.feature("segmentation_status") != "projected"
-        ):
+        if word.feature("lang_source") != "transcription_segmented":
+            continue
+        if word.feature("segmentation_status") != "projected":
+            # A drifted or unclassified word overlapping otherwise reliable
+            # evidence makes this span unsafe; abstain, not reassign.
+            unreliable.update(key for key in word.sign_keys if key in candidates)
             continue
         lang = word.feature("lang")
         for key in word.sign_keys:
@@ -69,7 +72,7 @@ def resolve_sign_languages(ir: InscriptionIR) -> InscriptionIR:
                 f"{ir.identity.inscription_id}: conflicting selected word "
                 f"languages for {sign.key}: {sorted(langs)!r}"
             )
-        if langs == {"arc"}:
+        if langs == {"arc"} and sign.key not in unreliable:
             # lang_original and lang_origin continue to describe the original
             # source paragraph, not the selected word that won precedence.
             new_signs.append(
