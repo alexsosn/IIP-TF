@@ -278,6 +278,12 @@ def _otext() -> dict[str, str]:
         "sectionFeatures": "inscription_id,section_part,line_n",
         "fmt:text-orig-full": "{primary_glyph}{primary_after}",
         "fmt:text-orig-refs-full": "{primary_glyph}{primary_ref_token}{primary_after}",
+        "fmt:text-section-normalized-full": (
+            "{transcription_glyph}{transcription_after}"
+            "{diplomatic_glyph}{diplomatic_after}"
+            "{translation_glyph}{translation_after}"
+            "{commentary_glyph}{commentary_after}"
+        ),
         "fmt:text-layer-full": "{glyph}{after}",
         "fmt:text-source-full": "{source_glyph}{source_after}",
         "fmt:text-transcription-full": "{transcription_glyph}{transcription_after}",
