@@ -90,12 +90,20 @@ def test_absent_word_and_explicit_non_arc_source_words_abstain(
         ("hebrew-word", '<w xml:id="he-w" xml:lang="heb">אב</w>', "אב"),
         ("untagged", '<w xml:id="un-w">אב</w>', "אב"),
     )
+    reasons = {
+        "unsegmented": "no_selected_word",
+        "hebrew-word": "selected_non_arc_word",
+        "untagged": "selected_word_without_lang",
+    }
     for name, segmented, transcription in cases:
         ir = parse_epidoc_file(_epidoc(
             tmp_path, name, transcription=transcription, segmented=segmented,
         ), source_revision="fixture")
         assert {(s.lang, s.lang_original, s.lang_origin)
                 for s in _visible(ir)} == {("heb", "heb ", "div")}
+        coverage = AramaicLanguageAudit()
+        coverage.ingest(ir)
+        assert coverage.report()["reasons"] == {reasons[name]: 2}
 
 
 @pytest.mark.parametrize("main_lang", ["heb", "grc", "eng"])
