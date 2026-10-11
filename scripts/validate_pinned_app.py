@@ -9,6 +9,7 @@ import argparse
 from html import escape
 from html.parser import HTMLParser
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 from tf.advanced.app import findApp  # type: ignore[import-untyped]
@@ -138,6 +139,42 @@ def main() -> int:
         raise RuntimeError("paleo-Hebrew inscription glyph reference was lost")
 
     validate_native_reference_tokens(api)
+
+    # The opt-in ref view uses precisely the primary normalized sign
+    # selection and must not suppress source-critical notes in the TF app.
+    # Exercise the production custom renderer against REAL Brown source
+    # slots, before creating the Flask browser, with no second TF load.
+    custom = getattr(app, "customMethods", None)
+    plain_custom = getattr(custom, "plainCustom", {}) if custom is not None else {}
+    render_sign = plain_custom.get("sign")
+    if render_sign is None:
+        raise RuntimeError("IIP native browser sign renderer unavailable")
+    options = SimpleNamespace(fmt="text-orig-refs-full")
+    glyph_nodes = [
+        node for node in api.L.d(masada, otype="markup")
+        if api.F.kind.v(node) == "glyph" and api.F.ref.v(node) == "phoen-gaml"
+    ]
+    if len(glyph_nodes) != 1:
+        raise RuntimeError("pinned Masada primary source ref not unique")
+    glyph_slot = api.E.oslots.s(glyph_nodes[0])[0]
+    glyph_html = render_sign(options, (glyph_slot,), "sign", False)
+    if "glyph ref=phoen-gaml" not in glyph_html or "((phoen-gaml))" not in glyph_html:
+        raise RuntimeError("opt-in native glyph label/reading not rendered")
+
+    abil = api.T.nodeFromSection(("abil0001",))
+    if abil is None:
+        raise RuntimeError("pinned source critical inscription missing")
+    supplied = [
+        node for node in api.L.d(abil, otype="markup")
+        if api.F.kind.v(node) == "supplied"
+        and api.F.layer.v(node) == api.F.primary_layer.v(abil)
+    ]
+    if not supplied:
+        raise RuntimeError("pinned primary supplied text evidence missing")
+    supplied_slot = api.E.oslots.s(supplied[0])[0]
+    supplied_html = render_sign(options, (supplied_slot,), "sign", False)
+    if "⟦supplied" not in supplied_html:
+        raise RuntimeError("opt-in source-reference view suppressed supplied note")
 
     # Exercise real native browser route creation and returned HTML against the
     # full corpus, without spawning another process or loading the corpus twice.
