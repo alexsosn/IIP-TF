@@ -425,6 +425,16 @@
         "transcription_segmented"
       ]
     },
+    "name_lang": {
+      "domain": "entity",
+      "value_type": "str",
+      "semantics": "ISO 639-3 or other/unknown classification of a source-explicit translation persName origin. Never the spoken language of the English translation characters. Bounded issue #55-A."
+    },
+    "name_lang_original": {
+      "domain": "entity",
+      "value_type": "str",
+      "semantics": "Exact source parser-visible translation persName/@xml:lang including leading/trailing whitespace; code mapping is visible separately in name_lang."
+    },
     "lang_original": {
       "domain": "sign|word|markup|entity|edition|textpart|paragraph",
       "value_type": "str",
