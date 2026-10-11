@@ -67,12 +67,28 @@ def read_person_register(
         root = ET.parse(path).getroot()
     except (OSError, ET.ParseError) as error:
         raise PersonRegisterError(f"cannot parse person register {path.name}") from error
-    if _local(root.tag) != "listPerson":
-        raise PersonRegisterError("person register root must be listPerson")
+    if root.tag != "listPerson" or root.attrib:
+        raise PersonRegisterError("person register root must be unnamespaced listPerson")
     entries: dict[str, PersonRecord] = {}
     for element in root:
-        if _local(element.tag) != "person":
+        if element.tag != "person":
             raise PersonRegisterError(f"unexpected register element {_local(element.tag)}")
+        if set(element.attrib) - {XML_ID, "sex"}:
+            raise PersonRegisterError("unsupported person register attributes")
+        for child in element:
+            if child.tag not in {"persName", "faith"}:
+                raise PersonRegisterError(
+                    f"{element.attrib.get(XML_ID)}: unknown person child {_local(child.tag)}"
+                )
+            allowed = {"type"} if child.tag == "persName" else set()
+            if set(child.attrib) - allowed:
+                raise PersonRegisterError("unsupported register name/faith attributes")
+            if child.tag == "persName" and child.attrib.get("type") not in {
+                None, "regularized"
+            }:
+                raise PersonRegisterError("unsupported source person-name variant type")
+            if len(child):
+                raise PersonRegisterError("unsupported nested person-register markup")
         pid = element.attrib.get(XML_ID)
         if not pid or pid in entries or "#" in pid or "/" in pid:
             raise PersonRegisterError(f"missing/duplicate/unsafe person xml:id: {pid!r}")
