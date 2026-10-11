@@ -6,12 +6,11 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
-from tf.fabric import Fabric  # type: ignore[import-untyped]
-
 from iip_tf.encoded_script import encoded_script
 from iip_tf.ir import IRNode, NodeType
 from iip_tf.text_parser import parse_epidoc_file
 from iip_tf.tf_writer import write_tf_corpus
+from tf.fabric import Fabric  # type: ignore[import-untyped]
 
 
 def _source(
