@@ -34,7 +34,7 @@ def _is_selected_sign(app: Any, node: int, fmt: str | None) -> bool:
         "text-translation-full": "translation",
         "text-commentary-full": "commentary",
     }
-    if fmt in {"text-orig-full", "text-source-full"}:
+    if fmt in {"text-orig-full", "text-orig-refs-full", "text-source-full"}:
         owners = tuple(api.L.u(node, otype="inscription"))
         if len(owners) != 1 or layer != api.F.primary_layer.v(owners[0]):
             return False
