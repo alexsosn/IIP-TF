@@ -143,7 +143,7 @@ def _source_word_details(
 
 
 
-_EDITORIAL_BRANCHES = frozenset({"orig", "reg", "sic", "corr", "lem", "rdg"})
+_EDITORIAL_BRANCHES = frozenset({"orig", "reg", "sic", "corr", "lemma", "reading"})
 _EDITORIAL_CONTAINERS = frozenset({"choice", "apparatus"})
 
 
