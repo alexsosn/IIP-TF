@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import argparse
+from collections.abc import Iterator
 from collections.abc import Sequence
 from pathlib import Path
 
 from iip_tf import __version__
+from iip_tf.ir import InscriptionIR
 from iip_tf.person_register import attach_person_register, read_person_register
 from iip_tf.release_gate import inventory_source_files, require_empty_output_directory
 from iip_tf.text_parser import parse_epidoc_file
@@ -45,7 +47,7 @@ def _convert(args: argparse.Namespace) -> int:
     if args.persons_register is not None and register is None:
         raise ValueError(f"explicit persons register does not exist: {register_path}")
     require_empty_output_directory(output)
-    def records():
+    def records() -> Iterator[InscriptionIR]:
         for path in paths:
             ir = parse_epidoc_file(path, source_revision=source_revision)
             yield attach_person_register(ir, register)[0] if register is not None else ir
