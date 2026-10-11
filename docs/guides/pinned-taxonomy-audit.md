@@ -52,6 +52,27 @@ whitespace-separated tokens is `multiple_tokens`; all other values
 are `unresolved`. The output retains the original raw strings even
 when a value resolves.
 
+For source attributes containing multiple space-separated references
+(e.g. `#door #lintel` or `#jewish #other_religion`), `values[].status`
+remains `multiple_tokens` for backwards-compatible raw-value reporting.
+Each `values[].tokens` entry now separately preserves the original token
+spelling, its **source order index**, exact category ID if active in the
+correct taxonomy, and its `resolved`, `wrong_taxonomy` or
+`unresolved` status. Duplicate tokens are retained, never deduplicated.
+Each field and the overall report also supply `multivalue_resolution`
+with **fully_resolved**, **partially_resolved** and **no_resolved**
+counts of *source attribute occurrences*.
+
+The authenticated 5,535-record Brown snapshot contains **530**
+multi-valued classification occurrences: **402 fully resolved, 126 partly
+resolved, and 2 with no active target**. The pinned audit gate requires
+this exact partition for the current source revision. A source revision
+change must be explicitly researched, not silently accepted.
+Most multi-token attributes are legitimate repeatable taxonomy references,
+so a single normalized scalar per inscription would discard real data.
+A future native model needs repeatable relations rather than guessing or
+flattening categories.
+
 **This diagnostic audit does not normalize or replace the existing native
 source features.** In particular it does not guess capitalization, remove
 arbitrary spaces, match category descriptions to IDs, treat commented-out
