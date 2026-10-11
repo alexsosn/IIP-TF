@@ -187,9 +187,22 @@ def validate_real_canaries(files: tuple[Path, ...], output_dir: Path) -> None:
         for sign in hebrew_letters
     ):
         raise RuntimeError("chor0001: encoded Hebrew script evidence lost")
-    # Crucially, this *does not* assert Hebrew linguistic identity.
-    if not any(api.F.lang.v(sign) == "heb" for sign in hebrew_letters):
+    # The original source p@xml:lang=heb still belongs in lang_original,
+    # while selected native Aramaic words now correct effective sign language.
+    original = [
+        sign for sign in hebrew_letters
+        if api.F.lang_original.v(sign) == "heb"
+        and api.F.lang_origin.v(sign) == "p"
+    ]
+    if len(original) < 10:
         raise RuntimeError("chor0001: original EpiDoc lang provenance changed")
+    corrected = [
+        sign for sign in original
+        if api.F.lang.v(sign) == "arc"
+        and api.F.lang_source.v(sign) == "transcription_segmented"
+    ]
+    if len(corrected) < 10:
+        raise RuntimeError("chor0001: projected word language not applied to source letters")
     caes = api.T.nodeFromSection(("caes0260",))
     if caes is None:
         raise RuntimeError("caes0260: missing real Greek inscription")
