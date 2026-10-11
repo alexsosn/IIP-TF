@@ -74,6 +74,12 @@
       "template": "{primary_glyph}{primary_ref_token}{primary_after}",
       "description": "Explicit HTML-safe IIP convention ((ref)) on empty primary glyph-reference slots. Does not change source glyph or default reading; labels are not attested source letters."
     },
+    "text-section-normalized-full": {
+      "purpose": "browser_selected_textpart_normalized_reading",
+      "target": "sign",
+      "template": "{transcription_glyph}{transcription_after}{diplomatic_glyph}{diplomatic_after}{translation_glyph}{translation_after}{commentary_glyph}{commentary_after}",
+      "description": "Opt-in normalized reading of each sign's own layer; readable secondary textpart/line without exposing source and normalized branches. An entire inscription combines multiple editions, translations and commentary; not one attested reading. Core text-orig-full stays the default."
+    },
     "text-layer-full": {
       "purpose": "current_layer",
       "target": "sign",
