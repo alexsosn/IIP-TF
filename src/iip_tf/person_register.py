@@ -112,6 +112,29 @@ def read_person_register(
     return MappingProxyType(entries)
 
 
+def unresolved_contributor_refs(
+    ir: InscriptionIR, register: Mapping[str, PersonRecord],
+) -> dict[str, int]:
+    """Count original provenance IDs without treating editors as name entities."""
+    missing: Counter[str] = Counter()
+    for node in ir.nodes:
+        if node.node_type == NodeType.REVISION:
+            value = node.feature("who")
+        elif node.node_type == NodeType.RESPONSIBILITY:
+            value = node.feature("agent_source_id")
+        else:
+            continue
+        if not isinstance(value, str):
+            continue
+        for ref in value.split():
+            if not ref.startswith("persons.xml#"):
+                continue
+            person_id = ref.partition("#")[2]
+            if not person_id or person_id not in register:
+                missing[ref] += 1
+    return dict(sorted(missing.items()))
+
+
 def attach_person_register(
     ir: InscriptionIR, register: Mapping[str, PersonRecord],
 ) -> tuple[InscriptionIR, PersonLinkAudit]:
