@@ -179,3 +179,28 @@ def test_div_drift_overlap_abstains_and_contradictory_words_fail_closed(
     )
     with pytest.raises(LanguageResolutionError, match="conflicting"):
         resolve_sign_languages(replace(baseline, nodes=baseline.nodes + (contradictory,)))
+
+
+def test_div_selected_untagged_overlap_blocks_clean_arc_precedence(
+    tmp_path: Path,
+) -> None:
+    parsed = parse_epidoc_file(_epidoc(
+        tmp_path, "div-untagged", transcription="אב",
+        segmented='<w xml:id="dv-w" xml:lang="arc">אב</w>',
+    ), source_revision="fixture")
+    (word,) = parsed.nodes_of_type(NodeType.WORD)
+    original = replace(parsed, signs=tuple(
+        replace(sign, lang="heb", lang_source="inherited")
+        for sign in parsed.signs
+    ))
+    untagged = IRNode(
+        key="div-untagged#other", node_type=NodeType.WORD,
+        sign_keys=word.sign_keys,
+        features=(("segmentation_status", "projected"),),
+    )
+    with_missing_language = replace(
+        original, nodes=original.nodes + (untagged,)
+    )
+    assert {s.lang for s in _visible(
+        resolve_sign_languages(with_missing_language)
+    )} == {"heb"}
