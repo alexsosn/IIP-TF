@@ -227,6 +227,55 @@ def main() -> int:
             raise RuntimeError(
                 f"{record_id}: {kind} source evidence invisible in browser"
             )
+    # Brown bshe0146: an authored transcription <g ref=cross/> shares
+    # its slot with a transcription_segmented <g/>. Both native markup
+    # nodes must survive, but only authored evidence gets a browser badge.
+    bshe = api.T.nodeFromSection(("bshe0146",))
+    if bshe is None:
+        raise RuntimeError("pinned bshe0146 source record missing")
+    authored_glyphs = [
+        m for m in api.L.d(bshe, otype="markup")
+        if api.F.kind.v(m) == "glyph"
+        and api.F.ref.v(m) == "cross"
+        and api.F.annotation_source.v(m) != "transcription_segmented"
+        and any(
+            api.F.synthetic_kind.v(slot) == "glyph_ref"
+            for slot in api.E.oslots.s(m)
+        )
+    ]
+    if len(authored_glyphs) != 1:
+        raise RuntimeError("bshe0146 authored reference not uniquely source-backed")
+    native_slots = api.E.oslots.s(authored_glyphs[0])
+    if len(native_slots) != 1:
+        raise RuntimeError("bshe0146 expected one source glyph-reference slot")
+    projected = [
+        m for m in api.L.u(native_slots[0], otype="markup")
+        if api.F.kind.v(m) == "glyph"
+        and api.F.annotation_source.v(m) == "transcription_segmented"
+    ]
+    if len(projected) != 1:
+        raise RuntimeError("bshe0146 projected segmented glyph disappeared")
+    bshe_line = api.L.u(native_slots[0], otype="line")
+    if len(bshe_line) != 1:
+        raise RuntimeError("bshe0146 reference has no unique line")
+    bshe_part = api.T.sectionFromNode(bshe_line[0])[1]
+    with webapp.test_client() as client:
+        displayed = client.post(
+            "/passage", data={"sec0": "bshe0146", "sec1": str(bshe_part)}
+        )
+    html_data = displayed.get_json()
+    if (
+        displayed.status_code != 200
+        or not isinstance(html_data, dict)
+        or not isinstance(html_data.get("table"), str)
+    ):
+        raise RuntimeError("bshe0146 source glyph browser passage failed")
+    native_text = VisibleText()
+    native_text.feed(html_data["table"])
+    content = "".join(native_text.parts)
+    if content.count("⟦glyph ref=cross⟧") != 1 or "⟦glyph⟧" in content:
+        raise RuntimeError("bshe0146 duplicate or missing source glyph badge")
+
     research_results = verify_pinned_examples(api)
     print(
         "Researcher examples verified: "

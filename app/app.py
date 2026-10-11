@@ -76,6 +76,16 @@ def _sign_annotations(app: Any, node: int) -> list[str]:
         kind = api.F.kind.v(markup)
         if kind not in _RENDERED_MARKUP:
             continue
+        # Segmented glyph annotations legitimately co-anchor to an authored
+        # source glyph (e.g. Brown bshe0146). Keep them in native TF, but
+        # never present them as an additional source glyph label.
+        annotation_source = getattr(api.F, "annotation_source", None)
+        if (
+            kind == "glyph"
+            and annotation_source is not None
+            and annotation_source.v(markup) == "transcription_segmented"
+        ):
+            continue
         if kind in {"gap", "glyph"}:
             if kind != point_kind:
                 continue
