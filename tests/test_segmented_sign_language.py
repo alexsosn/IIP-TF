@@ -1,7 +1,5 @@
 """#54 RED: selected Aramaic word language must outrank paragraph's script code."""
 
-# ruff: noqa: I001  # During RED missing resolver module changes import classification
-
 from __future__ import annotations
 
 from dataclasses import replace
@@ -185,3 +183,30 @@ def test_drift_word_is_not_authoritative_and_conflicting_overlaps_fail_closed(
     ) + (other,))
     with pytest.raises(LanguageResolutionError, match="conflict"):
         resolve_sign_languages(overlapped)
+
+    # Adversarial: a second drifted token makes the apparent clean word
+    # insufficient to correct the same source slot.
+    drift_other = replace(
+        other,
+        features=tuple(
+            (key, "projected_with_source_drift" if key == "segmentation_status" else value)
+            for key, value in other.features
+        ),
+    )
+    ambiguous = replace(overlapped, nodes=tuple(
+        drift_other if n.key == other.key else n for n in overlapped.nodes
+    ))
+    assert {sign.lang for sign in _letters(resolve_sign_languages(ambiguous))} == {"heb"}
+
+    equal_language_overlap = replace(
+        overlapped, nodes=tuple(
+            replace(other, features=tuple(
+                (key, "arc" if key == "lang" else value)
+                for key, value in other.features
+            )) if n.key == other.key else n
+            for n in overlapped.nodes
+        )
+    )
+    assert {sign.lang for sign in _letters(
+        resolve_sign_languages(equal_language_overlap)
+    )} == {"arc"}
