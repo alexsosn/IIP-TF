@@ -19,6 +19,7 @@ from iip_tf.person_register import (
     PINNED_PERSONS_BLOB,
     attach_person_register,
     read_person_register,
+    unresolved_contributor_refs,
 )
 from iip_tf.release_gate import (
     PINNED_EPIDOC_SOURCE_TREE,
@@ -409,6 +410,7 @@ def main() -> int:
         person_resolved_entities = 0
         person_distinct_people = 0
         person_unresolved: Counter[str] = Counter()
+        person_unresolved_contributors: Counter[str] = Counter()
         irs = []
         node_counts: Counter[str] = Counter()
         edge_counts: Counter[str] = Counter()
@@ -430,6 +432,9 @@ def main() -> int:
                 person_resolved_entities += int(person_audit["resolved_entities"])
                 person_distinct_people += int(person_audit["distinct_people"])
                 person_unresolved.update(person_audit["unresolved_targets"])
+                person_unresolved_contributors.update(
+                    unresolved_contributor_refs(ir, register)
+                )
             irs.append(ir)
             parsed_files.append(path.name)
             if len(selected) >= 1000:
@@ -709,6 +714,11 @@ def main() -> int:
                 or person_distinct_people != node_counts["person"]
             ):
                 raise SystemExit("pinned native IIP personal-name resolution coverage changed")
+            if (
+                len(person_unresolved_contributors) < 5
+                or "persons.xml#Elli_Mylonas" not in person_unresolved_contributors
+            ):
+                raise SystemExit("authenticated contributor provenance inventory lost")
             for record_id, person_id, expected_sex, expected_faith in (
                 ("beth0001", "beth0001p01", "1", "Jewish"),
                 ("beth0002", "beth0002p01", "2", "Jewish"),
@@ -751,6 +761,9 @@ def main() -> int:
                 "resolved_entities": person_resolved_entities,
                 "distinct_people": person_distinct_people,
                 "unresolved_targets": dict(sorted(person_unresolved.items())),
+                "unresolved_contributor_refs": dict(
+                    sorted(person_unresolved_contributors.items())
+                ),
                 "canaries": person_canaries,
             },
             "corrected_heb_script_transcription_signs": corrected_heb_script_signs,
