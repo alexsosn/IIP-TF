@@ -183,6 +183,23 @@ Unicode alone, normalize mixed BCP 47/ISO codes (#52), or disentangle
 personal name-origin annotations (#55). #54/#57 remain OPEN pending
 corpus-wide pattern audit and decisions about unsegmented source text.
 
+## Amendment #90 — selected division-level Aramaic language precedence
+
+Real IIP Aramaic inscriptions may declare `xml:lang="heb"` on the
+`div type="edition" subtype="transcription"` container rather than
+on the paragraph. If an authentic, **selected, drift-free** segmented source
+word explicitly gives `xml:lang="arc"` and projects onto a Hebrew-Unicode
+**alphabetic** sign, the effective sign `lang` is `arc` with
+`lang_source=transcription_segmented`, while source provenance remains
+`lang_original=heb,lang_origin=div`. An identical narrow rule
+previously existed only for `lang_origin=p` (#87). Unsegmented
+and doubtful overlap, explicit embedded `foreign`, other record languages,
+non-Hebrew-encoded glyphs, technical slots, and other layers abstain.
+No Unicode-script-based language inference or changes to slots/edges/text
+are introduced. The read-only Aramaic audit (#88) checks both source scopes
+separately and preserves the 45,162-sign initial population reconciliation.
+#54 remains open for unsupported residuals and other layers.
+
 ## Text-Fabric feature value types
 
 Every emitted TF feature has exactly one `@valueType`. Raw source attributes are preserved as
