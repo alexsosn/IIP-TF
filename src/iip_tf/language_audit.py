@@ -34,10 +34,11 @@ def _word_index(
     """Selected, already projected word evidence on original canonical keys."""
     index: dict[str, list[tuple[str, str]]] = defaultdict(list)
     for node in ir.nodes:
-        if (
-            node.node_type != NodeType.WORD
-            or node.feature("lang_source") != "transcription_segmented"
-        ):
+        # Projected WORD nodes belong to the selected segmentation
+        # candidate even when w/@xml:lang is ABSENT. In that case
+        # lang_source is absent too; dropping the node would incorrectly
+        # classify evidence as "no_selected_word".
+        if node.node_type != NodeType.WORD:
             continue
         status = node.feature("segmentation_status")
         value = node.feature("lang")
