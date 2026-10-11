@@ -146,6 +146,35 @@ def validate_prose_languages(api: Any) -> dict[str, int]:
     return inferred
 
 
+
+def validate_source_whitespace_ownership(api: Any) -> int:
+    """Count and audit true source-inside normalized spaces on real markup."""
+    feature = getattr(api.F, "source_trailing_space_inside", None)
+    if feature is None:
+        print("Pinned source-inside editorial spaces: 0 (feature absent)")
+        return 0
+    nodes = tuple(feature.s("yes"))
+    per_kind: dict[str, int] = {}
+    examples: list[str] = []
+    for node in nodes:
+        if api.F.otype.v(node) != "markup":
+            raise RuntimeError("source whitespace ownership attached to a non-markup node")
+        slots = api.E.oslots.s(node)
+        if not slots or api.F.after.v(slots[-1]) != " ":
+            raise RuntimeError("source-owned closing space lacks its native sign after")
+        kind = api.F.kind.v(node)
+        per_kind[kind] = per_kind.get(kind, 0) + 1
+        if len(examples) < 5:
+            owner = api.L.u(node, otype="inscription")
+            if owner:
+                examples.append(str(api.F.inscription_id.v(owner[0])))
+    print(
+        f"Pinned source-inside editorial spaces: {len(nodes)} markup nodes; "
+        f"kinds={sorted(per_kind.items())}; examples={examples}"
+    )
+    return len(nodes)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("tf_dir", type=Path)
@@ -196,6 +225,7 @@ def main() -> int:
 
     validate_native_reference_tokens(api)
     validate_prose_languages(api)
+    validate_source_whitespace_ownership(api)
 
     # The opt-in ref view uses precisely the primary normalized sign
     # selection and must not suppress source-critical notes in the TF app.
