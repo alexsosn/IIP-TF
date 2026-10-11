@@ -265,7 +265,6 @@ def _validate_language_source_provenance(api: Any) -> dict[str, int]:
     }
 
 
-
 _NAME_LANG_CODES = {
     "x-Nabatean": "arc",
     "x-Palmyran": "arc",
@@ -343,6 +342,7 @@ def _validate_native_name_origins(api: Any) -> dict[str, int]:
             if not letters or any(api.F.lang.v(slot) != "eng" for slot in letters):
                 raise SystemExit("caes0044: English translated name mislabeled Egyptian")
     return verified
+
 
 def main() -> int:
     parser = argparse.ArgumentParser()
