@@ -173,6 +173,33 @@ def validate_real_canaries(files: tuple[Path, ...], output_dir: Path) -> None:
     assert chor is not None
     if not api.T.text(chor, fmt="text-orig-full").strip():
         raise RuntimeError("chor0001: ordinary primary reading missing")
+
+    # Original Brown chor0001 has source paragraph xml:lang="heb" for
+    # an Aramaic inscription written with Hebrew Unicode characters.
+    hebrew_letters = [
+        sign for sign in api.L.d(chor, otype="sign")
+        if api.F.glyph.v(sign) and api.F.glyph.v(sign).isalpha()
+        and api.F.layer.v(sign) == "transcription"
+    ]
+    if not hebrew_letters or any(
+        api.F.script.v(sign) != "Hebr"
+        or api.F.script_source.v(sign) != "encoded_unicode"
+        for sign in hebrew_letters
+    ):
+        raise RuntimeError("chor0001: encoded Hebrew script evidence lost")
+    # Crucially, this *does not* assert Hebrew linguistic identity.
+    if not any(api.F.lang.v(sign) == "heb" for sign in hebrew_letters):
+        raise RuntimeError("chor0001: original EpiDoc lang provenance changed")
+    caes = api.T.nodeFromSection(("caes0260",))
+    if caes is None:
+        raise RuntimeError("caes0260: missing real Greek inscription")
+    greek_letters = [
+        sign for sign in api.L.d(caes, otype="sign")
+        if api.F.glyph.v(sign) and api.F.glyph.v(sign).isalpha()
+        and api.F.layer.v(sign) == "transcription"
+    ]
+    if not greek_letters or any(api.F.script.v(sign) != "Grek" for sign in greek_letters):
+        raise RuntimeError("caes0260: encoded Greek script evidence lost")
     haif = api.T.nodeFromSection(("haif0003",))
     assert haif is not None
     diplomatic_parts = [

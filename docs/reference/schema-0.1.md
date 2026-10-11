@@ -117,10 +117,24 @@ separately queryable and require their own documented migrations.
 
 ## Slot features
 
-Core features include `glyph`, `after`, `layer`, `lang`, `lang_source`, `reading_role`,
+Core features include `glyph`, `after`, `layer`, `lang`, `lang_source`, `script`,
+`script_source`, `reading_role`,
 `synthetic_kind`, primary/source display pairs, the sparse derived
 `primary_ref_token` used by the opt-in source-reference view, and layer-specific
 glyph/after pairs.
+
+The additive native `script` on signs and single-script projected words is an
+**ISO 15924 classification of encoded Unicode letters**, not a claim about
+the ancient inscription's original script. Its separate
+`script_source=encoded_unicode` records this derivation. Unsupported
+letters, punctuation, combining marks, numbers, mixed-script words and
+technical gap/glyph-reference positions remain unclassified.
+For example: `chor0001` has encoded `Hebr` characters in Aramaic
+inscriptions, `beth0023` has Greek-script `arc-Grek` text, and
+`sina0114`'s Latin transliteration is `Latn` *as stored text*.
+The original `lang` values remain unchanged in this first #54 slice;
+they must not be interpreted as normalized language identity until the
+separate source-backed #54/#57 correction is completed.
 
 `synthetic_kind` covers anchor, line/column break, gap, space, hand shift, milestone,
 glyph reference, figure, and other audited point events.

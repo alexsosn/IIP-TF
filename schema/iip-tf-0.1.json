@@ -208,6 +208,8 @@
       "layer",
       "lang",
       "lang_source",
+      "script",
+      "script_source",
       "reading_role",
       "synthetic_kind",
       "primary_glyph",
@@ -295,6 +297,8 @@
       "token_kind",
       "token_id",
       "word_text",
+      "script",
+      "script_source",
       "segmentation_status",
       "selected",
       "resolution_status",
@@ -413,6 +417,18 @@
         "none",
         "source_override"
       ]
+    },
+    "script": {
+      "domain": "sign|word",
+      "value_type": "str",
+      "values": ["Latn", "Grek", "Hebr", "Arab", "Syrc", "Phnx", "Armn", "Geor", "Copt", "Cyrl", "Samr", "Ethi", "Ugar"],
+      "semantics": "ISO 15924 script of actual encoded Unicode letters; no inference of original inscription script, text language, or script for unknown, symbolic, technical or mixed words. Explicit partial #54 baseline."
+    },
+    "script_source": {
+      "domain": "sign|word",
+      "value_type": "str",
+      "values": ["encoded_unicode"],
+      "semantics": "Provenance of the conservative encoded-script classification, never source-declared original writing system."
     },
     "synthetic_kind": {
       "domain": "sign",
