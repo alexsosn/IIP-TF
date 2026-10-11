@@ -115,8 +115,8 @@ def test_orig_reg_sibling_token_is_reported_without_relabelling() -> None:
 
 
 def test_apparatus_lem_rdg_sibling_is_not_a_sign_language_override() -> None:
-    ir = _editorial_case("apparatus", parent="apparatus", covered="lem",
-                         uncovered="rdg", covered_role="both",
+    ir = _editorial_case("apparatus", parent="apparatus", covered="lemma",
+                         uncovered="reading", covered_role="both",
                          uncovered_role="both")
     audit = AramaicLanguageAudit()
     audit.ingest(ir)
