@@ -47,6 +47,8 @@ def native(tmp_path: Path) -> tuple[Any, Any]:
         "expansion": "A<expan><abbr>BC</abbr><ex>DE</ex></expan>F",
         "rtl": 'א<supplied reason="lost">טב</supplied>ג',
         "gap": 'A<gap reason="lost" extent="unknown" unit="character"/>B',
+        "spacing": 'A<supplied reason="lost">BC</supplied> DE',
+        "crossline": "A<supplied>BC<lb/>DE</supplied>F",
         "clean": "XYZ",
     }
     irs = []
@@ -131,3 +133,30 @@ def test_plain_record_remains_free_of_editorial_boundaries(native: tuple[Any, An
     _, text = _passage(native, "clean")
     assert "XYZ" in text
     assert "⟦" not in text
+
+
+def test_closing_scope_precedes_whitespace_from_source_tail(
+    native: tuple[Any, Any],
+) -> None:
+    api, _ = native
+    node = api.T.nodeFromSection(("spacing",))
+    assert node is not None
+    source = api.T.text(node, fmt="text-orig-full")
+    assert source == "ABC DE"
+    _, text = _passage(native, "spacing")
+    assert "A⟦supplied reason=lost⟧BC⟦/supplied⟧ DE" in text
+    assert source in _reading(text)
+
+
+def test_editorial_scope_across_line_break_closes_after_last_sign(
+    native: tuple[Any, Any],
+) -> None:
+    api, _ = native
+    owner = api.T.nodeFromSection(("crossline",))
+    assert owner is not None
+    assert len(api.L.d(owner, otype="line")) == 2
+    _, text = _passage(native, "crossline")
+    assert text.count("⟦supplied⟧") == 1
+    assert text.count("⟦/supplied⟧") == 1
+    assert text.index("⟦/supplied⟧") > text.index("DE")
+    assert text.index("⟦/supplied⟧") < text.index("F")
