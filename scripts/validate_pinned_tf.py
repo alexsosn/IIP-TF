@@ -520,6 +520,31 @@ def main() -> int:
                 or not 0 <= editorial["alternate_branch_has_projected_word"] <= 179
             ):
                 raise SystemExit("authenticated uncovered editorial partition disagrees")
+            by_textpart = aramaic_language_audit["selected_uncovered_textpart_evidence"]
+            if (
+                by_textpart["signs"] != 168
+                or sum(by_textpart["scopes"].values()) != 168
+                or editorial["markup_branches"].get("none") != 168
+                or editorial["markup_branches"].get("reg") != 11
+                or len(by_textpart["normalized_no_editorial_examples"]) != 1
+            ):
+                raise SystemExit("pinned non-editorial textpart evidence mismatch")
+            mare = next(
+                (ir for ir in irs if ir.identity.inscription_id == "mare0134"),
+                None,
+            )
+            if (
+                mare is None
+                or not any(
+                    part.feature("section_part") == "transcription:column:b"
+                    for part in mare.nodes_of_type(NodeType.TEXTPART)
+                )
+                or not any(
+                    part.feature("section_part") == "transcription:left-margin-lines"
+                    for part in mare.nodes_of_type(NodeType.TEXTPART)
+                )
+            ):
+                raise SystemExit("pinned mare0134 multi-textpart source canary changed")
             bshe = next(
                 (ir for ir in irs if ir.identity.inscription_id == "bshe0157"),
                 None,
