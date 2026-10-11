@@ -208,6 +208,37 @@ def _uncovered_editorial_context(
     return ("none", "none", False, "")
 
 
+
+def _uncovered_textpart_scope(
+    ir: InscriptionIR, sign_key: str, *, selected_index: int | None,
+) -> tuple[str, str, tuple[str, ...]]:
+    """Selected token evidence is strictly local to its original textpart."""
+    matches = [
+        part for part in ir.nodes_of_type(NodeType.TEXTPART)
+        if sign_key in part.sign_keys
+    ]
+    if len(matches) > 1:
+        raise ValueError(f"{sign_key}: ambiguous source textpart membership")
+    if not matches:
+        return ("no_textpart", "", ())
+    part = matches[0]
+    section = str(part.feature("section_part") or "")
+    if not section:
+        raise ValueError(f"{part.key}: missing section_part")
+    member_keys = set(part.sign_keys)
+    kinds = sorted({
+        str(word.feature("token_kind") or "<untagged>")
+        for word in ir.nodes_of_type(NodeType.WORD)
+        if selected_index is not None
+        and word.feature("candidate_index") == selected_index
+        and word.feature("segmentation_status") == "projected"
+        and bool(member_keys.intersection(word.sign_keys))
+    })
+    prefix = "explicit" if ":" in section else "implicit"
+    suffix = "with_selected_word" if kinds else "without_selected_word"
+    return (f"{prefix}_{suffix}", section, tuple(kinds))
+
+
 @dataclass
 class AramaicLanguageAudit:
     """Accumulate a deterministic source-backed corpus-level language inventory."""
@@ -230,6 +261,11 @@ class AramaicLanguageAudit:
     _uncovered_alternate_word_signs: int = 0
     _uncovered_records: Counter[str] = field(default_factory=Counter)
     _uncovered_editorial_examples: list[dict[str, Any]] = field(default_factory=list)
+    _uncovered_textpart_scopes: Counter[str] = field(default_factory=Counter)
+    _uncovered_textpart_kinds: Counter[str] = field(default_factory=Counter)
+    _uncovered_textpart_records: Counter[str] = field(default_factory=Counter)
+    _uncovered_textpart_examples: list[dict[str, str]] = field(default_factory=list)
+    _normalized_noneditorial_examples: list[dict[str, str]] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         if self.max_examples < 1:
@@ -320,6 +356,40 @@ class AramaicLanguageAudit:
                         key=lambda row: (row["record"], row["sign_key"])
                     )
                     del self._uncovered_editorial_examples[self.max_examples:]
+                    if branch == "none":
+                        scope, section, kinds = _uncovered_textpart_scope(
+                            ir, sign.key, selected_index=index
+                        )
+                        self._uncovered_textpart_scopes[scope] += 1
+                        self._uncovered_textpart_records[ir.identity.inscription_id] += 1
+                        self._uncovered_textpart_kinds.update(kinds)
+                        textpart_example = {
+                            "record": ir.identity.inscription_id,
+                            "sign_key": sign.key,
+                            "glyph": sign.glyph,
+                            "reading_role": sign.reading_role,
+                            "section_part": section,
+                            "scope": scope,
+                            "token_kinds": " ".join(kinds),
+                        }
+                        self._uncovered_textpart_examples.append(textpart_example)
+                        self._uncovered_textpart_examples.sort(
+                            key=lambda row: (row["record"], row["sign_key"])
+                        )
+                        del self._uncovered_textpart_examples[self.max_examples:]
+                        if sign.reading_role == "normalized":
+                            self._normalized_noneditorial_examples.append({
+                                "record": ir.identity.inscription_id,
+                                "sign_key": sign.key,
+                                "glyph": sign.glyph,
+                                "section_part": section,
+                                "lang_original": sign.lang_original or "",
+                                "lang_origin": sign.lang_origin or "",
+                            })
+                            self._normalized_noneditorial_examples.sort(
+                                key=lambda row: (row["record"], row["sign_key"])
+                            )
+                            del self._normalized_noneditorial_examples[self.max_examples:]
             elif reason == "drift_or_uncertain_word_overlap":
                 self._drift_source_evidence.append({
                     "record": ir.identity.inscription_id,
@@ -363,6 +433,10 @@ class AramaicLanguageAudit:
             != self._unaligned_reasons["selected_words_do_not_cover_sign"]
         ):
             raise ValueError("selected uncovered editorial evidence does not reconcile")
+        if sum(self._uncovered_textpart_scopes.values()) != (
+            self._uncovered_markup_branches["none"]
+        ):
+            raise ValueError("non-editorial source textpart counts do not reconcile")
         return {
             "records_scanned": self.records_scanned,
             "corrected_signs": self.corrected_signs,
@@ -399,6 +473,26 @@ class AramaicLanguageAudit:
                     {"record": name, "signs": count}
                     for name, count in sorted(
                         self._uncovered_records.items(),
+                        key=lambda item: (-item[1], item[0]),
+                    )[:10]
+                ],
+            },
+            "selected_uncovered_textpart_evidence": {
+                "signs": sum(self._uncovered_textpart_scopes.values()),
+                "scopes": dict(sorted(self._uncovered_textpart_scopes.items())),
+                "token_kinds_in_sign_textpart": dict(
+                    sorted(self._uncovered_textpart_kinds.items())
+                ),
+                "normalized_no_editorial_examples": [
+                    dict(item) for item in self._normalized_noneditorial_examples
+                ],
+                "examples": [
+                    dict(item) for item in self._uncovered_textpart_examples
+                ],
+                "most_affected_records": [
+                    {"record": name, "signs": count}
+                    for name, count in sorted(
+                        self._uncovered_textpart_records.items(),
                         key=lambda item: (-item[1], item[0]),
                     )[:10]
                 ],
