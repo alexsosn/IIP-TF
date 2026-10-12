@@ -233,8 +233,13 @@ def validate_native_normalization(
     unresolved: Counter[str] = Counter()
 
     for feature, taxonomy_id in FEATURE_TAXONOMIES.items():
-        originals = dict(api.Fs(feature + "_original").items())
-        actual = dict(api.Fs(feature).items())
+        # Text-Fabric omits completely empty feature files, and Fs(name)
+        # returns None for a missing file. Reconcile each side as an empty
+        # map without losing the explicit cross-map provenance checks below.
+        source_feature = api.Fs(feature + "_original")
+        canonical_feature = api.Fs(feature)
+        originals = dict(source_feature.items()) if source_feature is not None else {}
+        actual = dict(canonical_feature.items()) if canonical_feature is not None else {}
         if not (originals.keys() <= inscriptions and actual.keys() <= inscriptions):
             raise TaxonomyError(f"{feature}: classification outside inscription nodes")
         if not actual.keys() <= originals.keys():
