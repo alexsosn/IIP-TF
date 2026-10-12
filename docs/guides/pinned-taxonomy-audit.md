@@ -94,3 +94,44 @@ The *auditor itself* does not normalize or alter corpus data. Native full-Brown 
 **Full-build integrity gate:** `--raw-original` also reconciles *every* reloaded native inscription classification against its original source value and exact taxonomy category set. It refuses a fabricated or missing canonical value, an ID from another taxonomy, a partially-resolved list, a changed IDREF order/repetition, or a classification placed on the wrong node type. The JSON report includes `native_normalization_integrity` with normalized and unresolved source-field counts. This check uses TF node features independently of the converter IR and runs after native reload in the pinned workflow.
 
 For a small EpiDoc subset, Text-Fabric omits feature files with no values. The read-back integrity check interprets an entirely absent feature file as an empty map, but still rejects missing canonical values for source-resolvable classifications and rejects canonical values without a source `_original`. Sparse standalone outputs must use the documented conversion mode rather than the full pinned `--raw-original` audit.
+
+## Query source category labels directly (issue #100)
+
+With the authenticated Brown source checked out, a researcher can resolve one
+native inscription's `F.material`, `F.genre`, `F.religion`,
+`F.object_type`, or `F.condition` IDREF list using the existing source
+taxonomy parser. No online lookup or generated semantic sidecar is involved:
+
+```bash
+iip-tf taxonomy-lookup upstream-iip/include_taxonomies.xml material \
+  '#stone.other #clay.terracotta' \
+  --source-revision 0b7dc8358ccdfd0c9391f049da4839fbd91c26e5
+```
+
+The deterministic JSON identifies the source revision, exact Git blob,
+expected feature/taxonomy, original input, full/partial/no resolution and
+an **ordered token list**. Exact active `stone.other` is labeled
+`Other Stone`; commented-only `clay.terracotta` is **unknown** (no active
+category label). Wrong-taxonomy references and case mismatches receive
+distinct statuses, but are never corrected by fuzzy matching. Duplicate
+source tokens remain separate. A partially resolved list is **not** silently
+returned as a canonical classification, mirroring native TF normalization.
+
+The in-process API is `lookup_taxonomy_labels(registry, feature, raw)` from
+`iip_tf.taxonomy_lookup`, with `registry` provided by
+`iip_tf.taxonomy_audit.parse_taxonomies`. For example,
+`lookup_taxonomy_labels(registry, "genre", "#funerary.epitaph")` retrieves
+the exact source label without guessing an inscription's textual genre.
+
+A returned `dotted_prefix_candidate` means only that an **active ID with
+that textual prefix** also exists in the same taxonomy. Brown's active
+category XML elements are siblings, and the source supplies no authoritative
+parent edge: this value is **not** a TEI hierarchy, `is_a` assertion, or
+class-subsumption claim. Similarly, `unknown` deliberately does not imply
+that a term was formally retired; XML comments are not active definitions.
+
+For a different, unpinned local taxonomy file the command still works but
+reports `source_revision: null` plus its actual computed Git blob SHA.
+Omitting `--source-revision` does **not** attest that the supplied file is
+the Brown pin. Supplying the pinned revision requires an **exact matching
+blob** and fails closed otherwise. The tool never changes the corpus.

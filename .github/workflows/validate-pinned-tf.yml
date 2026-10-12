@@ -123,6 +123,52 @@ jobs:
           cache: pip
       - name: Install
         run: python -m pip install -e '.[dev]'
+      - name: Smoke exact pinned source taxonomy labels through researcher CLI
+        run: |
+          python - <<'PY'
+          import json
+          import subprocess
+          import sys
+          from pathlib import Path
+
+          from iip_tf.taxonomy_audit import PINNED_SOURCE_REVISION, PINNED_TAXONOMY_BLOB
+          from iip_tf.taxonomy_audit import parse_taxonomies
+
+          source = Path("upstream-iip/include_taxonomies.xml")
+          registry = parse_taxonomies(source.read_bytes(), expected_blob=PINNED_TAXONOMY_BLOB)
+          assert sum(len(x) for x in registry.taxonomies.values()) == 142
+          dotted = [
+              (taxonomy, category)
+              for taxonomy, categories in registry.taxonomies.items()
+              for category in categories
+              if "." in category
+          ]
+          assert len(dotted) == 39, len(dotted)
+          with_prefix = [
+              (taxonomy, category)
+              for taxonomy, category in dotted
+              if any(
+                  ".".join(category.split(".")[:i]) in registry.taxonomies[taxonomy]
+                  for i in range(1, len(category.split(".")))
+              )
+          ]
+          assert len(with_prefix) == 38, len(with_prefix)
+          assert set(dotted) - set(with_prefix) == {
+              ("IIP-preservation", "fragment.single")
+          }
+          output = subprocess.check_output([
+              sys.executable, "-m", "iip_tf.cli", "taxonomy-lookup",
+              str(source), "material", "#stone.other #clay.terracotta",
+              "--source-revision", PINNED_SOURCE_REVISION,
+          ], text=True)
+          result = json.loads(output)
+          assert result["taxonomy_git_blob"] == PINNED_TAXONOMY_BLOB
+          assert result["resolution"] == "partially_resolved"
+          assert result["tokens"][0]["label"] == "Other Stone"
+          assert result["tokens"][0]["dotted_prefix_candidate"] == "stone"
+          assert result["tokens"][1]["status"] == "unknown"
+          assert "label" not in result["tokens"][1]
+          PY
       - name: Build and reload complete native TF corpus
         run: |
           python scripts/validate_pinned_tf.py \
