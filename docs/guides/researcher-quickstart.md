@@ -162,10 +162,10 @@ for entity in api.F.otype.s("entity"):
         if api.F.sex.v(person) != "2":
             continue
         for inscription in api.L.u(entity, otype="inscription"):
-            if api.F.religion.v(inscription) == "jewish":
+            if "jewish" in (api.F.religion.v(inscription) or "").split():
                 print(api.F.inscription_id.v(inscription), api.F.person_name.v(person))
 ```
 
-This query finds source-register sex code `2` in inscriptions explicitly classified as `#jewish` by the Brown EpiDoc `msItem/@ana` source (e.g. pinned `beth0002`, Hannah). The register's personal `faith` is separate: do not conflate an individual's faith with an inscription's classification. Native `person` nodes are per-register-entry and per-inscription; identical names are not global identities. Missing `faith` or `sex` remains missing, and unregistered or contributor references do not produce a graph link. Outside the full IIP checkout, provide `iip-tf convert --persons-register /path/to/persons.xml ...` explicitly, or expect a corpus without those links. No external web lookup is needed to query the native nodes.
+This query finds source-register sex code `2` in inscriptions with the `jewish` taxonomy ID among their classifications (including fully-resolved multi-IDREF fields) from the Brown EpiDoc `msItem/@ana` source (e.g. pinned `beth0002`, Hannah). The register's personal `faith` is separate: do not conflate an individual's faith with an inscription's classification. Native `person` nodes are per-register-entry and per-inscription; identical names are not global identities. Missing `faith` or `sex` remains missing, and unregistered or contributor references do not produce a graph link. Outside the full IIP checkout, provide `iip-tf convert --persons-register /path/to/persons.xml ...` explicitly, or expect a corpus without those links. No external web lookup is needed to query the native nodes.
 
 **Classification provenance:** In the full Brown build, `F.religion` holds source-taxonomy ID `jewish`, while `F.religion_original` retains the exact EpiDoc `#jewish`. Standalone EpiDoc-only conversions without `include_taxonomies.xml` retain the old raw feature semantics and should not be treated as taxonomy-normalized.
