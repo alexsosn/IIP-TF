@@ -11,7 +11,7 @@ from collections import Counter
 from dataclasses import replace
 from typing import TypedDict
 
-from iip_tf.ir import IRNode, InscriptionIR, NodeType
+from iip_tf.ir import InscriptionIR, IRNode, NodeType
 from iip_tf.taxonomy_audit import FEATURE_TAXONOMIES, TaxonomyRegistry
 
 
