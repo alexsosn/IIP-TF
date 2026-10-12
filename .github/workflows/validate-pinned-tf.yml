@@ -23,6 +23,8 @@ on:
       - "src/iip_tf/source_repair.py"
       - "schema/iip-tf-0.1.json"
       - "scripts/validate_pinned_tf.py"
+      - "scripts/validate_pinned_context_fabric.py"
+      - "tests/test_full_cfm_parity.py"
       - "scripts/validate_pinned_canary.py"
       - "schema/pinned-canary-blobs.tsv"
       - ".github/workflows/validate-pinned-tf.yml"
@@ -49,6 +51,8 @@ on:
       - "src/iip_tf/source_repair.py"
       - "schema/iip-tf-0.1.json"
       - "scripts/validate_pinned_tf.py"
+      - "scripts/validate_pinned_context_fabric.py"
+      - "tests/test_full_cfm_parity.py"
       - "scripts/validate_pinned_canary.py"
       - "schema/pinned-canary-blobs.tsv"
       - ".github/workflows/validate-pinned-tf.yml"
@@ -93,7 +97,7 @@ jobs:
     # Evaluate failed prerequisites, but never keep a superseded PR run alive.
     if: ${{ always() && !cancelled() }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - name: Require green preflight
         env:
@@ -190,6 +194,23 @@ jobs:
         run: |
           test -s build/pinned-tf-reports/iip-corpus-report.json
           test -s build/pinned-tf-reports/iip-corpus-report.md
+      # Reuse the already converted, byte-verified pinned corpus. Do not
+      # download EpiDoc source or rebuild a third TF snapshot.
+      - name: Select Python 3.13 for complete Context-Fabric acceptance
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install reviewed and immutable Context-Fabric empty-feature fix
+        run: |
+          python -m pip install -e '.[dev]'
+          python -m pip install 'context-fabric @ git+https://github.com/alexsosn/context-fabric.git@031bc15903a1a91c500d1ac8c049c78e331e4f20#subdirectory=libs/core'
+      - name: Verify entire pinned graph through raw and compiled Context-Fabric
+        run: |
+          python scripts/validate_pinned_context_fabric.py \
+            build/pinned-tf \
+            build/pinned-tf-reports/iip-corpus-report.json \
+            build/pinned-tf-reports/context-fabric-parity.json
       - name: Upload reproducibility or failure reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -199,4 +220,5 @@ jobs:
             build/pinned-tf-reports/iip-corpus-report.json
             build/pinned-tf-reports/iip-corpus-report.md
             build/pinned-tf-reports/taxonomy-audit.json
+            build/pinned-tf-reports/context-fabric-parity.json
           if-no-files-found: warn
