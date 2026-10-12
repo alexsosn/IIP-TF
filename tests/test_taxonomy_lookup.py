@@ -25,7 +25,7 @@ def _source() -> bytes:
             ("clay", "Clay"),
         ),
         "IIP-genre": (("funerary", "Funerary"), ("funerary.epitaph", "Epitaph")),
-        "IIP-preservation": (("complete", "Complete"),),
+        "IIP-preservation": (("complete", "Complete"), ("fragment.single", "Single Fragment")),
         "IIP-writing": (("painted", "Painted"),),
         "IIP-religion": (("jewish", "Jewish"),),
     }
@@ -68,6 +68,20 @@ def test_resolves_ordered_multivalue_ref_labels_without_deduplication() -> None:
     ]
     assert "parent" not in str(result)
     assert "is_a" not in str(result)
+
+
+def test_dotted_id_without_active_prefix_does_not_forge_hierarchy() -> None:
+    # Authentic Brown IIP-preservation has fragment.single but no fragment.
+    registry = parse_taxonomies(_source())
+    result = lookup_taxonomy_labels(registry, "condition", "#fragment.single")
+    assert result["resolution"] == "fully_resolved"
+    assert result["tokens"] == [{
+        "index": 0,
+        "raw": "#fragment.single",
+        "status": "resolved",
+        "category_id": "fragment.single",
+        "label": "Single Fragment",
+    }]
 
 
 def test_unresolved_tokens_never_receive_a_label_or_partial_canonical() -> None:
