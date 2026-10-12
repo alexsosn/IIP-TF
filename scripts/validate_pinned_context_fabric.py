@@ -60,9 +60,9 @@ def fingerprint_rows(
         else:
             if edge_values:
                 raise ParityError("expected valued edge mapping, got target set")
-            targets = sorted(int(target) for target in item)
-            encoded = [node, targets]
-            links += len(targets)
+            target_ids = sorted(int(target) for target in item)
+            encoded = [node, target_ids]
+            links += len(target_ids)
         digest.update(json.dumps(encoded, ensure_ascii=False, separators=(",", ":")).encode())
         digest.update(b"\n")
         count += 1
@@ -146,7 +146,7 @@ def validate_pinned_cfm(
     corpus: Path, native_report: Path, destination: Path
 ) -> dict[str, Any]:
     """Load the *same already validated* IIP TF artifact in all three runtimes."""
-    from cfabric.core import Fabric as ContextFabric
+    from cfabric.core import Fabric as ContextFabric  # type: ignore[import-not-found]
     from tf.fabric import Fabric as NativeFabric  # type: ignore[import-untyped]
 
     if not native_report.is_file():
