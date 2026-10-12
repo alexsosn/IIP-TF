@@ -72,6 +72,7 @@ def test_multivalued_resolves_only_when_all_tokens_have_same_taxonomy(
         "#jewish pagan #jewish"
     )
     assert audit["normalized_fields"] == 2
+    assert "jewish" in result.node_feature(NodeType.INSCRIPTION, "religion").split()
 
     for raw in ("#jewish #unknown", "#jewish #stone", "Jewish", "clay"):
         original = parse_epidoc_file(_xml(tmp_path, religion=raw),
