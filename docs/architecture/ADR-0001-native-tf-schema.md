@@ -347,3 +347,9 @@ source XML, metadata edges or critical apparatus.
 This staged amendment intentionally leaves separate open issues for
 writing system vs language (#54), the origin of personal names (#55)
 and explicit normalization/`_original` mappings (#52/#57).
+
+## Amendment #63 — source-authenticated person register (bounded)
+
+The separate Brown `data-keep/persons.xml` register defines *individual source records*, not a globally reconciled prosopography. When present, conversion creates one native `person` node per **cited** register person within its own inscription, anchored on exactly the cited entity's existing sign slots. The directed `person_ref` edge is `entity → person`. It requires a literal `persName/@ref="persons.xml#ID"` matching a register `person/@xml:id` from the same inscription. An identical spelling across inscriptions does not merge people, and contributor `respStmt` IDs are not textual person references.
+
+Native `person_id`, `person_name`, optional `person_name_variants`, `sex`, `faith` retain register values without name inference, faith normalization or ISO 5218 code recoding. Absent sex/faith remain absent. Unknown targets remain the original entity `ref`, with unresolved counts only in **build diagnostics**, not fabricated nodes. Original `lang`, `name_lang` and glyph/text features remain entirely independent. The pinned validator authenticates the register Git blob in addition to the complete EpiDoc source tree and checks **both independent builds** with identical source register data. The CLI discovers a sibling `data-keep/persons.xml` when a complete Brown source checkout is supplied, or accepts explicit `--persons-register`; standalone EpiDoc-only conversions remain valid but unlinked.

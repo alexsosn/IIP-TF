@@ -15,6 +15,12 @@ from tf.fabric import Fabric  # type: ignore[import-untyped]
 
 from iip_tf.ir import NodeType
 from iip_tf.language_audit import AramaicLanguageAudit
+from iip_tf.person_register import (
+    PINNED_PERSONS_BLOB,
+    attach_person_register,
+    read_person_register,
+    unresolved_contributor_refs,
+)
 from iip_tf.release_gate import (
     PINNED_EPIDOC_SOURCE_TREE,
     compare_tf_feature_hashes,
@@ -389,6 +395,22 @@ def main() -> int:
     stage = "parse"
     failing_file: str | None = None
     try:
+        register_path = args.source_dir.parent / "data-keep" / "persons.xml"
+        if len(selected) >= 1000 and not register_path.is_file():
+            raise SystemExit("pinned Brown persons.xml source register is missing")
+        register = (
+            read_person_register(
+                register_path,
+                expected_git_sha1=PINNED_PERSONS_BLOB if len(selected) >= 1000 else None,
+            )
+            if register_path.is_file() else None
+        )
+        if len(selected) >= 1000 and register is not None and len(register) != 844:
+            raise SystemExit("authenticated IIP person register changed")
+        person_resolved_entities = 0
+        person_distinct_people = 0
+        person_unresolved: Counter[str] = Counter()
+        person_unresolved_contributors: Counter[str] = Counter()
         irs = []
         node_counts: Counter[str] = Counter()
         edge_counts: Counter[str] = Counter()
@@ -405,6 +427,14 @@ def main() -> int:
         for path in selected:
             failing_file = path.name
             ir = parse_epidoc_file(path, source_revision=args.revision)
+            if register is not None:
+                ir, person_audit = attach_person_register(ir, register)
+                person_resolved_entities += int(person_audit["resolved_entities"])
+                person_distinct_people += int(person_audit["distinct_people"])
+                person_unresolved.update(person_audit["unresolved_targets"])
+                person_unresolved_contributors.update(
+                    unresolved_contributor_refs(ir, register)
+                )
             irs.append(ir)
             parsed_files.append(path.name)
             if len(selected) >= 1000:
@@ -453,8 +483,8 @@ def main() -> int:
         expected = {
             "parsed": EXPECTED_PARSED,
             "signs": EXPECTED_SIGNS,
-            "nodes": EXPECTED_NODES,
-            "edges": EXPECTED_EDGES,
+            "nodes": EXPECTED_NODES + node_counts["person"],
+            "edges": EXPECTED_EDGES + edge_counts["person_ref"],
             "points": EXPECTED_POINTS,
             "empty_structural": EXPECTED_EMPTY_STRUCTURAL,
             "segmented_token_identities": EXPECTED_SEGMENTED_TOKEN_IDENTITIES,
@@ -675,12 +705,67 @@ def main() -> int:
         metadata_queries = _validate_native_metadata_queries(api)
         language_sources = _validate_language_source_provenance(api)
         name_origin_canaries = _validate_native_name_origins(api)
+        person_canaries: dict[str, str] = {}
+        if register is not None and len(selected) >= 1000:
+            if (
+                person_resolved_entities < 500
+                or person_distinct_people < 500
+                or person_resolved_entities != edge_counts["person_ref"]
+                or person_distinct_people != node_counts["person"]
+            ):
+                raise SystemExit("pinned native IIP personal-name resolution coverage changed")
+            if (
+                len(person_unresolved_contributors) < 5
+                or "persons.xml#Elli_Mylonas" not in person_unresolved_contributors
+            ):
+                raise SystemExit("authenticated contributor provenance inventory lost")
+            for record_id, person_id, expected_sex, expected_faith in (
+                ("beth0001", "beth0001p01", "1", "Jewish"),
+                ("beth0002", "beth0002p01", "2", "Jewish"),
+                ("beth0042", "beth0042p01", "1", "Jewish"),
+            ):
+                root = api.T.nodeFromSection((record_id,))
+                if root is None:
+                    raise SystemExit(f"pinned person canary absent: {record_id}")
+                persons = [
+                    node for node in api.L.d(root, otype="person")
+                    if api.F.person_id.v(node) == person_id
+                ]
+                if len(persons) != 1:
+                    raise SystemExit(f"{record_id}: canonical person resolution failed")
+                person = persons[0]
+                if (
+                    api.F.sex.v(person) != expected_sex
+                    or api.F.faith.v(person) != expected_faith
+                ):
+                    raise SystemExit(f"{record_id}: real person sex/faith lost")
+                linked = [
+                    entity for entity in api.L.d(root, otype="entity")
+                    if person in api.E.person_ref.f(entity)
+                    and api.F.ref.v(entity) == f"persons.xml#{person_id}"
+                ]
+                if not linked:
+                    raise SystemExit(f"{record_id}: person edge or original ref lost")
+                if record_id == "beth0002" and api.F.religion.v(root) != "#jewish":
+                    raise SystemExit("beth0002: Jewish inscription classification lost")
+                person_canaries[record_id] = person_id
         report = {
             **actual,
             "metadata_queries": metadata_queries,
             "language_source_canaries": language_sources,
             "name_origin_codes": dict(sorted(name_origin_counts.items())),
             "name_origin_canaries": name_origin_canaries,
+            "person_register": {
+                "source_git_blob": PINNED_PERSONS_BLOB if register is not None else None,
+                "entries": len(register) if register is not None else 0,
+                "resolved_entities": person_resolved_entities,
+                "distinct_people": person_distinct_people,
+                "unresolved_targets": dict(sorted(person_unresolved.items())),
+                "unresolved_contributor_refs": dict(
+                    sorted(person_unresolved_contributors.items())
+                ),
+                "canaries": person_canaries,
+            },
             "corrected_heb_script_transcription_signs": corrected_heb_script_signs,
             "corrected_heb_script_signs_by_origin": dict(sorted(corrected_by_origin.items())),
             "aramaic_transcription_language_audit": aramaic_language_audit,
@@ -702,7 +787,15 @@ def main() -> int:
         ) as fresh_directory:
             second_dir = Path(fresh_directory)
             write_tf_corpus(
-                (parse_epidoc_file(path, source_revision=args.revision) for path in selected),
+                (
+                    attach_person_register(
+                        parse_epidoc_file(path, source_revision=args.revision),
+                        register,
+                    )[0]
+                    if register is not None
+                    else parse_epidoc_file(path, source_revision=args.revision)
+                    for path in selected
+                ),
                 second_dir,
                 converter_commit=args.converter_commit,
             )

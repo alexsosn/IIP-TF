@@ -148,3 +148,22 @@ missing feature or empty display. Current IIP public deep links are not assumed
 to be stable. Researcher distribution and Agora integration are tracked in
 [#10](https://github.com/alexsosn/IIP-TF/issues/10) and
 [#11](https://github.com/alexsosn/IIP-TF/issues/11).
+
+## Native personal names and register data
+
+The pinned full Brown source includes `data-keep/persons.xml`. After an authenticated build, names referring to this source file have **native** person register nodes and directed `person_ref` links. Example, a registered Jewish female's name (the register's `faith` is literal, not a proof of inscription-wide classification):
+
+```python
+from tf.fabric import Fabric
+api = Fabric(locations="build/pinned-tf", silent=True).loadAll(silent=True)
+assert api
+for entity in api.F.otype.s("entity"):
+    for person in api.E.person_ref.f(entity):
+        if api.F.sex.v(person) != "2":
+            continue
+        for inscription in api.L.u(entity, otype="inscription"):
+            if api.F.religion.v(inscription) == "#jewish":
+                print(api.F.inscription_id.v(inscription), api.F.person_name.v(person))
+```
+
+This query finds source-register sex code `2` in inscriptions explicitly classified as `#jewish` by the Brown EpiDoc `msItem/@ana` source (e.g. pinned `beth0002`, Hannah). The register's personal `faith` is separate: do not conflate an individual's faith with an inscription's classification. Native `person` nodes are per-register-entry and per-inscription; identical names are not global identities. Missing `faith` or `sex` remains missing, and unregistered or contributor references do not produce a graph link. Outside the full IIP checkout, provide `iip-tf convert --persons-register /path/to/persons.xml ...` explicitly, or expect a corpus without those links. No external web lookup is needed to query the native nodes.

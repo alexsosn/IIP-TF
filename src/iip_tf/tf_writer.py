@@ -24,6 +24,7 @@ _NODE_TYPE_ORDER = (
     NodeType.WORD,
     NodeType.MARKUP,
     NodeType.ENTITY,
+    NodeType.PERSON,
     NodeType.SEGMENTATION,
     NodeType.BIBL,
     NodeType.HAND,
