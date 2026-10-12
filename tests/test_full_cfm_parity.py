@@ -27,8 +27,8 @@ def test_edge_fingerprint_distinguishes_target_sets_and_values() -> None:
     assert fingerprint_rows(pairs, kind="edge") != fingerprint_rows(
         [(4, {1, 2}), (5, {3})], kind="edge"
     )
-    valued = fingerprint_rows([(4, {1: 0, 3: None})], kind="edge")
-    assert valued != fingerprint_rows([(4, {1: 1, 3: None})], kind="edge")
+    valued = fingerprint_rows([(4, {1: 0, 3: None})], kind="edge", edge_values=True)
+    assert valued != fingerprint_rows([(4, {1: 1, 3: None})], kind="edge", edge_values=True)
     assert valued != fingerprint_rows([(4, {1, 3})], kind="edge")
 
 
