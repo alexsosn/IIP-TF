@@ -204,7 +204,7 @@ jobs:
       - name: Install reviewed and immutable Context-Fabric empty-feature fix
         run: |
           python -m pip install -e '.[dev]'
-          python -m pip install 'context-fabric @ git+https://github.com/alexsosn/context-fabric.git@900060ef04346af0738500cf13fc397b8087e0b8#subdirectory=libs/core'
+          python -m pip install 'context-fabric @ git+https://github.com/alexsosn/context-fabric.git@031bc15903a1a91c500d1ac8c049c78e331e4f20#subdirectory=libs/core'
       - name: Verify entire pinned graph through raw and compiled Context-Fabric
         run: |
           python scripts/validate_pinned_context_fabric.py \
