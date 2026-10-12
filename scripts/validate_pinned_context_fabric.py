@@ -137,9 +137,12 @@ def compare_manifests(reference: dict[str, Any], actual: dict[str, Any]) -> None
             f"feature inventory mismatch: missing={sorted(set(ref) - set(got))}; "
             f"extra={sorted(set(got) - set(ref))}"
         )
-    for name in sorted(ref):
-        if ref[name] != got[name]:
-            raise ParityError(f"{name} fingerprint mismatch (count/values/edges)")
+    mismatched = [name for name in sorted(ref) if ref[name] != got[name]]
+    if mismatched:
+        raise ParityError(
+            f"{len(mismatched)} fingerprint mismatches "
+            f"(count/values/edges): {mismatched[:24]}"
+        )
 
 
 def validate_pinned_cfm(
