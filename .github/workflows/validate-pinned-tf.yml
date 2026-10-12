@@ -137,15 +137,25 @@ jobs:
           source = Path("upstream-iip/include_taxonomies.xml")
           registry = parse_taxonomies(source.read_bytes(), expected_blob=PINNED_TAXONOMY_BLOB)
           assert sum(len(x) for x in registry.taxonomies.values()) == 142
-          dotted = sum(
-              "." in category and any(
-                  ".".join(category.split(".")[:i]) in categories
+          dotted = [
+              (taxonomy, category)
+              for taxonomy, categories in registry.taxonomies.items()
+              for category in categories
+              if "." in category
+          ]
+          assert len(dotted) == 39, len(dotted)
+          with_prefix = [
+              (taxonomy, category)
+              for taxonomy, category in dotted
+              if any(
+                  ".".join(category.split(".")[:i]) in registry.taxonomies[taxonomy]
                   for i in range(1, len(category.split(".")))
               )
-              for categories in registry.taxonomies.values()
-              for category in categories
-          )
-          assert dotted == 39, dotted
+          ]
+          assert len(with_prefix) == 38, len(with_prefix)
+          assert set(dotted) - set(with_prefix) == {
+              ("IIP-preservation", "fragment.single")
+          }
           output = subprocess.check_output([
               sys.executable, "-m", "iip_tf.cli", "taxonomy-lookup",
               str(source), "material", "#stone.other #clay.terracotta",
