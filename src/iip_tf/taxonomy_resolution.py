@@ -47,18 +47,15 @@ def resolve_taxonomy_features(
             tokens = raw.split()
             known = registry.taxonomies[taxonomy_id]
             mapped = [
-                candidate if candidate in known else None
+                token[1:] if token.startswith("#") else token
                 for token in tokens
-                for candidate in (token[1:] if token.startswith("#") else token,)
             ]
             features[f"{field}_original"] = raw
-            if not tokens or any(candidate is None for candidate in mapped):
+            if not tokens or any(candidate not in known for candidate in mapped):
                 features.pop(field, None)
                 counts[field] += 1
             else:
-                features[field] = " ".join(
-                    str(candidate) for candidate in mapped
-                )
+                features[field] = " ".join(mapped)
                 resolved_count += 1
         nodes.append(replace(node, features=tuple(features.items())))
     return replace(ir, nodes=tuple(nodes)), {
