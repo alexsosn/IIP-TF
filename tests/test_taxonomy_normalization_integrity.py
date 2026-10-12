@@ -105,3 +105,37 @@ def test_rejects_ambiguous_duplicate_source_ids_even_if_report_is_consistent() -
     api = _api({1: "#jewish jewish"}, {1: "jewish"})
     with pytest.raises(TaxonomyError):
         validate_native_normalization(api, _registry())
+
+
+def test_sparse_native_corpus_treats_uncreated_feature_files_as_empty() -> None:
+    # Real TF does not save .tf files for entirely empty node features;
+    # Fabric.Fs("material_original") then returns None, not a feature object.
+    api = _api({1: "#jewish"}, {1: "jewish"})
+    original_fs = api.Fs
+    absent = {
+        f"{field}{suffix}"
+        for field in ("genre", "material", "object_type", "condition")
+        for suffix in ("", "_original")
+    }
+    api.Fs = lambda name: None if name in absent else original_fs(name)
+    assert validate_native_normalization(api, _registry()) == {
+        "normalized_fields": 1,
+        "unresolved_fields": {},
+    }
+
+
+@pytest.mark.parametrize(
+    ("originals", "canonical", "missing"),
+    [
+        ({1: "#jewish"}, {1: "jewish"}, "religion_original"),
+        ({1: "#jewish"}, {1: "jewish"}, "religion"),
+    ],
+)
+def test_missing_one_side_of_sparse_feature_pair_fails_closed(
+    originals: dict[int, str], canonical: dict[int, str], missing: str,
+) -> None:
+    api = _api(originals, canonical)
+    original_fs = api.Fs
+    api.Fs = lambda name: None if name == missing else original_fs(name)
+    with pytest.raises(TaxonomyError):
+        validate_native_normalization(api, _registry())
