@@ -9,7 +9,7 @@ from tf.fabric import Fabric  # type: ignore[import-untyped]
 
 from iip_tf.cli import main as cli_main
 from iip_tf.ir import NodeType
-from iip_tf.taxonomy_audit import TaxonomyRegistry
+from iip_tf.taxonomy_audit import TaxonomyRegistry, validate_native_normalization
 from iip_tf.taxonomy_resolution import resolve_taxonomy_features
 from iip_tf.text_parser import parse_epidoc_file
 from iip_tf.tf_writer import write_tf_corpus
@@ -106,6 +106,9 @@ def test_native_fabric_reload_retains_original_and_canonical_queries(
     assert api.F.religion_original.v(root) == "#jewish"
     assert api.F.genre.v(root) == "dedicatory"
     assert api.F.genre_original.v(root) == "#dedicatory"
+    assert validate_native_normalization(api, _vocabulary()) == {
+        "normalized_fields": 2, "unresolved_fields": {},
+    }
     assert api.T.text(root) == "אב"
     assert api.F.otype.s("person") == ()
 
