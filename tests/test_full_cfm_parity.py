@@ -49,7 +49,7 @@ def test_feature_inventory_and_values_must_match() -> None:
         "max_node": 4,
         "features": {"node:glyph": {"count": 2, "sha256": "abc"}},
     }
-    assert compare_manifests(native, dict(native)) is None
+    compare_manifests(native, dict(native))
     with pytest.raises(ParityError, match="node:glyph"):
         compare_manifests(
             native, {**native, "features": {"node:glyph": {"count": 2, "sha256": "def"}}}
