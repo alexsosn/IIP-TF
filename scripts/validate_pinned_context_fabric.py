@@ -146,8 +146,8 @@ def validate_pinned_cfm(
     corpus: Path, native_report: Path, destination: Path
 ) -> dict[str, Any]:
     """Load the *same already validated* IIP TF artifact in all three runtimes."""
-    from tf.fabric import Fabric as NativeFabric  # type: ignore[import-untyped]
     from cfabric.core import Fabric as ContextFabric
+    from tf.fabric import Fabric as NativeFabric  # type: ignore[import-untyped]
 
     if not native_report.is_file():
         raise ParityError("missing complete pinned native reproducibility report")
