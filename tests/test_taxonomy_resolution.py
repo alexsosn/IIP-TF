@@ -7,6 +7,7 @@ from typing import Any
 
 from tf.fabric import Fabric  # type: ignore[import-untyped]
 
+from iip_tf.cli import main as cli_main
 from iip_tf.ir import NodeType
 from iip_tf.taxonomy_audit import TaxonomyRegistry
 from iip_tf.taxonomy_resolution import resolve_taxonomy_features
@@ -118,3 +119,70 @@ def test_feature_resolution_rejects_double_normalization(tmp_path: Path) -> None
         assert "already" in str(error)
     else:
         raise AssertionError("re-augmenting taxonomy must fail closed")
+
+
+def _xml_taxonomy_file(path: Path) -> None:
+    categories = {
+        "IIP-form": ("block", "Block"),
+        "IIP-materials": ("clay", "Clay"),
+        "IIP-genre": ("dedicatory", "Dedicatory"),
+        "IIP-preservation": ("complete", "Complete"),
+        "IIP-writing": ("painted", "Painted"),
+        "IIP-religion": ("jewish", "Jewish"),
+    }
+    taxonomy = "".join(
+        f'<taxonomy xml:id="{key}"><category xml:id="{cat}">'
+        f'<catDesc>{label}</catDesc></category></taxonomy>'
+        for key, (cat, label) in categories.items()
+    )
+    path.write_text(
+        '<classDecl xmlns="http://www.tei-c.org/ns/1.0">'
+        + taxonomy + '</classDecl>',
+        encoding="utf-8",
+    )
+
+
+def test_cli_autodiscovers_taxonomy_without_changing_standalone_mode(
+    tmp_path: Path,
+) -> None:
+    sources = tmp_path / "epidoc-files"
+    sources.mkdir()
+    _xml(sources, religion="#jewish")
+    arguments = ["--source-revision", "fixture", "--converter-commit", "test"]
+
+    output_raw = tmp_path / "raw"
+    assert cli_main(["convert", str(sources), str(output_raw), *arguments]) == 0
+    raw: Any = Fabric(locations=str(output_raw), silent=True).loadAll(silent=True)
+    root = raw.T.nodeFromSection(("demo0001",))
+    assert raw.F.religion.v(root) == "#jewish"
+
+    _xml_taxonomy_file(tmp_path / "include_taxonomies.xml")
+    output_canonical = tmp_path / "canonical"
+    assert cli_main([
+        "convert", str(sources), str(output_canonical), *arguments
+    ]) == 0
+    canonical: Any = Fabric(
+        locations=str(output_canonical), silent=True
+    ).loadAll(silent=True)
+    root = canonical.T.nodeFromSection(("demo0001",))
+    assert canonical.F.religion.v(root) == "jewish"
+    assert canonical.F.religion_original.v(root) == "#jewish"
+    assert canonical.F.genre_original.v(root) == "#dedicatory"
+    assert canonical.F.otype.s("person") == ()
+
+
+def test_cli_explicit_taxonomy_path_must_exist(tmp_path: Path) -> None:
+    src = tmp_path / "epidoc-files"
+    src.mkdir()
+    _xml(src)
+    try:
+        cli_main([
+            "convert", str(src), str(tmp_path / "native"),
+            "--source-revision", "fixture",
+            "--converter-commit", "test",
+            "--taxonomy-file", str(tmp_path / "missing.xml"),
+        ])
+    except ValueError as exc:
+        assert "taxonomy source" in str(exc)
+    else:
+        raise AssertionError("explicit taxonomy file should fail closed")
