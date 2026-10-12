@@ -203,12 +203,15 @@ def audit_values(
     }
 
 
-def audit_native_taxonomies(api: Any, registry: TaxonomyRegistry) -> dict[str, Any]:
+def audit_native_taxonomies(
+    api: Any, registry: TaxonomyRegistry, *, raw_original: bool = False,
+) -> dict[str, Any]:
     """Query raw native TF feature items; never consult a metadata sidecar."""
     observed: dict[str, Counter[str]] = {}
     for feature in FEATURE_TAXONOMIES:
         values: Counter[str] = Counter()
-        for _node, raw in api.Fs(feature).items():
+        native_feature = feature + "_original" if raw_original else feature
+        for _node, raw in api.Fs(native_feature).items():
             if not isinstance(raw, str):
                 raise TaxonomyError(f"{feature}: unexpected non-text native TF feature")
             values[raw] += 1
@@ -222,6 +225,10 @@ def main() -> int:
     parser.add_argument("tf_dir", type=Path)
     parser.add_argument("report_json", type=Path)
     parser.add_argument(
+        "--raw-original", action="store_true",
+        help="audit the verbatim <feature>_original source fields, not canonical IDs",
+    )
+    parser.add_argument(
         "--revision", default=PINNED_SOURCE_REVISION,
         choices=[PINNED_SOURCE_REVISION],
     )
@@ -232,7 +239,7 @@ def main() -> int:
     api: Any = Fabric(locations=str(args.tf_dir), silent=True).loadAll(silent=True)
     if not api:
         raise TaxonomyError("cannot load native Text-Fabric corpus")
-    report = audit_native_taxonomies(api, registry)
+    report = audit_native_taxonomies(api, registry, raw_original=args.raw_original)
     if report["multivalue_resolution"] != EXPECTED_PINNED_MULTIVALUE:
         raise TaxonomyError(
             "pinned multi-valued source classification partition changed: "
