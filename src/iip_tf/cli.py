@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import argparse
-from collections.abc import Iterator
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 from pathlib import Path
 
 from iip_tf import __version__
