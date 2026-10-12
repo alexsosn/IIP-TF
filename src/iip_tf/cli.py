@@ -10,6 +10,12 @@ from iip_tf import __version__
 from iip_tf.ir import InscriptionIR
 from iip_tf.person_register import attach_person_register, read_person_register
 from iip_tf.release_gate import inventory_source_files, require_empty_output_directory
+from iip_tf.taxonomy_audit import (
+    PINNED_SOURCE_REVISION,
+    PINNED_TAXONOMY_BLOB,
+    parse_taxonomies,
+)
+from iip_tf.taxonomy_resolution import resolve_taxonomy_features
 from iip_tf.text_parser import parse_epidoc_file
 from iip_tf.tf_writer import write_tf_corpus
 
@@ -31,6 +37,7 @@ def build_parser() -> argparse.ArgumentParser:
     convert.add_argument("--source-revision", required=True)
     convert.add_argument("--converter-commit", required=True)
     convert.add_argument("--persons-register", type=Path)
+    convert.add_argument("--taxonomy-file", type=Path)
     return parser
 
 
@@ -45,10 +52,23 @@ def _convert(args: argparse.Namespace) -> int:
     register = read_person_register(register_path) if register_path.is_file() else None
     if args.persons_register is not None and register is None:
         raise ValueError(f"explicit persons register does not exist: {register_path}")
+    taxonomy_path = args.taxonomy_file or (source.parent / "include_taxonomies.xml")
+    taxonomy = (
+        parse_taxonomies(
+            taxonomy_path.read_bytes(),
+            expected_blob=PINNED_TAXONOMY_BLOB
+            if source_revision == PINNED_SOURCE_REVISION else None,
+        )
+        if taxonomy_path.is_file() else None
+    )
+    if args.taxonomy_file is not None and taxonomy is None:
+        raise ValueError(f"explicit taxonomy source does not exist: {taxonomy_path}")
     require_empty_output_directory(output)
     def records() -> Iterator[InscriptionIR]:
         for path in paths:
             ir = parse_epidoc_file(path, source_revision=source_revision)
+            if taxonomy is not None:
+                ir, _taxonomy_audit = resolve_taxonomy_features(ir, taxonomy)
             yield attach_person_register(ir, register)[0] if register is not None else ir
 
     irs = tuple(records())

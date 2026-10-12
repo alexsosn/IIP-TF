@@ -13,7 +13,7 @@ from typing import Any
 
 from tf.fabric import Fabric  # type: ignore[import-untyped]
 
-from iip_tf.ir import NodeType
+from iip_tf.ir import InscriptionIR, NodeType
 from iip_tf.language_audit import AramaicLanguageAudit
 from iip_tf.person_register import (
     PINNED_PERSONS_BLOB,
@@ -30,6 +30,8 @@ from iip_tf.release_gate import (
     validate_oslots_mapping,
     write_build_reports,
 )
+from iip_tf.taxonomy_audit import PINNED_TAXONOMY_BLOB, parse_taxonomies
+from iip_tf.taxonomy_resolution import resolve_taxonomy_features
 from iip_tf.text_parser import parse_epidoc_file
 from iip_tf.tf_writer import write_tf_corpus
 
@@ -395,6 +397,19 @@ def main() -> int:
     stage = "parse"
     failing_file: str | None = None
     try:
+        taxonomy_path = args.source_dir.parent / "include_taxonomies.xml"
+        if len(selected) >= 1000 and not taxonomy_path.is_file():
+            raise SystemExit("pinned Brown source taxonomies missing")
+        taxonomy = (
+            parse_taxonomies(
+                taxonomy_path.read_bytes(),
+                expected_blob=PINNED_TAXONOMY_BLOB
+                if len(selected) >= 1000 else None,
+            )
+            if taxonomy_path.is_file() else None
+        )
+        taxonomy_normalized_fields = 0
+        taxonomy_unresolved: Counter[str] = Counter()
         register_path = args.source_dir.parent / "data-keep" / "persons.xml"
         if len(selected) >= 1000 and not register_path.is_file():
             raise SystemExit("pinned Brown persons.xml source register is missing")
@@ -427,6 +442,10 @@ def main() -> int:
         for path in selected:
             failing_file = path.name
             ir = parse_epidoc_file(path, source_revision=args.revision)
+            if taxonomy is not None:
+                ir, tax_audit = resolve_taxonomy_features(ir, taxonomy)
+                taxonomy_normalized_fields += tax_audit["normalized_fields"]
+                taxonomy_unresolved.update(tax_audit["unresolved_fields"])
             if register is not None:
                 ir, person_audit = attach_person_register(ir, register)
                 person_resolved_entities += int(person_audit["resolved_entities"])
@@ -746,8 +765,11 @@ def main() -> int:
                 ]
                 if not linked:
                     raise SystemExit(f"{record_id}: person edge or original ref lost")
-                if record_id == "beth0002" and api.F.religion.v(root) != "#jewish":
-                    raise SystemExit("beth0002: Jewish inscription classification lost")
+                if record_id == "beth0002" and (
+                    api.F.religion.v(root) != "jewish"
+                    or api.F.religion_original.v(root) != "#jewish"
+                ):
+                    raise SystemExit("beth0002: source/canonical Jewish classification lost")
                 person_canaries[record_id] = person_id
         report = {
             **actual,
@@ -755,6 +777,11 @@ def main() -> int:
             "language_source_canaries": language_sources,
             "name_origin_codes": dict(sorted(name_origin_counts.items())),
             "name_origin_canaries": name_origin_canaries,
+            "taxonomy_resolution": {
+                "source_git_blob": PINNED_TAXONOMY_BLOB if taxonomy is not None else None,
+                "normalized_fields": taxonomy_normalized_fields,
+                "unresolved_fields": dict(sorted(taxonomy_unresolved.items())),
+            },
             "person_register": {
                 "source_git_blob": PINNED_PERSONS_BLOB if register is not None else None,
                 "entries": len(register) if register is not None else 0,
@@ -786,16 +813,16 @@ def main() -> int:
             dir=args.output_dir.parent,
         ) as fresh_directory:
             second_dir = Path(fresh_directory)
+            def reparse_and_enrich(path: Path) -> InscriptionIR:
+                ir = parse_epidoc_file(path, source_revision=args.revision)
+                if taxonomy is not None:
+                    ir, _ = resolve_taxonomy_features(ir, taxonomy)
+                if register is not None:
+                    ir, _ = attach_person_register(ir, register)
+                return ir
+
             write_tf_corpus(
-                (
-                    attach_person_register(
-                        parse_epidoc_file(path, source_revision=args.revision),
-                        register,
-                    )[0]
-                    if register is not None
-                    else parse_epidoc_file(path, source_revision=args.revision)
-                    for path in selected
-                ),
+                (reparse_and_enrich(path) for path in selected),
                 second_dir,
                 converter_commit=args.converter_commit,
             )

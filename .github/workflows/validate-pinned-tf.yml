@@ -15,6 +15,7 @@ on:
       - "src/iip_tf/text_parser.py"
       - "src/iip_tf/metadata_parser.py"
       - "src/iip_tf/person_register.py"
+      - "src/iip_tf/taxonomy_resolution.py"
       - "src/iip_tf/taxonomy_audit.py"
       - "docs/guides/pinned-taxonomy-audit.md"
       - "src/iip_tf/segmentation.py"
@@ -40,6 +41,7 @@ on:
       - "src/iip_tf/text_parser.py"
       - "src/iip_tf/metadata_parser.py"
       - "src/iip_tf/person_register.py"
+      - "src/iip_tf/taxonomy_resolution.py"
       - "src/iip_tf/taxonomy_audit.py"
       - "docs/guides/pinned-taxonomy-audit.md"
       - "src/iip_tf/segmentation.py"
@@ -135,7 +137,8 @@ jobs:
           python -m iip_tf.taxonomy_audit \
             upstream-iip/include_taxonomies.xml \
             build/pinned-tf \
-            build/pinned-tf-reports/taxonomy-audit.json
+            build/pinned-tf-reports/taxonomy-audit.json \
+            --raw-original
       - name: Require successful pinned build report
         if: success()
         run: |

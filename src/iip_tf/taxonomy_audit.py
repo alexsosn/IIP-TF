@@ -203,12 +203,15 @@ def audit_values(
     }
 
 
-def audit_native_taxonomies(api: Any, registry: TaxonomyRegistry) -> dict[str, Any]:
+def audit_native_taxonomies(
+    api: Any, registry: TaxonomyRegistry, *, raw_original: bool = False,
+) -> dict[str, Any]:
     """Query raw native TF feature items; never consult a metadata sidecar."""
     observed: dict[str, Counter[str]] = {}
     for feature in FEATURE_TAXONOMIES:
         values: Counter[str] = Counter()
-        for _node, raw in api.Fs(feature).items():
+        native_feature = feature + "_original" if raw_original else feature
+        for _node, raw in api.Fs(native_feature).items():
             if not isinstance(raw, str):
                 raise TaxonomyError(f"{feature}: unexpected non-text native TF feature")
             values[raw] += 1
@@ -216,11 +219,69 @@ def audit_native_taxonomies(api: Any, registry: TaxonomyRegistry) -> dict[str, A
     return audit_values(registry, observed)
 
 
+def validate_native_normalization(
+    api: Any, registry: TaxonomyRegistry,
+) -> dict[str, Any]:
+    """Independently reconcile every emitted canonical ID to original TF data.
+
+    This intentionally reconstructs expectations from the *reloaded* native
+    node features rather than consulting the converter's IR or audit counters.
+    Missing values on either side, partial IDs and wrong node types fail.
+    """
+    inscriptions = set(api.F.otype.s("inscription"))
+    normalized = 0
+    unresolved: Counter[str] = Counter()
+
+    for feature, taxonomy_id in FEATURE_TAXONOMIES.items():
+        # Text-Fabric omits completely empty feature files, and Fs(name)
+        # returns None for a missing file. Reconcile each side as an empty
+        # map without losing the explicit cross-map provenance checks below.
+        source_feature = api.Fs(feature + "_original")
+        canonical_feature = api.Fs(feature)
+        originals = dict(source_feature.items()) if source_feature is not None else {}
+        actual = dict(canonical_feature.items()) if canonical_feature is not None else {}
+        if not (originals.keys() <= inscriptions and actual.keys() <= inscriptions):
+            raise TaxonomyError(f"{feature}: classification outside inscription nodes")
+        if not actual.keys() <= originals.keys():
+            raise TaxonomyError(f"{feature}: canonical value without original source")
+        category_ids = registry.taxonomies[taxonomy_id]
+
+        for node, raw in originals.items():
+            if not isinstance(raw, str):
+                raise TaxonomyError(f"{feature}: non-text original at node {node}")
+            tokens = raw.split()
+            ids = tuple(token.removeprefix("#") for token in tokens)
+            valid = bool(ids) and all(token in category_ids for token in ids)
+            expected = " ".join(ids) if valid else None
+
+            if expected is None:
+                if node in actual:
+                    raise TaxonomyError(
+                        f"{feature}: unresolved original has canonical value at {node}"
+                    )
+                unresolved[feature] += 1
+            elif actual.get(node) != expected:
+                raise TaxonomyError(
+                    f"{feature}: source/canonical mismatch at inscription {node}"
+                )
+            else:
+                normalized += 1
+
+    return {
+        "normalized_fields": normalized,
+        "unresolved_fields": dict(sorted(unresolved.items())),
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("taxonomy_xml", type=Path)
     parser.add_argument("tf_dir", type=Path)
     parser.add_argument("report_json", type=Path)
+    parser.add_argument(
+        "--raw-original", action="store_true",
+        help="audit the verbatim <feature>_original source fields, not canonical IDs",
+    )
     parser.add_argument(
         "--revision", default=PINNED_SOURCE_REVISION,
         choices=[PINNED_SOURCE_REVISION],
@@ -232,7 +293,11 @@ def main() -> int:
     api: Any = Fabric(locations=str(args.tf_dir), silent=True).loadAll(silent=True)
     if not api:
         raise TaxonomyError("cannot load native Text-Fabric corpus")
-    report = audit_native_taxonomies(api, registry)
+    report = audit_native_taxonomies(api, registry, raw_original=args.raw_original)
+    if args.raw_original:
+        report["native_normalization_integrity"] = validate_native_normalization(
+            api, registry
+        )
     if report["multivalue_resolution"] != EXPECTED_PINNED_MULTIVALUE:
         raise TaxonomyError(
             "pinned multi-valued source classification partition changed: "

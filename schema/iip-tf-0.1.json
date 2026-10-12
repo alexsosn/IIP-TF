@@ -269,11 +269,16 @@
       "main_lang",
       "other_langs",
       "genre",
+      "genre_original",
       "genre_cert",
       "religion",
+      "religion_original",
       "object_type",
+      "object_type_original",
       "material",
+      "material_original",
       "condition",
+      "condition_original",
       "layout_columns",
       "layout_written_lines",
       "height",
@@ -462,6 +467,31 @@
       "domain": "person",
       "value_type": "str",
       "semantics": "Verbatim register person/faith free text if present; not normalized, and not inscription classification."
+    },
+    "genre_original": {
+      "domain": "inscription",
+      "value_type": "str",
+      "semantics": "Verbatim original source genre IDREF string before exact Brown taxonomy normalization; retained even when some or all tokens cannot be mapped."
+    },
+    "religion_original": {
+      "domain": "inscription",
+      "value_type": "str",
+      "semantics": "Verbatim original source religion IDREF string before exact Brown taxonomy normalization; retained even when some or all tokens cannot be mapped."
+    },
+    "object_type_original": {
+      "domain": "inscription",
+      "value_type": "str",
+      "semantics": "Verbatim original source object_type IDREF string before exact Brown taxonomy normalization; retained even when some or all tokens cannot be mapped."
+    },
+    "material_original": {
+      "domain": "inscription",
+      "value_type": "str",
+      "semantics": "Verbatim original source material IDREF string before exact Brown taxonomy normalization; retained even when some or all tokens cannot be mapped."
+    },
+    "condition_original": {
+      "domain": "inscription",
+      "value_type": "str",
+      "semantics": "Verbatim original source condition IDREF string before exact Brown taxonomy normalization; retained even when some or all tokens cannot be mapped."
     },
     "name_lang_original": {
       "domain": "entity",

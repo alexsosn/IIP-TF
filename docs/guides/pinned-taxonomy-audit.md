@@ -19,7 +19,8 @@ From the IIP-TF checkout root after following the
 python -m iip_tf.taxonomy_audit \
   upstream-iip/include_taxonomies.xml \
   build/pinned-tf \
-  build/pinned-tf-reports/taxonomy-audit.json
+  build/pinned-tf-reports/taxonomy-audit.json \
+  --raw-original
 ```
 
 The pinned GitHub Actions native-TF workflow also runs this after
@@ -85,3 +86,11 @@ The upstream XML and corpus metadata retain Brown's **CC BY-NC 4.0**
 source-data terms; MIT applies to the converter code, not source
 taxonomy content. Cite the IIP editions and data DOI
 [10.26300/pz1d-st89](https://doi.org/10.26300/pz1d-st89).
+
+## Source-normalized native features (issue #64)
+
+The *auditor itself* does not normalize or alter corpus data. Native full-Brown conversion now uses the authenticated taxonomy to populate canonical taxonomy IDs in `F.religion`, `F.genre`, `F.material`, `F.object_type`, and `F.condition`. Their exact verbatim EpiDoc source strings are preserved separately in the corresponding `_original` node features. The `--raw-original` option audits these source fields rather than already-normalized IDs, so the established 402/126/2 multivalue inventory and source provenance remain comparable with previous builds. Fully resolved whitespace-separated source IDREF lists retain their original ordering and repetition as space-separated canonical IDs; **partly** resolved lists have no normalized primary classification, but retain complete `_original` and appear in the audit. The normalized features are only available when the converter has the taxonomy XML; standalone EpiDoc-only conversions without it retain unnormalized source fields. This is a deliberate mode distinction, not an implicit network lookup.
+
+**Full-build integrity gate:** `--raw-original` also reconciles *every* reloaded native inscription classification against its original source value and exact taxonomy category set. It refuses a fabricated or missing canonical value, an ID from another taxonomy, a partially-resolved list, a changed IDREF order/repetition, or a classification placed on the wrong node type. The JSON report includes `native_normalization_integrity` with normalized and unresolved source-field counts. This check uses TF node features independently of the converter IR and runs after native reload in the pinned workflow.
+
+For a small EpiDoc subset, Text-Fabric omits feature files with no values. The read-back integrity check interprets an entirely absent feature file as an empty map, but still rejects missing canonical values for source-resolvable classifications and rejects canonical values without a source `_original`. Sparse standalone outputs must use the documented conversion mode rather than the full pinned `--raw-original` audit.
