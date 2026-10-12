@@ -28,7 +28,10 @@ jobs:
       - name: Install source converter and pinned Context-Fabric runtime
         run: |
           python -m pip install -e '.[dev]'
-          python -m pip install 'context-fabric==0.5.7'
+          # Public 0.5.7 omits empty declared features from .cfm but lists them
+          # in its manifest; cfabric fork PR #8 fixes that corruption.
+          # Immutable commit is the reviewed, all-jobs-green fix.
+          python -m pip install 'context-fabric @ git+https://github.com/alexsosn/context-fabric.git@900060ef04346af0738500cf13fc397b8087e0b8#subdirectory=libs/core'
       - name: Require importable Context-Fabric (no skipped acceptance)
         run: python -c 'from cfabric.core import Fabric; assert Fabric'
       - name: Assert native TF, raw cfabric, and compiled .cfm graph equivalence
