@@ -56,3 +56,26 @@ def test_feature_inventory_and_values_must_match() -> None:
         )
     with pytest.raises(ParityError, match="inventory"):
         compare_manifests(native, {**native, "features": {}})
+
+
+def test_multiple_corrupt_features_are_reported_in_one_expensive_run() -> None:
+    expected = {
+        "slot_type": "sign",
+        "max_slot": 1,
+        "max_node": 2,
+        "features": {
+            "node:date_not_after_int": {"count": 1, "sha256": "one"},
+            "node:date_not_before_int": {"count": 1, "sha256": "two"},
+        },
+    }
+    actual = {
+        **expected,
+        "features": {
+            "node:date_not_after_int": {"count": 0, "sha256": "different"},
+            "node:date_not_before_int": {"count": 0, "sha256": "different"},
+        },
+    }
+    with pytest.raises(ParityError, match="2 fingerprint mismatches") as err:
+        compare_manifests(expected, actual)
+    assert "date_not_after_int" in str(err.value)
+    assert "date_not_before_int" in str(err.value)
