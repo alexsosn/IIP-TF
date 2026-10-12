@@ -19,7 +19,8 @@ From the IIP-TF checkout root after following the
 python -m iip_tf.taxonomy_audit \
   upstream-iip/include_taxonomies.xml \
   build/pinned-tf \
-  build/pinned-tf-reports/taxonomy-audit.json
+  build/pinned-tf-reports/taxonomy-audit.json \
+  --raw-original
 ```
 
 The pinned GitHub Actions native-TF workflow also runs this after
@@ -85,3 +86,7 @@ The upstream XML and corpus metadata retain Brown's **CC BY-NC 4.0**
 source-data terms; MIT applies to the converter code, not source
 taxonomy content. Cite the IIP editions and data DOI
 [10.26300/pz1d-st89](https://doi.org/10.26300/pz1d-st89).
+
+## Source-normalized native features (issue #64)
+
+The *auditor itself* does not normalize or alter corpus data. Native full-Brown conversion now uses the authenticated taxonomy to populate canonical taxonomy IDs in `F.religion`, `F.genre`, `F.material`, `F.object_type`, and `F.condition`. Their exact verbatim EpiDoc source strings are preserved separately in the corresponding `_original` node features. The `--raw-original` option audits these source fields rather than already-normalized IDs, so the established 402/126/2 multivalue inventory and source provenance remain comparable with previous builds. Fully resolved whitespace-separated source IDREF lists retain their original ordering and repetition as space-separated canonical IDs; **partly** resolved lists have no normalized primary classification, but retain complete `_original` and appear in the audit. The normalized features are only available when the converter has the taxonomy XML; standalone EpiDoc-only conversions without it retain unnormalized source fields. This is a deliberate mode distinction, not an implicit network lookup.
