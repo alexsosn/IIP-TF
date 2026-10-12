@@ -121,3 +121,33 @@ def test_native_to_context_fabric_raw_and_compiled(tmp_path: Path) -> None:
         query="inscription inscription_id=demo",
         edges=("parent",),
     )
+
+
+def test_all_real_writer_features_match_raw_and_compiled_cfm(tmp_path: Path) -> None:
+    """Exhaustively compare the *actual writer fixture*, not selected canaries."""
+    from scripts.validate_pinned_context_fabric import (
+        _manifest,
+        _source_schema,
+        compare_manifests,
+    )
+
+    fixture = runpy.run_path(str(Path(__file__).with_name("test_tf_writer.py")))
+    output = tmp_path / "full-parity"
+    write_tf_corpus(
+        (fixture["_record"](), fixture["_empty_record"]()),
+        output,
+        converter_commit="deadbeef",
+    )
+    nodes, edges = _source_schema(output)
+    native = NativeFabric(locations=str(output), silent="deep").loadAll(silent="deep")
+    oracle = _manifest(native, nodes, edges)
+    cf_fabric = importlib.import_module("cfabric.core").Fabric
+    raw_fabric = cf_fabric(locations=str(output), silent="deep")
+    raw = raw_fabric.loadAll(silent="deep")
+    assert not getattr(raw_fabric, "_loaded_from_cfm", False)
+    compare_manifests(oracle, _manifest(raw, nodes, edges))
+    assert raw_fabric.compile(silent="deep")
+    compiled_fabric = cf_fabric(locations=str(output), silent="deep")
+    loaded = compiled_fabric.loadAll(silent="deep")
+    assert getattr(compiled_fabric, "_loaded_from_cfm", False)
+    compare_manifests(oracle, _manifest(loaded, nodes, edges))
