@@ -25,6 +25,7 @@ from iip_tf.release_gate import (
 from iip_tf.taxonomy_audit import (
     PINNED_SOURCE_REVISION,
     PINNED_TAXONOMY_BLOB,
+    TaxonomyError,
     parse_taxonomies,
 )
 
