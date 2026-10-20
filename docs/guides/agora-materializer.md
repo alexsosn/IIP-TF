@@ -13,8 +13,12 @@ The manifest at `agora.materializer.json` declares two source options:
   `0b7dc8358ccdfd0c9391f049da4839fbd91c26e5`, acquired at the repository
   **root** (not the `epidoc-files/` subdirectory).
 - **User-local:** a researcher-provided copy of the same directory structure.
-  A non-Git local folder has `source_revision=unversioned-local`, explicitly
-  **not** an authenticated Brown commit.
+  A non-Git tarball containing the *exact three pinned Brown source components*
+  is authenticated by their independent hashes and uses the pinned source
+  revision. Other local trees are explicitly `unversioned-local` unless the
+  host supplies a revision. An unverified source containing Brown's
+  `aaTestFile.xml` fixture is **rejected**, rather than ingesting it as a
+  scholarly inscription.
 
 The following paths are required together:
 `epidoc-files/*.xml`, `include_taxonomies.xml`, and
