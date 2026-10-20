@@ -13,7 +13,7 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
-from lxml import etree
+from lxml import etree  # type: ignore[import-untyped]
 
 from iip_tf.release_gate import (
     PINNED_EPIDOC_SOURCE_TREE,
