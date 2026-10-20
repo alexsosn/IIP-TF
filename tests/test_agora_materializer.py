@@ -12,7 +12,7 @@ from unittest.mock import patch
 import pytest
 from tf.fabric import Fabric  # type: ignore[import-untyped]
 
-from iip_tf.agora import materialize, main
+from iip_tf.agora import main, materialize
 
 ROOT = Path(__file__).resolve().parents[1]
 
