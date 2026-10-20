@@ -10,6 +10,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 ACTIVE_PR_WORKFLOWS = {
     "ci.yml",
     "context-fabric-acceptance.yml",
+    "validate-agora-materializer.yml",
     "audit-pinned-iip.yml",
     "validate-pinned-source.yml",
     "validate-pinned-text-ir.yml",
