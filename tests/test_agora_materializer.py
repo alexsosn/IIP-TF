@@ -13,6 +13,7 @@ import pytest
 from tf.fabric import Fabric  # type: ignore[import-untyped]
 
 import iip_tf.agora as agora_module
+import iip_tf.cli as cli_module
 from iip_tf.agora import main, materialize
 from iip_tf.person_register import git_blob_sha1
 from iip_tf.release_gate import git_source_tree_sha
@@ -165,10 +166,11 @@ def test_local_exact_pinned_source_without_git_metadata_is_verified(
         agora_module, "PINNED_EPIDOC_SOURCE_TREE",
         git_source_tree_sha(source / "epidoc-files"),
     )
-    monkeypatch.setattr(
-        agora_module, "PINNED_TAXONOMY_BLOB",
-        git_blob_sha((source / "include_taxonomies.xml").read_bytes()),
-    )
+    fixture_taxonomy_sha = git_blob_sha((source / "include_taxonomies.xml").read_bytes())
+    monkeypatch.setattr(agora_module, "PINNED_TAXONOMY_BLOB", fixture_taxonomy_sha)
+    # The adapter calls the real standalone converter, which independently
+    # authenticates the same source rather than trusting the adapter alone.
+    monkeypatch.setattr(cli_module, "PINNED_TAXONOMY_BLOB", fixture_taxonomy_sha)
     monkeypatch.setattr(
         agora_module, "PINNED_PERSONS_BLOB",
         git_blob_sha1(source / "data-keep/persons.xml"),
