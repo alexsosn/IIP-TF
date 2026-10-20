@@ -13,10 +13,10 @@ import pytest
 from tf.fabric import Fabric  # type: ignore[import-untyped]
 
 import iip_tf.agora as agora_module
+from iip_tf.agora import main, materialize
 from iip_tf.person_register import git_blob_sha1
 from iip_tf.release_gate import git_source_tree_sha
 from iip_tf.taxonomy_audit import PINNED_SOURCE_REVISION, git_blob_sha
-from iip_tf.agora import main, materialize
 
 ROOT = Path(__file__).resolve().parents[1]
 
