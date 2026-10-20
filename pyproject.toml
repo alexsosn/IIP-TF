@@ -49,3 +49,11 @@ select = ["E", "F", "I", "UP", "B"]
 python_version = "3.11"
 strict = true
 files = ["src", "tests"]
+exclude = "src/iip_tf/_bundled_app/"
+
+[tool.setuptools.package-data]
+iip_tf = [
+  "_bundled_app/app.py",
+  "_bundled_app/config.yaml",
+  "_bundled_app/static/*.css",
+]
