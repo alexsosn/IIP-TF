@@ -17,7 +17,11 @@ from pathlib import Path
 from iip_tf import __version__
 from iip_tf.cli import main as convert_cli
 from iip_tf.person_register import PINNED_PERSONS_BLOB, git_blob_sha1
-from iip_tf.release_gate import PINNED_EPIDOC_SOURCE_TREE, require_source_tree_sha
+from iip_tf.release_gate import (
+    PINNED_EPIDOC_SOURCE_TREE,
+    ReproducibilityError,
+    require_source_tree_sha,
+)
 from iip_tf.taxonomy_audit import (
     PINNED_SOURCE_REVISION,
     PINNED_TAXONOMY_BLOB,
@@ -79,15 +83,34 @@ def materialize(source: Path, output: Path, *, source_revision: str) -> Path:
         raise ValueError("Agora output must not reside within its Brown source root")
 
     transcription, taxonomy, persons = _required_source(source)
-    source_revision = source_revision or UNVERSIONED_LOCAL
-    pinned = source_revision == PINNED_SOURCE_REVISION
-    if pinned:
-        # Check actual bytes, not just the manifest revision string. Preserve
-        # all three independently pinned source components, not only XML texts.
-        require_source_tree_sha(transcription, expected_sha=PINNED_EPIDOC_SOURCE_TREE)
-        parse_taxonomies(taxonomy.read_bytes(), expected_blob=PINNED_TAXONOMY_BLOB)
-        if git_blob_sha1(persons) != PINNED_PERSONS_BLOB:
-            raise ValueError("pinned Brown persons.xml Git blob mismatch")
+    requested_revision = source_revision
+    pinned = False
+    if not requested_revision or requested_revision == PINNED_SOURCE_REVISION:
+        # A downloaded Brown snapshot with no .git is still authentically the
+        # pin when the *three consumed source components* match their hashes.
+        # This also keeps aaTestFile.xml excluded by the existing converter.
+        try:
+            require_source_tree_sha(transcription, expected_sha=PINNED_EPIDOC_SOURCE_TREE)
+            parse_taxonomies(taxonomy.read_bytes(), expected_blob=PINNED_TAXONOMY_BLOB)
+            if git_blob_sha1(persons) != PINNED_PERSONS_BLOB:
+                raise ValueError("pinned Brown persons.xml Git blob mismatch")
+        except (ReproducibilityError, TaxonomyError, ValueError) as exc:
+            if requested_revision == PINNED_SOURCE_REVISION:
+                raise ValueError("pinned Brown source components do not match") from exc
+        else:
+            pinned = True
+    source_revision = (
+        PINNED_SOURCE_REVISION if pinned
+        else requested_revision or UNVERSIONED_LOCAL
+    )
+    # This is an attested upstream test fixture, excluded only for authenticated
+    # pinned Brown content. An unverified local copy must not silently turn it
+    # into an inscription, regardless of the revision text supplied by the host.
+    if not pinned and (transcription / "aaTestFile.xml").exists():
+        raise ValueError(
+            "unverified Brown source contains aaTestFile.xml; "
+            "refusing to convert a known non-inscription fixture"
+        )
 
     bundled = Path(__file__).resolve().parent / "_bundled_app"
     for relative in _APP_FILES:
