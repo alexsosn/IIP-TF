@@ -12,6 +12,10 @@ from unittest.mock import patch
 import pytest
 from tf.fabric import Fabric  # type: ignore[import-untyped]
 
+import iip_tf.agora as agora_module
+from iip_tf.person_register import git_blob_sha1
+from iip_tf.release_gate import git_source_tree_sha
+from iip_tf.taxonomy_audit import PINNED_SOURCE_REVISION, git_blob_sha
 from iip_tf.agora import main, materialize
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -151,6 +155,45 @@ def test_cli_exits_failure_without_network_or_false_artifact(tmp_path: Path) -> 
     assert main([str(source), str(output), "--source-revision", ""]) != 0
     assert list(output.iterdir()) == []
 
+
+
+def test_local_exact_pinned_source_without_git_metadata_is_verified(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = _source(tmp_path)
+    monkeypatch.setattr(
+        agora_module, "PINNED_EPIDOC_SOURCE_TREE",
+        git_source_tree_sha(source / "epidoc-files"),
+    )
+    monkeypatch.setattr(
+        agora_module, "PINNED_TAXONOMY_BLOB",
+        git_blob_sha((source / "include_taxonomies.xml").read_bytes()),
+    )
+    monkeypatch.setattr(
+        agora_module, "PINNED_PERSONS_BLOB",
+        git_blob_sha1(source / "data-keep/persons.xml"),
+    )
+    output = tmp_path / "verified"
+    output.mkdir()
+    materialize(source, output, source_revision="")
+    report = json.loads((output / "conversion-summary.json").read_text())
+    assert report["source_revision"] == PINNED_SOURCE_REVISION
+    assert report["source_revision_verified"] is True
+    api: Any = Fabric(locations=str(output / "tf"), silent=True).loadAll(silent=True)
+    assert api.F.inscription_id.meta["sourceCommit"] == PINNED_SOURCE_REVISION
+
+
+def test_unverified_source_with_known_brown_test_fixture_is_not_ingested(
+    tmp_path: Path,
+) -> None:
+    source = _source(tmp_path)
+    test_file = source / "epidoc-files/aaTestFile.xml"
+    test_file.write_bytes((source / "epidoc-files/demo0001.xml").read_bytes())
+    output = tmp_path / "staging"
+    output.mkdir()
+    with pytest.raises(ValueError, match="aaTestFile|unverified"):
+        materialize(source, output, source_revision="")
+    assert list(output.iterdir()) == []
 
 def test_manifest_targets_full_brown_root_and_real_python_module() -> None:
     manifest = json.loads((ROOT / "agora.materializer.json").read_text())
