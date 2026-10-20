@@ -21,3 +21,7 @@ Existing CLI requires `--converter-commit`, but Agora installs code without .git
 ## Constraints
 
 Software MIT; upstream IIP EpiDoc and derived TF remain CC BY-NC 4.0 with edition-specific attribution. No images or source corpus binaries are bundled. Local output is not an authorized unrestricted distributable dataset. Agora owns acquisition, sandbox/host, installation trust and artifact publication; IIP-TF does not fork those components.
+
+## Adversarial source-accounting amendment (2026-10-20)
+
+Review of `inventory_source_files` found `aaTestFile.xml` is excluded only when the converter receives Brown's authenticated pinned source revision. Agora user-local acquisition supplies an empty `{source_revision}` for downloaded tarballs without .git, so the initial adapter would misclassify that test fixture as an inscription. Two new RED-first tests at commits `48e0465`/`1d0051b` fail on the production path (CI #39389601694: 2 specific pytest failures; Ruff/MyPy green). Fix: authenticate all three consumed Brown source components when revision is empty; if exact, pass true pinned revision to the unchanged converter; otherwise refuse the known `aaTestFile.xml` in unverified inputs. Do not invent a revision for other local content. This does not broaden the schema/IR.
