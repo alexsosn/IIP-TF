@@ -20,6 +20,7 @@ from iip_tf.release_gate import (
     inventory_source_files,
     require_source_tree_sha,
 )
+from iip_tf.source_repair import SourceConflictError, repair_source_file
 from iip_tf.taxonomy_audit import PINNED_SOURCE_REVISION
 
 
@@ -39,7 +40,9 @@ def _layer(element: etree._Element) -> str:
     return "unclassified"
 
 
-def scan_glyph_xml(path: Path) -> dict[str, Any]:
+def scan_glyph_xml(
+    path: Path, *, source_revision: str = "unversioned-local"
+) -> dict[str, Any]:
     """Count source XML g elements using precisely the current EpiDoc parser rule.
 
     A g is empty iff its own element text has no non-space content AND it
@@ -48,11 +51,15 @@ def scan_glyph_xml(path: Path) -> dict[str, Any]:
     """
     if path.is_symlink() or path.suffix != ".xml" or not path.is_file():
         raise GlyphInventoryError(f"invalid XML source file: {path.name}")
+    # The authenticated Brown pin contains seven real Git-conflict fragments.
+    # Reuse the converter's exact, researched, pin-scoped repairs; never rely
+    # on lxml recover=True or silently drop one of those 5,535 records.
     parser = etree.XMLParser(resolve_entities=False, no_network=True, load_dtd=False)
     try:
-        root = etree.parse(str(path), parser)
-    except (OSError, etree.XMLSyntaxError) as exc:
-        raise GlyphInventoryError(f"cannot parse XML source: {path.name}") from exc
+        source = repair_source_file(path, source_revision=source_revision)
+        root = etree.fromstring(source.text.encode("utf-8"), parser)
+    except (SourceConflictError, OSError, etree.XMLSyntaxError) as exc:
+        raise GlyphInventoryError(f"cannot parse XML source: {path.name}: {exc}") from exc
     refs: Counter[str] = Counter()
     layers: Counter[str] = Counter()
     unreferenced = 0
@@ -72,6 +79,7 @@ def scan_glyph_xml(path: Path) -> dict[str, Any]:
             filled += 1
     return {
         "record": path.stem,
+        "source_repaired": source.repaired,
         "empty_referenced": sum(refs.values()),
         "empty_unreferenced": unreferenced,
         "filled_referenced": filled,
@@ -80,7 +88,9 @@ def scan_glyph_xml(path: Path) -> dict[str, Any]:
     }
 
 
-def audit_glyph_sources(paths: Iterable[Path]) -> dict[str, Any]:
+def audit_glyph_sources(
+    paths: Iterable[Path], *, source_revision: str = "unversioned-local"
+) -> dict[str, Any]:
     """Deterministic inventory; never skip parse errors or duplicate record IDs."""
     source_paths = sorted(tuple(paths), key=lambda path: path.name)
     if not source_paths:
@@ -89,13 +99,16 @@ def audit_glyph_sources(paths: Iterable[Path]) -> dict[str, Any]:
     refs: Counter[str] = Counter()
     layers: Counter[str] = Counter()
     by_record: dict[str, int] = {}
+    repaired_files: list[str] = []
     empty_unref = 0
     filled = 0
     for path in source_paths:
         if path.stem in records:
             raise GlyphInventoryError(f"duplicate source record id: {path.stem}")
         records.add(path.stem)
-        result = scan_glyph_xml(path)
+        result = scan_glyph_xml(path, source_revision=source_revision)
+        if result["source_repaired"]:
+            repaired_files.append(path.name)
         refs.update(result["refs"])
         layers.update(result["layers"])
         empty_unref += result["empty_unreferenced"]
@@ -107,6 +120,7 @@ def audit_glyph_sources(paths: Iterable[Path]) -> dict[str, Any]:
         raise GlyphInventoryError("empty glyph source accounting failed")
     return {
         "source_records": len(records),
+        "repaired_files": sorted(repaired_files),
         "records_with_empty_references": len(by_record),
         "empty_referenced": count,
         "empty_unreferenced": empty_unref,
@@ -131,7 +145,7 @@ def audit_pinned_source(directory: Path, output: Path) -> dict[str, Any]:
         "source_revision": PINNED_SOURCE_REVISION,
         "source_epidoc_git_tree": verified_tree,
         "excluded": dict(sorted(excluded.items())),
-        **audit_glyph_sources(paths),
+        **audit_glyph_sources(paths, source_revision=PINNED_SOURCE_REVISION),
     }
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(
