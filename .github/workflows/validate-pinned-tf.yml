@@ -17,6 +17,8 @@ on:
       - "src/iip_tf/person_register.py"
       - "src/iip_tf/taxonomy_resolution.py"
       - "src/iip_tf/taxonomy_audit.py"
+      - "src/iip_tf/glyph_inventory.py"
+      - "tests/test_glyph_inventory.py"
       - "src/iip_tf/agora.py"
       - "src/iip_tf/_bundled_app/**"
       - "agora.materializer.json"
@@ -50,6 +52,8 @@ on:
       - "src/iip_tf/person_register.py"
       - "src/iip_tf/taxonomy_resolution.py"
       - "src/iip_tf/taxonomy_audit.py"
+      - "src/iip_tf/glyph_inventory.py"
+      - "tests/test_glyph_inventory.py"
       - "src/iip_tf/agora.py"
       - "src/iip_tf/_bundled_app/**"
       - "agora.materializer.json"
@@ -183,6 +187,12 @@ jobs:
           assert result["tokens"][1]["status"] == "unknown"
           assert "label" not in result["tokens"][1]
           PY
+      - name: Inventory every empty source g ref before Unicode display policy
+        run: |
+          python -m iip_tf.glyph_inventory \
+            upstream-iip/epidoc-files \
+            build/pinned-tf-reports/glyph-source-census.json
+          test -s build/pinned-tf-reports/glyph-source-census.json
       - name: Build and reload complete native TF corpus
         run: |
           python scripts/validate_pinned_tf.py \
@@ -230,5 +240,6 @@ jobs:
             build/pinned-tf-reports/iip-corpus-report.json
             build/pinned-tf-reports/iip-corpus-report.md
             build/pinned-tf-reports/taxonomy-audit.json
+            build/pinned-tf-reports/glyph-source-census.json
             build/pinned-tf-reports/context-fabric-parity.json
           if-no-files-found: warn
