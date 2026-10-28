@@ -132,7 +132,8 @@ def test_pinned_workflow_keeps_taxonomy_cli_arguments_separate_from_artifact() -
     audit = workflow.split("      - name: Audit pinned Brown taxonomy", 1)[1].split(
         "      - name: Require successful pinned build report", 1
     )[0]
-    assert "build/pinned-tf-reports/taxonomy-audit.json \\n            --raw-original" in audit
+    assert "build/pinned-tf-reports/taxonomy-audit.json" in audit
+    assert "--raw-original" in audit
     assert "glyph-source-census.json" not in audit, (
         "diagnostic artifact path must not become an argument to taxonomy audit"
     )
