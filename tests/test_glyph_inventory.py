@@ -125,3 +125,16 @@ def test_unreviewed_source_conflict_never_silently_recovers(tmp_path: Path) -> N
     )
     with pytest.raises(GlyphInventoryError, match="conflict"):
         scan_glyph_xml(source, source_revision=PINNED_IIP_REVISION)
+
+def test_pinned_workflow_keeps_taxonomy_cli_arguments_separate_from_artifact() -> None:
+    workflow = (Path(__file__).resolve().parents[1]
+                / ".github/workflows/validate-pinned-tf.yml").read_text(encoding="utf-8")
+    audit = workflow.split("      - name: Audit pinned Brown taxonomy", 1)[1].split(
+        "      - name: Require successful pinned build report", 1
+    )[0]
+    assert "build/pinned-tf-reports/taxonomy-audit.json \\n            --raw-original" in audit
+    assert "glyph-source-census.json" not in audit, (
+        "diagnostic artifact path must not become an argument to taxonomy audit"
+    )
+    upload = workflow.split("      - name: Upload reproducibility or failure reports", 1)[1]
+    assert "build/pinned-tf-reports/glyph-source-census.json" in upload
