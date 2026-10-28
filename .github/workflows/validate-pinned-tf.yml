@@ -207,8 +207,7 @@ jobs:
           python -m iip_tf.taxonomy_audit \
             upstream-iip/include_taxonomies.xml \
             build/pinned-tf \
-            build/pinned-tf-reports/taxonomy-audit.json
-            build/pinned-tf-reports/glyph-source-census.json \
+            build/pinned-tf-reports/taxonomy-audit.json \
             --raw-original
       - name: Require successful pinned build report
         if: success()
@@ -241,5 +240,6 @@ jobs:
             build/pinned-tf-reports/iip-corpus-report.json
             build/pinned-tf-reports/iip-corpus-report.md
             build/pinned-tf-reports/taxonomy-audit.json
+            build/pinned-tf-reports/glyph-source-census.json
             build/pinned-tf-reports/context-fabric-parity.json
           if-no-files-found: warn
