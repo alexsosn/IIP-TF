@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from iip_tf.glyph_inventory import GlyphInventoryError, audit_glyph_sources, scan_glyph_xml
+from iip_tf.source_repair import PINNED_IIP_REVISION
 
 
 def _xml(path: Path, text: str) -> Path:
@@ -91,3 +92,36 @@ def test_output_never_invents_unicode_or_source_glyphs(tmp_path: Path) -> None:
     assert report["refs"] == {"phoen-???": 1, "phoen-gaml": 1}
     assert "𐤂" not in json.dumps(report)
     assert "((" not in json.dumps(report)
+
+def test_pinned_bqut_conflict_uses_reviewed_source_repair_only(tmp_path: Path) -> None:
+    """Actual bqut0002.xml conflict block is a known pin-specific source repair."""
+    source = _xml(
+        tmp_path / "bqut0002.xml",
+        '<div type="edition" subtype="transcription">'
+        '<g ref="phoen-gaml"/>'
+        '</div>\n'
+        '<<<<<<< Updated upstream\n'
+        '=======\n'
+        '\n'
+        '>>>>>>> Stashed changes',
+    )
+    with pytest.raises(GlyphInventoryError, match="XML|conflict"):
+        scan_glyph_xml(source)
+    repaired = scan_glyph_xml(source, source_revision=PINNED_IIP_REVISION)
+    assert repaired["refs"] == {"phoen-gaml": 1}
+    assert repaired["empty_referenced"] == 1
+    with pytest.raises(GlyphInventoryError, match="conflict|pinned"):
+        scan_glyph_xml(source, source_revision="not-brown-pin")
+
+
+def test_unreviewed_source_conflict_never_silently_recovers(tmp_path: Path) -> None:
+    source = _xml(
+        tmp_path / "unknown0001.xml",
+        '<div><g ref="x"/></div>\n'
+        '<<<<<<< Updated upstream\n'
+        '=======\n'
+        '\n'
+        '>>>>>>> Stashed changes',
+    )
+    with pytest.raises(GlyphInventoryError, match="conflict"):
+        scan_glyph_xml(source, source_revision=PINNED_IIP_REVISION)
