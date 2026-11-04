@@ -191,8 +191,8 @@ jobs:
         run: |
           python -m iip_tf.glyph_inventory \
             upstream-iip/epidoc-files \
-            build/pinned-tf-reports/glyph-source-census.json
-          test -s build/pinned-tf-reports/glyph-source-census.json
+            build/glyph-source-census.json
+          test -s build/glyph-source-census.json
       - name: Build and reload complete native TF corpus
         run: |
           python scripts/validate_pinned_tf.py \
@@ -240,6 +240,6 @@ jobs:
             build/pinned-tf-reports/iip-corpus-report.json
             build/pinned-tf-reports/iip-corpus-report.md
             build/pinned-tf-reports/taxonomy-audit.json
-            build/pinned-tf-reports/glyph-source-census.json
+            build/glyph-source-census.json
             build/pinned-tf-reports/context-fabric-parity.json
           if-no-files-found: warn
