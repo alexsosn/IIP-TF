@@ -103,7 +103,7 @@ def test_pinned_bqut_conflict_uses_reviewed_source_repair_only(tmp_path: Path) -
         '<<<<<<< Updated upstream\n'
         '=======\n'
         '\n'
-        '>>>>>>> Stashed changes',
+        '>>>>>>> Stashed changes\n',
     )
     with pytest.raises(GlyphInventoryError, match="XML|conflict"):
         scan_glyph_xml(source)
