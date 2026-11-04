@@ -54,7 +54,12 @@ def scan_glyph_xml(
     # The authenticated Brown pin contains seven real Git-conflict fragments.
     # Reuse the converter's exact, researched, pin-scoped repairs; never rely
     # on lxml recover=True or silently drop one of those 5,535 records.
-    parser = etree.XMLParser(resolve_entities=False, no_network=True, load_dtd=False)
+    # The production ElementTree reader accepts repeated xml:id across alternate
+    # editions (e.g. pinned suhm0001). This diagnostic never resolves XML IDs.
+    # Keep structural XML validation, but do not enforce lxml's ID uniqueness.
+    parser = etree.XMLParser(
+        resolve_entities=False, no_network=True, load_dtd=False, collect_ids=False
+    )
     try:
         source = repair_source_file(path, source_revision=source_revision)
         root = etree.fromstring(source.text.encode("utf-8"), parser)
