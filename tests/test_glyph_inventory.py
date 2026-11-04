@@ -158,5 +158,12 @@ def test_pinned_workflow_keeps_taxonomy_cli_arguments_separate_from_artifact() -
     assert "glyph-source-census.json" not in audit, (
         "diagnostic artifact path must not become an argument to taxonomy audit"
     )
+    inventory = workflow.split("      - name: Inventory every empty source g ref", 1)[1].split(
+        "      - name: Build and reload complete native TF corpus", 1
+    )[0]
+    assert "build/glyph-source-census.json" in inventory
+    assert "build/pinned-tf-reports/" not in inventory, (
+        "source census must not pre-populate native validator output directory"
+    )
     upload = workflow.split("      - name: Upload reproducibility or failure reports", 1)[1]
-    assert "build/pinned-tf-reports/glyph-source-census.json" in upload
+    assert "build/glyph-source-census.json" in upload
