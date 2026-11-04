@@ -71,6 +71,27 @@ def test_absent_layer_explicit_and_attribute_ref_xml_decoded(tmp_path: Path) -> 
     assert scan_glyph_xml(p)["layers"] == {"unclassified": 2}
 
 
+def test_duplicate_xml_ids_in_alternate_editions_are_not_xml_syntax_errors(
+    tmp_path: Path,
+) -> None:
+    """Brown suhm0001 has repeated xml:id tokens across two segmented editions.
+
+    Like the production ElementTree parser, this read-only glyph census must
+    parse the well-formed XML without enforcing global xml:id uniqueness.
+    Duplicate source record filenames remain a separate fatal condition.
+    """
+    source = _xml(tmp_path / "suhm0001.xml", (
+        '<div type="edition" subtype="transcription_segmented">'
+        '<w xml:id="suhm0001-1">first</w><g ref="phoen-gaml"/></div>'
+        '<div type="edition" subtype="transcription_segmented">'
+        '<w xml:id="suhm0001-1">second</w><g ref="phoen-mem"/></div>'
+    ))
+    result = scan_glyph_xml(source)
+    assert result["empty_referenced"] == 2
+    assert result["refs"] == {"phoen-gaml": 1, "phoen-mem": 1}
+    assert result["layers"] == {"transcription_segmented": 2}
+
+
 def test_malformed_input_and_duplicate_record_ids_fail_closed(tmp_path: Path) -> None:
     a = _xml(tmp_path / "a.xml", "<g ref='x'/>")
     with pytest.raises(GlyphInventoryError, match="duplicate"):
