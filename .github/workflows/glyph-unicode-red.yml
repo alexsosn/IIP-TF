@@ -1,0 +1,20 @@
+name: Glyph Unicode TDD RED checkpoint
+on:
+  pull_request:
+    paths:
+      - "tests/test_glyph_unicode_display.py"
+      - ".github/workflows/glyph-unicode-red.yml"
+jobs:
+  pytest-red:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install -e '.[dev]'
+      - name: Run new test module directly before implementation
+        run: pytest -q tests/test_glyph_unicode_display.py
