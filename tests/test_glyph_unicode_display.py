@@ -5,6 +5,7 @@ from __future__ import annotations
 import unicodedata
 
 import pytest
+
 from iip_tf.glyph_unicode import (
     GLYPH_UNICODE_MAP,
     REVIEWED_GLYPH_REFS,
