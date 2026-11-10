@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import unicodedata
+from pathlib import Path
 
 import pytest
 
@@ -12,7 +13,9 @@ from iip_tf.glyph_unicode import (
     GlyphDisplayError,
     glyph_display_token,
 )
-from iip_tf.tf_writer import _otext
+from iip_tf.source_repair import PINNED_IIP_REVISION
+from iip_tf.text_parser import parse_epidoc_file
+from iip_tf.tf_writer import _otext, write_tf_corpus
 
 
 @pytest.mark.parametrize(
@@ -81,3 +84,26 @@ def test_derived_text_formats_leave_source_and_existing_formats_unchanged() -> N
     normalized = formats["fmt:text-section-normalized-unicode-full"]
     assert "{transcription_unicode_ref_token}" in normalized
     assert "{translation_glyph}{translation_unicode_ref_token}{translation_after}" in normalized
+
+
+def test_declared_pinned_source_rejects_unreviewed_glyph_at_writer_gate(
+    tmp_path: Path,
+) -> None:
+    """The pinned gate must hold in direct TF conversion, not only GitHub CI."""
+    source = tmp_path / "local.xml"
+    source.write_text(
+        '<TEI xmlns="http://www.tei-c.org/ns/1.0">'
+        '<teiHeader><fileDesc><titleStmt><title>Test</title>'
+        '<respStmt><resp>Editor</resp><name>Person</name></respStmt>'
+        '</titleStmt><publicationStmt><idno>local</idno></publicationStmt>'
+        '</fileDesc></teiHeader><text><body>'
+        '<div type="edition" subtype="transcription"><p>'
+        '<g ref="phoen-new"/></p></div></body></text></TEI>',
+        encoding="utf-8",
+    )
+    pinned_ir = parse_epidoc_file(source, source_revision=PINNED_IIP_REVISION)
+    with pytest.raises(GlyphDisplayError, match="unreviewed"):
+        write_tf_corpus((pinned_ir,), tmp_path / "pinned", converter_commit="test")
+
+    local_ir = parse_epidoc_file(source, source_revision="local-unpinned")
+    write_tf_corpus((local_ir,), tmp_path / "unversioned", converter_commit="test")
