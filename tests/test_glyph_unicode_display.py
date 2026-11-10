@@ -60,6 +60,13 @@ def test_unreviewed_empty_glyph_refs_fail_closed(unknown: str) -> None:
         glyph_display_token(unknown)
 
 
+def test_local_unreviewed_refs_remain_escaped_source_labels_without_unicode_guess() -> None:
+    assert glyph_display_token("<script>", strict=False) == "((&lt;script&gt;))"
+    assert glyph_display_token("one", strict=False) == "((one))"
+    with pytest.raises(GlyphDisplayError, match="unreviewed"):
+        glyph_display_token("")
+
+
 def test_derived_text_formats_leave_source_and_existing_formats_unchanged() -> None:
     formats = _otext()
     assert formats["fmt:text-orig-full"] == "{primary_glyph}{primary_after}"
