@@ -124,8 +124,11 @@ for readable selected sections in every layer. The old
 `text-orig-full`, `text-orig-refs-full`,
 `text-section-normalized-full`, source `glyph` and source
 markup `ref` remain unchanged; all new tokens are *derived display*.
-Unseen empty refs fail closed. The pinned source inventory is compared
-against the policy to detect additions before release. No new TF slots,
+Unseen empty refs fail closed in strict policy validation. For explicit
+non-pinned local EpiDoc conversion, an unknown ref is shown only as an
+HTML-escaped source label, never as guessed Unicode. The authenticated pinned
+source inventory is compared against the complete policy to detect additions
+before building corpus data. No new TF slots,
 edges, source edits or semantic sidecars are introduced.
 
 ## Text language provenance (issue #53)
