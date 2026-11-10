@@ -34,13 +34,13 @@ def _is_selected_sign(app: Any, node: int, fmt: str | None) -> bool:
         "text-translation-full": "translation",
         "text-commentary-full": "commentary",
     }
-    if fmt in {"text-orig-full", "text-orig-refs-full", "text-source-full"}:
+    if fmt in {"text-orig-full", "text-orig-refs-full", "text-orig-unicode-full", "text-source-full"}:
         owners = tuple(api.L.u(node, otype="inscription"))
         if len(owners) != 1 or layer != api.F.primary_layer.v(owners[0]):
             return False
         allowed = {"both", "source"} if fmt == "text-source-full" else {"both", "normalized"}
         return role in allowed
-    if fmt == "text-section-normalized-full":
+    if fmt in {"text-section-normalized-full", "text-section-normalized-unicode-full"}:
         return layer in layer_for_format.values() and role in {"both", "normalized"}
     if fmt in layer_for_format:
         return layer == layer_for_format[fmt] and role in {"both", "normalized"}
@@ -73,6 +73,7 @@ _SPAN_KINDS = frozenset({"supplied", "unclear", "abbr", "ex"})
 _AFTER_FEATURE = {
     "text-orig-full": "primary_after",
     "text-orig-refs-full": "primary_after",
+    "text-orig-unicode-full": "primary_after",
     "text-layer-full": "after",
     "text-source-full": "source_after",
     "text-transcription-full": "transcription_after",
@@ -205,7 +206,9 @@ def render_sign(app: Any, options: Any, chunk: Any, n_type: str, outer: bool) ->
     after_html = ""
     if closings:
         after_feature_name = (
-            f"{layer}_after" if display_fmt == "text-section-normalized-full"
+            f"{layer}_after" if display_fmt in {
+                "text-section-normalized-full", "text-section-normalized-unicode-full"
+            }
             and (layer := app.api.F.layer.v(node)) in {
                 "transcription", "diplomatic", "translation", "commentary"
             }
