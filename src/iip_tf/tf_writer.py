@@ -240,9 +240,10 @@ def _add_primary_reference_tokens(
         ref = refs.get(sign.key)
         if ref is None:
             continue
-        # Check the source ref even when this branch is not a selected reading.
-        # New refs cannot silently acquire guessed text in any edition.
-        display = glyph_display_token(ref)
+        # For non-pinned local EpiDoc, unknown refs remain visible only as
+        # escaped source labels. The authenticated full corpus workflow checks
+        # exact ref-policy equality and fails closed before native TF build.
+        display = glyph_display_token(ref, strict=False)
         if sign.reading_role not in {"both", "normalized"}:
             continue
         slot = slot_by_key[sign.key]
