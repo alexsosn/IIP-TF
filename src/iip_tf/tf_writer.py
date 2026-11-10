@@ -300,8 +300,8 @@ def _otext() -> dict[str, str]:
         "fmt:text-section-normalized-unicode-full": (
             "{transcription_glyph}{transcription_unicode_ref_token}{transcription_after}"
             "{diplomatic_glyph}{diplomatic_unicode_ref_token}{diplomatic_after}"
-            "{translation_glyph}{translation_after}"
-            "{commentary_glyph}{commentary_after}"
+            "{translation_glyph}{translation_unicode_ref_token}{translation_after}"
+            "{commentary_glyph}{commentary_unicode_ref_token}{commentary_after}"
         ),
         "fmt:text-layer-full": "{glyph}{after}",
         "fmt:text-source-full": "{source_glyph}{source_after}",
