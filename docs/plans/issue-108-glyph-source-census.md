@@ -1,0 +1,15 @@
+# #108 — Source-grounded empty glyph reference census (research → plan)
+
+Pinned Brown source identity is `Brown-University-Library/iip-texts@0b7dc8358ccdfd0c9391f049da4839fbd91c26e5`, with authenticated `epidoc-files/` tree Git SHA-1 `4445c4878873227c73ead5e8b94f9e3487c28c3b` (5,536 regular XML files including known `aaTestFile.xml`). IIP-TF's `text_parser.py` creates a synthetic `glyph_ref` slot for an inline `g` only if **no child elements** and **no non-whitespace element text**; it does so even when `g@ref` is absent. The writer already renders sourced references in an **opt-in** `text-orig-refs-full` feature as escaped `((ref))` but deliberately does **not** change attested `glyph` or `text-orig-full`. Maintainer #58 requires a complete reviewed table of mapped Unicode versus explicit fallback for every observed source `ref` and build failure on an unseen value. Existing issue evidence reports 1,955 empty `g@ref` in 503 records, versus 1,353 filled `g@ref` with authored characters.
+
+## Scope / TDD
+
+* Audit the exact **parser condition** for empty `g`; report both empty-with-ref and empty-without-ref separately, keeping filled-with-ref separate. Distinguish source `div subtype=transcription_segmented` annotations from normal edition layers; preserve exact parser-visible `ref` strings (no case or Unicode normalization). Collect per-ref and per-record counts in deterministic order, with layer-based partitions. Warn of no meaningful parent layer rather than assigning inferred script.
+* The CLI authenticates the pinned source Git tree before scanning, rejects unexpected directories/symlinks, XML errors, duplicate IDs/files and empty census, and fails on source accounting inconsistencies. Exclude only the actual upstream test file `aaTestFile.xml` **after** the exact tree pin is proved. No XML/JSON semantic sidecar, no changes to TF nodes, features, text formats or browser.
+* RED-first tests: namespaced EpiDoc, genuine empty refs (incl. empty whitespace), no-ref synthetic refs, nonempty `<g>+</g>` and child elements, distinct source layers/segmented, mixed refs, duplicate records, malformed XML, stable JSON output. Commit tests before implementation; run targeted pytest RED with recorded evidence.
+* CI runs the new audit under the **existing** full pinned workflow, reusing already-downloaded source; retain a separately uploaded diagnostic `glyph-source-census.json`. Pin source SHA; record full unique source ref vocabulary for downstream Unicode/fallback mapping. Do not expand the default character-substitution policy until every observed ref can be reviewed.
+* Exact-head CI, pinned 5,535-record full gate, and independent skeptical review before merge. This bounded work doesn't resolve #58 on its own.
+
+## Count/research cautions
+
+Counts supplied in #58 are hypotheses to verify against the *active* source tree and whether `transcription_segmented` glyphs count separately from primary authored references. No silent correction of upstream malformed `g` data. Source attribute values exposed by XML parser cannot attest original lexical entity quoting; report them as XML-decoded values, not raw lexical bytes.
