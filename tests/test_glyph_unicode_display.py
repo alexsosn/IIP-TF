@@ -8,10 +8,11 @@ import pytest
 
 from iip_tf.glyph_unicode import (
     GLYPH_UNICODE_MAP,
-    GlyphDisplayError,
     REVIEWED_GLYPH_REFS,
+    GlyphDisplayError,
     glyph_display_token,
 )
+
 from iip_tf.tf_writer import _otext
 
 
