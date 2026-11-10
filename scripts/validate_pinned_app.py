@@ -318,6 +318,28 @@ def main() -> int:
         if not isinstance(payload.get("table"), str) or not payload["table"]:
             raise RuntimeError("pinned browser returned empty passage HTML")
 
+        # Researcher E2E through the actual HTML passage endpoint: primary
+        # source-only Masada ostracon is no longer a blank browser reading.
+        masada_lines = api.L.d(masada, otype="line")
+        if not masada_lines:
+            raise RuntimeError("masa0286: no source glyph line for browser smoke")
+        masada_section = api.T.sectionFromNode(masada_lines[0])
+        glyph_passage = client.post(
+            "/passage",
+            data={"sec0": "masa0286", "sec1": str(masada_section[1])},
+        )
+        glyph_payload = glyph_passage.get_json()
+        if glyph_passage.status_code != 200 or not isinstance(glyph_payload, dict):
+            raise RuntimeError("masa0286: glyph browser passage failed")
+        glyph_markup = glyph_payload.get("table")
+        if not isinstance(glyph_markup, str):
+            raise RuntimeError("masa0286: browser glyph passage has no HTML")
+        visible_glyph = VisibleText()
+        visible_glyph.feed(glyph_markup)
+        rendered_glyph = "".join(visible_glyph.parts)
+        if "𐤂" not in rendered_glyph or "𐤃" not in rendered_glyph:
+            raise RuntimeError("masa0286: reviewed glyphs absent in browser passage")
+
         search = client.post(
             "/query",
             data={"query": "inscription inscription_id=abil0001", "condenseType": "line"}
