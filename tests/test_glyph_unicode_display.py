@@ -6,6 +6,7 @@ import unicodedata
 from pathlib import Path
 
 import pytest
+from tf.fabric import Fabric  # type: ignore[import-untyped]
 
 from iip_tf.glyph_unicode import (
     GLYPH_UNICODE_MAP,
@@ -106,4 +107,10 @@ def test_declared_pinned_source_rejects_unreviewed_glyph_at_writer_gate(
         write_tf_corpus((pinned_ir,), tmp_path / "pinned", converter_commit="test")
 
     local_ir = parse_epidoc_file(source, source_revision="local-unpinned")
-    write_tf_corpus((local_ir,), tmp_path / "unversioned", converter_commit="test")
+    output = tmp_path / "unversioned"
+    write_tf_corpus((local_ir,), output, converter_commit="test")
+    api = Fabric(locations=str(output), silent=True).loadAll(silent=True)
+    owner = api.T.nodeFromSection(("local",))
+    assert owner is not None
+    assert api.T.text(owner, fmt="text-orig-full") == ""
+    assert api.T.text(owner, fmt="text-orig-unicode-full") == "((phoen-new))"
