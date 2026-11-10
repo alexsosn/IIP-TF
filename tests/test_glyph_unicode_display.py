@@ -74,4 +74,4 @@ def test_derived_text_formats_leave_source_and_existing_formats_unchanged() -> N
     assert "fmt:text-section-normalized-unicode-full" in formats
     normalized = formats["fmt:text-section-normalized-unicode-full"]
     assert "{transcription_unicode_ref_token}" in normalized
-    assert "{translation_glyph}{translation_after}" in normalized
+    assert "{translation_glyph}{translation_unicode_ref_token}{translation_after}" in normalized
