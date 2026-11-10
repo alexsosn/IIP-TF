@@ -110,6 +110,27 @@ layer is absent ([#51](https://github.com/alexsosn/IIP-TF/issues/51)).
 `text-layer-full` is a literal stored-slot view and may show competing
 editorial branches; do not interpret it as a vetted critical edition.
 
+Empty source glyph references are visible in the **new opt-in**
+`text-orig-unicode-full` and the standard browser's
+`text-section-normalized-unicode-full`. A reviewed one-to-one Phoenician
+character uses its real Unicode scalar (e.g. `phoen-gaml` → 𐤂,
+`phoen-delt` → 𐤃 in `masa0286`); otherwise the source label
+`((ref))` is shown instead of inventing a symbol. All 153 observed source
+refs have a reviewed policy. The original `glyph` and the default native
+`text-orig-full` still preserve the empty synthetic positions. For example:
+
+```python
+from tf.fabric import Fabric
+api = Fabric(locations="PATH/TO/TF").loadAll()
+node = api.T.nodeFromSection(("masa0286",))
+print(api.T.text(node, fmt="text-orig-unicode-full"))
+```
+
+That output contains the reviewed Phoenician codepoints; source spacing can
+occur between them. Query the original markup `ref` for source provenance,
+not the derived glyph display. The complete mapped/fallback table and cautions
+are in [the native schema reference](../reference/schema-0.1.md).
+
 For more worked native metadata/edge queries, including bibliography,
 Pleiades source references, physical dimensions, facsimile credits and
 contributor/provenance records, see
@@ -141,8 +162,9 @@ redistributed by this build; metadata may retain only their links and credits.
 **Limitations:** language codes are *source raw values*, not verified language
 or writing-system normalizations
 ([#52–#57](https://github.com/alexsosn/IIP-TF/issues/57));
-the current browser does not fully visualize supplied/uncertain source
-apparatus (#65), non-primary display (#51) and empty referenced glyphs (#58).
+source-critical editorial apparatus remains only partially visualized
+(#65), and some non-primary display issues remain (#51). Glyph references
+now have explicit reviewed Unicode/fallback display (#58).
 Do not infer an absence of reading, person identity or dating merely from a
 missing feature or empty display. Current IIP public deep links are not assumed
 to be stable. Researcher distribution and Agora integration are tracked in

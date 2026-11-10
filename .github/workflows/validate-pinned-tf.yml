@@ -18,7 +18,9 @@ on:
       - "src/iip_tf/taxonomy_resolution.py"
       - "src/iip_tf/taxonomy_audit.py"
       - "src/iip_tf/glyph_inventory.py"
+      - "src/iip_tf/glyph_unicode.py"
       - "tests/test_glyph_inventory.py"
+      - "tests/test_glyph_unicode_display.py"
       - "src/iip_tf/agora.py"
       - "src/iip_tf/_bundled_app/**"
       - "agora.materializer.json"
@@ -53,7 +55,9 @@ on:
       - "src/iip_tf/taxonomy_resolution.py"
       - "src/iip_tf/taxonomy_audit.py"
       - "src/iip_tf/glyph_inventory.py"
+      - "src/iip_tf/glyph_unicode.py"
       - "tests/test_glyph_inventory.py"
+      - "tests/test_glyph_unicode_display.py"
       - "src/iip_tf/agora.py"
       - "src/iip_tf/_bundled_app/**"
       - "agora.materializer.json"
@@ -193,6 +197,25 @@ jobs:
             upstream-iip/epidoc-files \
             build/glyph-source-census.json
           test -s build/glyph-source-census.json
+      - name: Require exact reviewed Unicode-or-fallback policy for all pinned source refs
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from iip_tf.glyph_unicode import (
+              FALLBACK_GLYPH_REFS, GLYPH_UNICODE_MAP, REVIEWED_GLYPH_REFS
+          )
+          report = json.loads(Path("build/glyph-source-census.json").read_text(encoding="utf-8"))
+          observed = set(report["refs"])
+          assert observed == REVIEWED_GLYPH_REFS, {
+              "unreviewed": sorted(observed - REVIEWED_GLYPH_REFS),
+              "stale": sorted(REVIEWED_GLYPH_REFS - observed),
+          }
+          assert not (set(GLYPH_UNICODE_MAP) & FALLBACK_GLYPH_REFS)
+          assert len(GLYPH_UNICODE_MAP) == 16 and len(FALLBACK_GLYPH_REFS) == 137
+          assert sum(report["refs"].values()) == report["empty_referenced"] == 1955
+          print("Authenticated glyph Unicode/fallback policy covers all 153 source refs")
+          PY
       - name: Build and reload complete native TF corpus
         run: |
           python scripts/validate_pinned_tf.py \

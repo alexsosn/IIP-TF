@@ -15,6 +15,7 @@ from typing import Any
 from tf.advanced.app import findApp  # type: ignore[import-untyped]
 from tf.browser import kernel, web  # type: ignore[import-untyped]
 
+from iip_tf.glyph_unicode import glyph_display_token
 from iip_tf.researcher_queries import verify_pinned_examples
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -36,6 +37,7 @@ def validate_native_reference_tokens(api: Any) -> int:
     F, L = api.F, api.L
     annotation_source = getattr(F, "annotation_source", None)
     matched = 0
+    referenced_owners: set[int] = set()
     for slot in F.synthetic_kind.s("glyph_ref"):
         if F.glyph.v(slot) is not None:
             raise RuntimeError(f"glyph reference slot {slot} gained fabricated source text")
@@ -66,11 +68,46 @@ def validate_native_reference_tokens(api: Any) -> int:
             raise RuntimeError(
                 f"glyph reference slot {slot}: expected {expected!r}, actual {actual!r}"
             )
+        role = F.reading_role.v(slot)
+        layer = F.layer.v(slot)
+        reviewed = glyph_display_token(source_ref) if source_ref else None
+        selected = role in {"both", "normalized"}
+        primary_unicode_expected = reviewed if primary else None
+        if F.primary_unicode_ref_token.v(slot) != primary_unicode_expected:
+            raise RuntimeError(
+                f"glyph ref slot {slot}: reviewed primary Unicode/fallback token mismatch"
+            )
+        if layer in {"transcription", "diplomatic", "translation", "commentary"}:
+            layer_feature = getattr(F, f"{layer}_unicode_ref_token")
+            layer_expected = reviewed if selected else None
+            if layer_feature.v(slot) != layer_expected:
+                raise RuntimeError(
+                    f"glyph ref slot {slot}: reviewed {layer} Unicode/fallback token mismatch"
+                )
         if expected:
             matched += 1
+            referenced_owners.add(owners[0])
 
     if matched < 1000:
         raise RuntimeError(f"unexpectedly low pinned primary glyph-ref coverage: {matched}")
+
+    # Complete pinned release acceptance (#58): a record whose selected
+    # primary source text consists only of empty glyph-ref positions must
+    # have a nonblank reviewed display. Check ALL such records, not just
+    # handpicked Masada canaries.
+    source_glyph_only = 0
+    for owner in sorted(referenced_owners):
+        if api.T.text(owner, fmt="text-orig-full").strip():
+            continue
+        source_glyph_only += 1
+        if not api.T.text(owner, fmt="text-orig-unicode-full").strip():
+            record_id = F.inscription_id.v(owner)
+            raise RuntimeError(
+                f"pinned ref-only record {record_id}: derived glyph text remains blank"
+            )
+    if source_glyph_only == 0:
+        raise RuntimeError("pinned glyph-only source records unexpectedly missing")
+    print(f"Pinned glyph-only inscriptions with visible Unicode/fallback text: {source_glyph_only}")
 
     for record_id, expected_refs in (
         ("masa0286", ("phoen-gaml", "phoen-delt")),
@@ -81,11 +118,14 @@ def validate_native_reference_tokens(api: Any) -> int:
             raise RuntimeError(f"missing native glyph-reference example: {record_id}")
         plain = api.T.text(owner, fmt="text-orig-full")
         with_refs = api.T.text(owner, fmt="text-orig-refs-full")
+        with_unicode = api.T.text(owner, fmt="text-orig-unicode-full")
         if plain.strip():
             raise RuntimeError(f"{record_id} unexpectedly contains visible source glyphs")
         for ref in expected_refs:
             if f"(({ref}))" not in with_refs:
                 raise RuntimeError(f"{record_id}: missing opt-in glyph ref {ref}")
+            if glyph_display_token(ref) not in with_unicode:
+                raise RuntimeError(f"{record_id}: missing reviewed Unicode {ref}")
     print(f"Pinned native glyph-reference display: {matched} primary tokens verified")
     return matched
 
@@ -211,8 +251,8 @@ def main() -> int:
     if not content.strip():
         raise RuntimeError("Aramaic-source inscription lost its visible TF text")
 
-    # Empty Phoenician glyph references remain source-queryable, even though
-    # default display is an acknowledged limitation tracked in #58.
+    # Original Phoenician source refs remain queryable, while the browser's
+    # additive display now uses exact reviewed Unicode or source-label fallback.
     masada = api.T.nodeFromSection(("masa0286",))
     assert masada is not None
     native_refs = [
@@ -247,6 +287,10 @@ def main() -> int:
     glyph_html = render_sign(options, (glyph_slot,), "sign", False)
     if "glyph ref=phoen-gaml" not in glyph_html or "((phoen-gaml))" not in glyph_html:
         raise RuntimeError("opt-in native glyph label/reading not rendered")
+    unicode_options = SimpleNamespace(fmt="text-orig-unicode-full")
+    unicode_html = render_sign(unicode_options, (glyph_slot,), "sign", False)
+    if "glyph ref=phoen-gaml" not in unicode_html or "𐤂" not in unicode_html:
+        raise RuntimeError("reviewed Unicode glyph and native editorial label missing")
 
     abil = api.T.nodeFromSection(("abil0001",))
     if abil is None:
@@ -293,6 +337,28 @@ def main() -> int:
             raise RuntimeError("pinned browser passage endpoint failed")
         if not isinstance(payload.get("table"), str) or not payload["table"]:
             raise RuntimeError("pinned browser returned empty passage HTML")
+
+        # Researcher E2E through the actual HTML passage endpoint: primary
+        # source-only Masada ostracon is no longer a blank browser reading.
+        masada_lines = api.L.d(masada, otype="line")
+        if not masada_lines:
+            raise RuntimeError("masa0286: no source glyph line for browser smoke")
+        masada_section = api.T.sectionFromNode(masada_lines[0])
+        glyph_passage = client.post(
+            "/passage",
+            data={"sec0": "masa0286", "sec1": str(masada_section[1])},
+        )
+        glyph_payload = glyph_passage.get_json()
+        if glyph_passage.status_code != 200 or not isinstance(glyph_payload, dict):
+            raise RuntimeError("masa0286: glyph browser passage failed")
+        glyph_markup = glyph_payload.get("table")
+        if not isinstance(glyph_markup, str):
+            raise RuntimeError("masa0286: browser glyph passage has no HTML")
+        visible_glyph = VisibleText()
+        visible_glyph.feed(glyph_markup)
+        rendered_glyph = "".join(visible_glyph.parts)
+        if "𐤂" not in rendered_glyph or "𐤃" not in rendered_glyph:
+            raise RuntimeError("masa0286: reviewed glyphs absent in browser passage")
 
         search = client.post(
             "/query",
