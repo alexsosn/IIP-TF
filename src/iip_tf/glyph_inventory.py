@@ -56,9 +56,16 @@ def scan_glyph_xml(
     # on lxml recover=True or silently drop one of those 5,535 records.
     # The production ElementTree reader accepts repeated xml:id across alternate
     # editions (e.g. pinned suhm0001). This diagnostic never resolves XML IDs.
-    # Keep structural XML validation, but do not enforce lxml's ID uniqueness.
+    # Match ElementTree's default handling of comments and processing
+    # instructions as well: neither counts as a child of an empty source g.
+    # Preserve strict structural XML validation without ID uniqueness checks.
     parser = etree.XMLParser(
-        resolve_entities=False, no_network=True, load_dtd=False, collect_ids=False
+        resolve_entities=False,
+        no_network=True,
+        load_dtd=False,
+        collect_ids=False,
+        remove_comments=True,
+        remove_pis=True,
     )
     try:
         source = repair_source_file(path, source_revision=source_revision)
