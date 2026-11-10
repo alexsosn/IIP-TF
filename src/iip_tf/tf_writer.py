@@ -16,6 +16,7 @@ from iip_tf import __version__
 from iip_tf.encoded_script import encoded_script, uniform_encoded_script
 from iip_tf.glyph_unicode import glyph_display_token
 from iip_tf.ir import InscriptionIR, IRSign, Layer, NodeType
+from iip_tf.source_repair import PINNED_IIP_REVISION
 
 _NODE_TYPE_ORDER = (
     NodeType.INSCRIPTION,
@@ -240,10 +241,11 @@ def _add_primary_reference_tokens(
         ref = refs.get(sign.key)
         if ref is None:
             continue
-        # For non-pinned local EpiDoc, unknown refs remain visible only as
-        # escaped source labels. The authenticated full corpus workflow checks
-        # exact ref-policy equality and fails closed before native TF build.
-        display = glyph_display_token(ref, strict=False)
+        # Enforce reviewed policy even when the authenticated Brown revision
+        # is converted outside CI. Unpinned local EpiDoc instead gets only an
+        # escaped source-label fallback; never guess a Unicode character.
+        strict = ir.provenance.source_revision == PINNED_IIP_REVISION
+        display = glyph_display_token(ref, strict=strict)
         if sign.reading_role not in {"both", "normalized"}:
             continue
         slot = slot_by_key[sign.key]
