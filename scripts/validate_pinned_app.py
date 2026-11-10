@@ -37,6 +37,7 @@ def validate_native_reference_tokens(api: Any) -> int:
     F, L = api.F, api.L
     annotation_source = getattr(F, "annotation_source", None)
     matched = 0
+    referenced_owners: set[int] = set()
     for slot in F.synthetic_kind.s("glyph_ref"):
         if F.glyph.v(slot) is not None:
             raise RuntimeError(f"glyph reference slot {slot} gained fabricated source text")
@@ -85,9 +86,28 @@ def validate_native_reference_tokens(api: Any) -> int:
                 )
         if expected:
             matched += 1
+            referenced_owners.add(owners[0])
 
     if matched < 1000:
         raise RuntimeError(f"unexpectedly low pinned primary glyph-ref coverage: {matched}")
+
+    # Complete pinned release acceptance (#58): a record whose selected
+    # primary source text consists only of empty glyph-ref positions must
+    # have a nonblank reviewed display. Check ALL such records, not just
+    # handpicked Masada canaries.
+    source_glyph_only = 0
+    for owner in sorted(referenced_owners):
+        if api.T.text(owner, fmt="text-orig-full").strip():
+            continue
+        source_glyph_only += 1
+        if not api.T.text(owner, fmt="text-orig-unicode-full").strip():
+            record_id = F.inscription_id.v(owner)
+            raise RuntimeError(
+                f"pinned ref-only record {record_id}: derived glyph text remains blank"
+            )
+    if source_glyph_only == 0:
+        raise RuntimeError("pinned glyph-only source records unexpectedly missing")
+    print(f"Pinned glyph-only inscriptions with visible Unicode/fallback text: {source_glyph_only}")
 
     for record_id, expected_refs in (
         ("masa0286", ("phoen-gaml", "phoen-delt")),
