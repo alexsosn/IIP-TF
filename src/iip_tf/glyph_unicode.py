@@ -187,15 +187,17 @@ REVIEWED_GLYPH_REFS: Final[frozenset[str]] = (
 )
 
 
-def glyph_display_token(ref: str) -> str:
-    """Unicode for reviewed exact identities; source-faithful ((ref)) otherwise.
+def glyph_display_token(ref: str, *, strict: bool = True) -> str:
+    """Unicode for reviewed identities; escaped source label otherwise.
 
-    Ref is the XML-decoded source value, never a fabricated source glyph.
-    An unreviewed empty ref is a hard error, not an omitted character.
+    Strict policy validation rejects new refs. A local, unpinned EpiDoc
+    conversion may instead use safe literal source-label fallback, without
+    guessing a Unicode symbol. The authenticated full pin separately requires
+    exact observed-ref coverage before building any Text-Fabric data.
     """
     character = GLYPH_UNICODE_MAP.get(ref)
     if character is not None:
         return character
-    if ref in FALLBACK_GLYPH_REFS:
+    if ref in FALLBACK_GLYPH_REFS or (not strict and ref != ""):
         return f"(({escape(ref, quote=True)}))"
     raise GlyphDisplayError(f"unreviewed source glyph reference: {ref!r}")
