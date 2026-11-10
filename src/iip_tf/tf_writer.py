@@ -14,6 +14,7 @@ from tf.fabric import Fabric  # type: ignore[import-untyped]
 
 from iip_tf import __version__
 from iip_tf.encoded_script import encoded_script, uniform_encoded_script
+from iip_tf.glyph_unicode import glyph_display_token
 from iip_tf.ir import InscriptionIR, IRSign, Layer, NodeType
 
 _NODE_TYPE_ORDER = (
@@ -236,18 +237,25 @@ def _add_primary_reference_tokens(
     for sign in ir.signs:
         if sign.synthetic_kind != "glyph_ref":
             continue
-        if sign.layer.value != primary or sign.reading_role not in {"both", "normalized"}:
-            continue
         ref = refs.get(sign.key)
-        if ref is not None:
-            # HTML-safe *display* convention; the native markup retains the
-            # byte-for-byte source ref, while glyph remains genuinely empty.
+        if ref is None:
+            continue
+        # Check the source ref even when this branch is not a selected reading.
+        # New refs cannot silently acquire guessed text in any edition.
+        display = glyph_display_token(ref)
+        if sign.reading_role not in {"both", "normalized"}:
+            continue
+        slot = slot_by_key[sign.key]
+        # Preserve the published IIP source-label format exactly as before.
+        # Only the new, separate features contain the reviewed derived reading.
+        if sign.layer.value == primary:
             _set_feature(
-                features,
-                "primary_ref_token",
-                slot_by_key[sign.key],
-                f"(({escape(ref, quote=True)}))",
+                features, "primary_ref_token", slot, f"(({escape(ref, quote=True)}))"
             )
+            _set_feature(features, "primary_unicode_ref_token", slot, display)
+        _set_feature(
+            features, f"{sign.layer.value}_unicode_ref_token", slot, display
+        )
 
 
 def _feature_metadata(
@@ -280,9 +288,18 @@ def _otext() -> dict[str, str]:
         "sectionFeatures": "inscription_id,section_part,line_n",
         "fmt:text-orig-full": "{primary_glyph}{primary_after}",
         "fmt:text-orig-refs-full": "{primary_glyph}{primary_ref_token}{primary_after}",
+        "fmt:text-orig-unicode-full": (
+            "{primary_glyph}{primary_unicode_ref_token}{primary_after}"
+        ),
         "fmt:text-section-normalized-full": (
             "{transcription_glyph}{transcription_after}"
             "{diplomatic_glyph}{diplomatic_after}"
+            "{translation_glyph}{translation_after}"
+            "{commentary_glyph}{commentary_after}"
+        ),
+        "fmt:text-section-normalized-unicode-full": (
+            "{transcription_glyph}{transcription_unicode_ref_token}{transcription_after}"
+            "{diplomatic_glyph}{diplomatic_unicode_ref_token}{diplomatic_after}"
             "{translation_glyph}{translation_after}"
             "{commentary_glyph}{commentary_after}"
         ),
