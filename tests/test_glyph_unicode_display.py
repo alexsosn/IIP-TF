@@ -12,7 +12,6 @@ from iip_tf.glyph_unicode import (
     GlyphDisplayError,
     glyph_display_token,
 )
-
 from iip_tf.tf_writer import _otext
 
 
