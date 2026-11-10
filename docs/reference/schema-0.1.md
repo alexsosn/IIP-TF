@@ -56,7 +56,9 @@ needed for uniqueness.
 |---|---|
 | `text-orig-full` | Default primary text |
 | `text-orig-refs-full` | Explicit primary reading with source-empty glyph identifiers in IIP `((ref))` notation; these tokens are **not attested source letters**, nor Unicode substitutions |
-| `text-section-normalized-full` | Normalized signs in **each selected textpart/line**, including secondary diplomatic, translation and commentary; browser default only; inscription-level aggregation concatenates distinct layers and is **not a unified primary reading** |
+| `text-orig-unicode-full` | Opt-in primary text with exact source-reviewed Phoenician Unicode characters where available, otherwise `((ref))`; no source glyph mutation |
+| `text-section-normalized-full` | Legacy normalized text in each layer without derived Unicode ref display |
+| `text-section-normalized-unicode-full` | **Browser default**: normalized text in each layer with reviewed Unicode or source-label fallback; inscription-level aggregation is not a unified primary reading |
 | `text-source-full` | Source-oriented primary reading |
 | `text-layer-full` | Literal stored-slot view of one edition/textpart/line; may expose both editorial branches |
 | `text-transcription-full` | Normalized transcription layer |
@@ -68,9 +70,9 @@ needed for uniqueness.
 The **core corpus default** remains `text-orig-full` and uses
 `primary_glyph` / `primary_after`, undefined on non-primary slots.
 The **standard TF browser** chooses the additive
-`text-section-normalized-full` view for the selected textpart/line.
+`text-section-normalized-unicode-full` view for the selected textpart/line.
 It concatenates the four existing, mutually layer-exclusive,
-**normalized-only** per-layer glyph/after pairs. This reveals the
+**normalized-only** per-layer glyph/after pairs plus sparse reviewed Unicode/ref display tokens. This reveals the
 non-primary diplomatic text of `haif0003` and translation of
 `bloy0002` without duplicating `orig/reg` alternatives. It adds no
 source glyph data and does not modify `api.T.defaultFormat` or existing
@@ -92,6 +94,39 @@ are entity-escaped in these visible tokens only, leaving the native
 the explicit format, and use `markup kind=glyph ref=...` to query the
 source annotation. Glyphs missing a source `ref` are not fabricated;
 nonprimary textparts still need an explicit layer format (#51).
+
+## Amendment #58 — reviewed glyph reference display
+
+The authenticated pinned Brown census finds **1,955 empty referenced `g` across
+503 source records**, with 153 distinct XML-decoded `ref` identifiers. It includes
+**1,321 transcription, 102 diplomatic and 532 segmented** occurrences; segmented
+word annotations are not duplicated authored text. Seven empty unreferenced
+`g` remain synthetic but cannot be assigned a source character.
+
+All 153 identifiers have an explicit reviewed display policy in
+`src/iip_tf/glyph_unicode.py`: **16** exact one-code-point Unicode mappings
+drawn from the Unicode Phoenician block
+([Unicode Standard names list](https://www.unicode.org/charts/PDF/U10900.pdf)),
+and **137** explicit source-label `((ref))` fallbacks.
+For example `phoen-gaml` is U+10902 (`𐤂`), `phoen-delt` U+10903 (`𐤃`),
+`phoen-wau` U+10905 (`𐤅`) and `phoen-mem` U+1090C (`𐤌`).
+`phoen-4`, `phoen-6`, `phoen-???`, `bird` and all unreconstructable
+stroke/iconographic descriptions retain `((ref))`; they are not assigned
+lookalike Unicode characters. The character represents an encoding identity,
+not proof of the ancient palaeographic shape.
+
+`text-orig-unicode-full` derives an opt-in primary reading from sparse
+`primary_unicode_ref_token`. The browser uses
+`text-section-normalized-unicode-full` and layer-specific
+`transcription_unicode_ref_token`, `diplomatic_unicode_ref_token`,
+`translation_unicode_ref_token` and `commentary_unicode_ref_token`
+for readable selected sections in every layer. The old
+`text-orig-full`, `text-orig-refs-full`,
+`text-section-normalized-full`, source `glyph` and source
+markup `ref` remain unchanged; all new tokens are *derived display*.
+Unseen empty refs fail closed. The pinned source inventory is compared
+against the policy to detect additions before release. No new TF slots,
+edges, source edits or semantic sidecars are introduced.
 
 ## Text language provenance (issue #53)
 
