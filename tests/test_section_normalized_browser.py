@@ -110,7 +110,7 @@ def test_default_browser_displays_nonprimary_sections_without_adding_alternative
 
 def test_standard_browser_conf_declares_normalized_per_layer_default() -> None:
     config = (APP / "config.yaml").read_text(encoding="utf-8")
-    assert "textFormat: text-section-normalized-full" in config
+    assert "textFormat: text-section-normalized-unicode-full" in config
 
 
 def test_source_critical_renderer_understands_normalized_section_format(
