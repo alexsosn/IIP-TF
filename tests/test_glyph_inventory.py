@@ -92,6 +92,30 @@ def test_duplicate_xml_ids_in_alternate_editions_are_not_xml_syntax_errors(
     assert result["layers"] == {"transcription_segmented": 2}
 
 
+def test_comments_and_processing_instructions_do_not_fill_glyphs(
+    tmp_path: Path,
+) -> None:
+    """Production ElementTree ignores comments and processing instructions.
+
+    A source g containing only these nodes still creates a synthetic glyph_ref
+    slot. Actual TEI child elements and non-whitespace authored text do not.
+    """
+    source = _xml(tmp_path / "commented.xml", (
+        '<div type="edition" subtype="transcription">'
+        '<g ref="comment-only"><!-- editorial note --></g>'
+        '<g ref="pi-only"><?editor uncertainty?></g>'
+        '<g ref="both"><!-- note --><?editor uncertainty?></g>'
+        '<g ref="nested"><hi>symbol</hi></g>'
+        '<g ref="literal">+</g>'
+        '</div>'
+    ))
+    result = scan_glyph_xml(source)
+    assert result["empty_referenced"] == 3
+    assert result["refs"] == {"both": 1, "comment-only": 1, "pi-only": 1}
+    assert result["filled_referenced"] == 2
+    assert result["layers"] == {"transcription": 3}
+
+
 def test_malformed_input_and_duplicate_record_ids_fail_closed(tmp_path: Path) -> None:
     a = _xml(tmp_path / "a.xml", "<g ref='x'/>")
     with pytest.raises(GlyphInventoryError, match="duplicate"):
