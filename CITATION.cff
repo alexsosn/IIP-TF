@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: >-
+  If you use the IIP-TF converter, please cite this software. If you use
+  converted inscription data, also cite the Brown University Library
+  Inscriptions of Israel/Palestine project (https://doi.org/10.26300/pz1d-st89)
+  and the scholarly editions credited by the original records. The upstream
+  corpus is not covered by the converter's MIT license.
+type: software
+title: 'IIP-TF: Text-Fabric converter for the Inscriptions of Israel/Palestine'
+authors:
+  - family-names: Sosnovshchenko
+    given-names: Oleksandr
+version: '0.1.0.dev0'
+abstract: >-
+  IIP-TF converts Brown University Library's Inscriptions of Israel/Palestine
+  EpiDoc source corpus into a research-oriented Text-Fabric dataset. The
+  converter is in pre-release development; upstream corpus data and scholarly
+  editions retain their own licenses and attribution requirements.
+repository-code: https://github.com/alexsosn/IIP-TF
+url: https://github.com/alexsosn/IIP-TF
+license: MIT
+keywords:
+  - Text-Fabric
+  - EpiDoc
+  - epigraphy
+  - inscriptions
