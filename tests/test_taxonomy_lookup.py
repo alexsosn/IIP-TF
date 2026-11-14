@@ -148,7 +148,7 @@ def test_cli_missing_taxonomy_is_not_accepted(tmp_path: Path) -> None:
 
 def test_catalog_all_six_taxonomies_includes_unmapped_writing_with_source_labels() -> None:
     # getattr allows the RED unit test to reach pytest before the new API exists.
-    catalog = getattr(importlib.import_module("iip_tf.taxonomy_lookup"), "catalog_taxonomies")
+    catalog = importlib.import_module("iip_tf.taxonomy_lookup").catalog_taxonomies
     result = catalog(parse_taxonomies(_source()))
     assert result["taxonomy_count"] == 6
     assert result["active_category_count"] == 13
@@ -169,7 +169,7 @@ def test_catalog_all_six_taxonomies_includes_unmapped_writing_with_source_labels
 
 
 def test_catalog_comment_exclusion_and_only_source_attested_prefix_candidates() -> None:
-    catalog = getattr(importlib.import_module("iip_tf.taxonomy_lookup"), "catalog_taxonomies")
+    catalog = importlib.import_module("iip_tf.taxonomy_lookup").catalog_taxonomies
     registry = parse_taxonomies(_source())
     materials = catalog(registry, taxonomy_id="IIP-materials")
     assert materials["taxonomy_count"] == 1
