@@ -19,3 +19,11 @@
 ## Non-goals
 
 No source acquisition, Python 3.10 compatibility change, migration of IIP's corpus-specific SHA/licensing/bibliography handling, renderer rewrite, new tf-build public API, software/corpus release or Agora registry registration.
+
+## Packaging discovery: official release is GitHub-hosted (2026-11-15)
+
+The initial research stated the correct version but overlooked its delivery method. Verified `alexsosn/tf-build` [published GitHub Release v0.1.0rc1](https://github.com/alexsosn/tf-build/releases/tag/v0.1.0rc1): wheel `tf_build-0.1.0rc1-py3-none-any.whl`, SHA-256 `dff2a14c0299422b4716217d04e6d43b47e714f4dacdb21d9939292051e82c9a`. The actual official `.github/workflows/release.yml` publishes assets to GitHub Releases, **not PyPI**. Current ORAEC-TF already uses `requirements/tf-build.txt` to fetch the same wheel via a hash-pinned URL, before installing its version-pinned distribution metadata.
+
+A direct `tf-build==0.1.0rc1` runtime requirement alone would rely on a PyPI/index release that is **not established** and would make `pip install -e '.[dev]'` fail in all existing IIP workflows. IIP currently promises direct pip installation from a checkout and has many independent `pip install -e '.[dev]'` CI jobs. Rather than modify all workflows and leave base package installation non-self-contained, **use a PEP 508 direct URL requirement for that exact GitHub release wheel, with its published SHA-256 fragment**, in `pyproject.toml`. The wheel's internal METADATA still declares version rc1. This preserves all standard IIP install commands, with explicit online wheel acquisition through a vetted immutable artifact.
+
+Add a packaging RED-first regression to require the verified direct URL/hash, not a bare version string, and update the user-facing Agora guide accordingly. A repository-local/direct URL dependency would need replacement if IIP-TF is eventually distributed on PyPI (which restricts external direct dependencies); IIP release gate #10/#12 should revisit that once tf-build is made available through a public package index. No assertion that PyPI publishing has already occurred. The shared helper code and scientific converter contract are unchanged by this distribution correction.
