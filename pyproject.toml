@@ -15,7 +15,7 @@ authors = [
 dependencies = [
   "lxml>=5,<7",
   "text-fabric>=13.1,<14",
-  "tf-build==0.1.0rc1",
+  "tf-build @ https://github.com/alexsosn/tf-build/releases/download/v0.1.0rc1/tf_build-0.1.0rc1-py3-none-any.whl#sha256=dff2a14c0299422b4716217d04e6d43b47e714f4dacdb21d9939292051e82c9a",
 ]
 
 [project.scripts]
