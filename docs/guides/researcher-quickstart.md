@@ -174,9 +174,14 @@ The helper supports only `heb` → `he`/`heb`, `lat` →
 `la`/`lat`, and `kat` → `geo`/`Geo`. It returns a sorted
 tuple of **native inscription node IDs**, using exact indexed source-value
 queries; source attributes, TF data, and node ownership are unmodified.
-The Latin and Georgian alias groups are also checked against the complete
-pinned native corpus. The equivalent explicit native query is
-`set(api.F.main_lang.s("he")) | set(api.F.main_lang.s("heb"))`.
+On the authenticated pinned **native inscription** nodes, the Latin
+query retrieves 284 `la` and **zero** `lat`; `lat` occurs in the
+source's token-level `xml:lang` audit, but not in the pinned
+`F.main_lang` record-level feature. The Georgian query retrieves
+three `geo` and one `Geo` native inscriptions. Both source-code
+count sets are independently enforced by pinned CI. The equivalent
+explicit Hebrew native query is
+`set(api.F.main_lang.s("he")) | set(api.F.main_lang.s("heb"))`. 
 
 **Do not apply these aliases blindly to sign/word `lang`.** In IIP an
 inherited `xml:lang="heb"` on an Aramaic inscription can denote its
