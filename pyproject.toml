@@ -15,6 +15,7 @@ authors = [
 dependencies = [
   "lxml>=5,<7",
   "text-fabric>=13.1,<14",
+  "tf-build==0.1.0rc1",
 ]
 
 [project.scripts]
