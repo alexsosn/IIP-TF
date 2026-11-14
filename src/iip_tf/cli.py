@@ -12,13 +12,14 @@ from iip_tf.ir import InscriptionIR
 from iip_tf.person_register import attach_person_register, read_person_register
 from iip_tf.release_gate import inventory_source_files, require_empty_output_directory
 from iip_tf.taxonomy_audit import (
+    EXPECTED_TAXONOMIES,
     FEATURE_TAXONOMIES,
     PINNED_SOURCE_REVISION,
     PINNED_TAXONOMY_BLOB,
     git_blob_sha,
     parse_taxonomies,
 )
-from iip_tf.taxonomy_lookup import lookup_taxonomy_labels
+from iip_tf.taxonomy_lookup import catalog_taxonomies, lookup_taxonomy_labels
 from iip_tf.taxonomy_resolution import resolve_taxonomy_features
 from iip_tf.text_parser import parse_epidoc_file
 from iip_tf.tf_writer import write_tf_corpus
@@ -51,6 +52,19 @@ def build_parser() -> argparse.ArgumentParser:
     lookup.add_argument("feature", choices=sorted(FEATURE_TAXONOMIES))
     lookup.add_argument("raw_value", help="source IDREF or quoted whitespace-separated list")
     lookup.add_argument(
+        "--source-revision", choices=[PINNED_SOURCE_REVISION],
+        help="authenticate the exact pinned Brown taxonomy Git blob",
+    )
+    catalog = subparsers.add_parser(
+        "taxonomy-catalog",
+        help="list all six active source category label catalogs or one taxonomy scope",
+    )
+    catalog.add_argument("taxonomy_xml", type=Path)
+    catalog.add_argument(
+        "--taxonomy-id", choices=sorted(EXPECTED_TAXONOMIES),
+        help="show one source taxonomy, including writing technique categories",
+    )
+    catalog.add_argument(
         "--source-revision", choices=[PINNED_SOURCE_REVISION],
         help="authenticate the exact pinned Brown taxonomy Git blob",
     )
@@ -111,6 +125,25 @@ def _taxonomy_lookup(args: argparse.Namespace) -> int:
     return 0
 
 
+def _taxonomy_catalog(args: argparse.Namespace) -> int:
+    source: Path = args.taxonomy_xml
+    if not source.is_file():
+        raise ValueError(f"taxonomy source does not exist: {source}")
+    data = source.read_bytes()
+    registry = parse_taxonomies(
+        data,
+        expected_blob=PINNED_TAXONOMY_BLOB
+        if args.source_revision == PINNED_SOURCE_REVISION else None,
+    )
+    result = {
+        "source_revision": args.source_revision,
+        "taxonomy_git_blob": git_blob_sha(data),
+        **catalog_taxonomies(registry, taxonomy_id=args.taxonomy_id),
+    }
+    print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -118,6 +151,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _convert(args)
     if args.command == "taxonomy-lookup":
         return _taxonomy_lookup(args)
+    if args.command == "taxonomy-catalog":
+        return _taxonomy_catalog(args)
     return 0
 
 
