@@ -260,4 +260,9 @@ def test_materializer_calls_shared_tf_build_preflight(
 
 def test_installable_project_pins_published_shared_agora_dependency() -> None:
     project = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]
-    assert "tf-build==0.1.0rc1" in project["dependencies"]
+    pinned_wheel = (
+        "tf-build @ https://github.com/alexsosn/tf-build/releases/download/v0.1.0rc1/"
+        "tf_build-0.1.0rc1-py3-none-any.whl"
+        "#sha256=dff2a14c0299422b4716217d04e6d43b47e714f4dacdb21d9939292051e82c9a"
+    )
+    assert pinned_wheel in project["dependencies"]
