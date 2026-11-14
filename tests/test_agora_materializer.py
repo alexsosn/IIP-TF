@@ -232,3 +232,32 @@ def test_manifest_targets_full_brown_root_and_real_python_module() -> None:
         "app/app.py", "app/config.yaml", "app/static/display.css",
         "conversion-summary.json",
     }
+
+
+def test_materializer_calls_shared_tf_build_preflight(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A shared input gate must run before any IIP source parsing or writing."""
+    output = tmp_path / "staging"
+    output.mkdir()
+    checked: list[Path] = []
+
+    def reject_from_shared_library(root: Path) -> Path:
+        checked.append(root)
+        raise ValueError("tf-build shared preflight sentinel")
+
+    # Fail on the pre-migration adapter that has no imported shared gate;
+    # after adoption, prove the actual entry point calls this public boundary.
+    assert hasattr(agora_module, "prepare_agora_output")
+    monkeypatch.setattr(
+        agora_module, "prepare_agora_output", reject_from_shared_library,
+    )
+    with pytest.raises(ValueError, match="tf-build shared preflight sentinel"):
+        materialize(tmp_path / "deliberately-missing-source", output, source_revision="")
+    assert checked == [output]
+    assert list(output.iterdir()) == []
+
+
+def test_installable_project_pins_published_shared_agora_dependency() -> None:
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]
+    assert "tf-build==0.1.0rc1" in project["dependencies"]
