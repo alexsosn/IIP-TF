@@ -41,8 +41,10 @@ def _source_value(api: Any, feature: str, node: int, present: set[str]) -> Any:
 
 
 
-# Only verified variants of *record-level* IIP msContents/textLang@mainLang.
-# Source-valued sign 'lang' can represent encoded script; it is NOT included.
+# Narrow ISO-backed query aliases for record-level IIP textLang@mainLang.
+# A code may have zero occurrences in this pin (native main_lang=lat: 0)
+# despite being attested in token-level xml:lang. Sign 'lang' can also
+# describe encoded script and is NOT consulted by these record queries.
 _MAIN_LANG_SOURCE_ALIASES: dict[str, tuple[str, ...]] = {
     "heb": ("he", "heb"),  # Hebrew: ISO 639-1 and ISO 639-3
     "lat": ("la", "lat"),  # Latin: ISO 639-1 and ISO 639-3
