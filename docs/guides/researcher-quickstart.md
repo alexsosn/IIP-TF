@@ -137,6 +137,13 @@ contributor/provenance records, see
 [Querying IIP metadata](query-native-metadata.md) and the
 [0.1 native schema reference](../reference/schema-0.1.md).
 
+To inspect classification vocabularies and **all six source taxonomy labels**,
+including writing techniques not stored as an inscription feature, use
+`iip-tf taxonomy-catalog` with the authenticated Brown `include_taxonomies.xml`;
+see [the source taxonomy guide](pinned-taxonomy-audit.md#browse-all-six-source-taxonomies-issue-100).
+This read-only lookup never guesses a `parent` or `is_a` relationship from
+a dotted category identifier.
+
 ## 5. Browse, provenance, and responsible citation
 
 To browse or search through standard Text-Fabric's local web interface, follow
