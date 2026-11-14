@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import json
 from pathlib import Path
 
@@ -26,7 +27,12 @@ def _source() -> bytes:
         ),
         "IIP-genre": (("funerary", "Funerary"), ("funerary.epitaph", "Epitaph")),
         "IIP-preservation": (("complete", "Complete"), ("fragment.single", "Single Fragment")),
-        "IIP-writing": (("painted", "Painted"),),
+        "IIP-writing": (
+            ("impressed", "Impressed"),
+            ("impressed.inscribed", "Impressed (Inscribed)"),
+            ("impressed.inscribed.chiseled", "Impressed (Chiseled)"),
+            ("painted", "Painted"),
+        ),
         "IIP-religion": (("jewish", "Jewish"),),
     }
     xml = '<classDecl xmlns="http://www.tei-c.org/ns/1.0">'
@@ -138,3 +144,66 @@ def test_cli_lookup_is_stable_and_labels_unpinned_source_honestly(
 def test_cli_missing_taxonomy_is_not_accepted(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="taxonomy source"):
         cli_main(["taxonomy-lookup", str(tmp_path / "missing.xml"), "material", "clay"])
+
+
+def test_catalog_all_six_taxonomies_includes_unmapped_writing_with_source_labels() -> None:
+    # getattr allows the RED unit test to reach pytest before the new API exists.
+    catalog = getattr(importlib.import_module("iip_tf.taxonomy_lookup"), "catalog_taxonomies")
+    result = catalog(parse_taxonomies(_source()))
+    assert result["taxonomy_count"] == 6
+    assert result["active_category_count"] == 15
+    assert result["label_source"] == "tei:catDesc"
+    assert result["relationship_policy"] == "dotted-prefix-candidates-only"
+    by_scope = {row["taxonomy_id"]: row for row in result["taxonomies"]}
+    assert set(by_scope) == {
+        "IIP-form", "IIP-materials", "IIP-genre", "IIP-preservation",
+        "IIP-writing", "IIP-religion",
+    }
+    writing = by_scope["IIP-writing"]
+    assert writing["active_category_count"] == 4
+    assert {"id": "impressed.inscribed.chiseled",
+            "label": "Impressed (Chiseled)",
+            "dotted_prefix_candidate": "impressed.inscribed"} in writing["categories"]
+    assert not any("parent" in entry or "is_a" in entry
+                   for row in result["taxonomies"] for entry in row["categories"])
+
+
+def test_catalog_comment_exclusion_and_only_source_attested_prefix_candidates() -> None:
+    catalog = getattr(importlib.import_module("iip_tf.taxonomy_lookup"), "catalog_taxonomies")
+    registry = parse_taxonomies(_source())
+    materials = catalog(registry, taxonomy_id="IIP-materials")
+    assert materials["taxonomy_count"] == 1
+    assert materials["active_category_count"] == 3
+    assert materials["taxonomies"][0]["taxonomy_id"] == "IIP-materials"
+    assert materials["taxonomies"][0]["categories"] == [
+        {"id": "clay", "label": "Clay"},
+        {"id": "stone", "label": "Stone"},
+        {"id": "stone.other", "label": "Other Stone",
+         "dotted_prefix_candidate": "stone"},
+    ]
+    preservation = catalog(registry, taxonomy_id="IIP-preservation")
+    fragment = next(c for c in preservation["taxonomies"][0]["categories"]
+                    if c["id"] == "fragment.single")
+    assert fragment == {"id": "fragment.single", "label": "Single Fragment"}
+    assert "clay.terracotta" not in str(materials)
+    with pytest.raises(TaxonomyError, match="unknown taxonomy"):
+        catalog(registry, taxonomy_id="IIP-absence")
+
+
+def test_catalog_cli_is_deterministic_and_pinned_blob_is_authenticated(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str],
+) -> None:
+    source = tmp_path / "include_taxonomies.xml"
+    source.write_bytes(_source())
+    args = ["taxonomy-catalog", str(source), "--taxonomy-id", "IIP-writing"]
+    assert cli_main(args) == 0
+    first = capsys.readouterr().out
+    assert cli_main(args) == 0
+    assert capsys.readouterr().out == first
+    result = json.loads(first)
+    assert result["source_revision"] is None
+    assert len(result["taxonomy_git_blob"]) == 40
+    assert result["taxonomy_count"] == 1
+    assert result["taxonomies"][0]["active_category_count"] == 4
+    with pytest.raises(TaxonomyError, match="blob"):
+        cli_main([*args, "--source-revision", PINNED_SOURCE_REVISION])
