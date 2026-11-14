@@ -357,3 +357,46 @@ Native `person_id`, `person_name`, optional `person_name_variants`, `sex`, `fait
 ## Amendment #64 — exact taxonomy IDs with lossless source provenance
 
 Full Brown conversions source-authenticate and read the same `include_taxonomies.xml` already used by `taxonomy_audit`: five inscription classification feature names become exact registered canonical category IDs, with companion `_original` feature preserving the entire verbatim EpiDoc source. Multi-token TEI IDREF values convert all-or-nothing: every token must be in the correct active taxonomy, otherwise only the raw original survives. No fuzzy matching, case coercion, Unicode heuristics or collapse of partly-known lists. Standalone EpiDoc-only TF remains valid and raw; no automatic online fetch. The report separately records unresolved fields. Source-specific taxonomy hierarchy edges require separate evidence, not a guessed dot-prefix graph. Personal `faith` is not inscription taxonomy `religion`. Both pinned parses and the source audit verify the same authenticated XML and raw value inventory.
+
+## Amendment #58 — exact Unicode display for empty source glyph references
+
+The authenticated Brown IIP revision `0b7dc8358ccdfd0c9391f049da4839fbd91c26e5`
+contains 1,955 *empty* referenced `<g ref>` elements across 503 records, with
+153 distinct XML-decoded ref identifiers. Source readings retain one *empty*
+synthetic `sign` (`synthetic_kind=glyph_ref`) per genuine source position and
+a source `markup(kind=glyph, ref=...)` node; no character or new slot is
+retroactively written to `glyph` or `primary_glyph`. Segmented transcription
+annotations are not a fifth authored text layer.
+
+The source-reviewed policy in `iip_tf.glyph_unicode` explicitly accounts for
+**all 153 identifiers**. Sixteen exact named Phoenician letters/numerals map
+to one Unicode scalar as defined by the Unicode 17 Phoenician Names List
+(e.g. `phoen-gaml` U+10902, `phoen-delt` U+10903, `phoen-20` U+10918).
+The other 137 receive the explicit `((ref))` source-label fallback; no
+iconographic similarity, numeral arithmetic or paleo-Hebrew font resemblance
+justifies adding a codepoint. A one-codepoint encoding choice does not claim
+facsimile or historical glyph-shape identity. Pinned conversion refuses an
+unreviewed reference even outside the workflow. Local, unpinned EpiDoc
+conversion may render an unknown reference as an escaped label, but must never
+guess an encoded glyph.
+
+New sparse display-only features (`primary_unicode_ref_token` and
+`<layer>_unicode_ref_token`) feed `text-orig-unicode-full` and the
+standard browser's `text-section-normalized-unicode-full`. The browser
+presents selected normalized readings for all four layers, retaining source
+markup/editorial notes. Existing `text-orig-full`, `text-orig-refs-full`,
+`text-section-normalized-full`, default Text-Fabric `T.defaultFormat`,
+the original `ref`, character and node/edge semantics are unchanged.
+Any entire inscription that consists only of selected glyph references
+renders visibly in the explicit Unicode/fallback view, while its raw source
+`glyph` remains empty.
+
+The full pinned gate authenticates the exact EpiDoc Git tree, checks
+**source-ref inventory equals the 153-element policy**, then validates
+complete double native TF builds/reloads, rendered text, provenance,
+standard TF browser routes and raw/compiled Context-Fabric parity.
+The browser acceptance includes genuine Brown Masada 0286/0290, plus
+all pinned glyph-only inscriptions, not only fixtures. This is a
+converter-derived display policy, not a source correction or external
+runtime sidecar; unknown source readings retain their original annotation.
+

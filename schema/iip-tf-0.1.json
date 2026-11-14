@@ -89,11 +89,23 @@
       "template": "{primary_glyph}{primary_ref_token}{primary_after}",
       "description": "Explicit HTML-safe IIP convention ((ref)) on empty primary glyph-reference slots. Does not change source glyph or default reading; labels are not attested source letters."
     },
+    "text-orig-unicode-full": {
+      "purpose": "opt_in_primary_reviewed_unicode_glyph_display",
+      "target": "sign",
+      "template": "{primary_glyph}{primary_unicode_ref_token}{primary_after}",
+      "description": "Reviewed exact Phoenician Unicode scalar for selected primary empty g@ref where one exists; otherwise the escaped source ((ref)) label. Derived display only; source glyph and text-orig-full never change."
+    },
     "text-section-normalized-full": {
       "purpose": "browser_selected_textpart_normalized_reading",
       "target": "sign",
       "template": "{transcription_glyph}{transcription_after}{diplomatic_glyph}{diplomatic_after}{translation_glyph}{translation_after}{commentary_glyph}{commentary_after}",
       "description": "Opt-in normalized reading of each sign's own layer; readable secondary textpart/line without exposing source and normalized branches. An entire inscription combines multiple editions, translations and commentary; not one attested reading. Core text-orig-full stays the default."
+    },
+    "text-section-normalized-unicode-full": {
+      "purpose": "browser_selected_textpart_reviewed_unicode_display",
+      "target": "sign",
+      "template": "{transcription_glyph}{transcription_unicode_ref_token}{transcription_after}{diplomatic_glyph}{diplomatic_unicode_ref_token}{diplomatic_after}{translation_glyph}{translation_unicode_ref_token}{translation_after}{commentary_glyph}{commentary_unicode_ref_token}{commentary_after}",
+      "description": "Normalized selected signs in each layer, with 16 reviewed exact single-scalar Phoenician source ref mappings and explicit source-label fallbacks for 137 other observed empty refs; never inferred facsimile shape or altered source characters."
     },
     "text-layer-full": {
       "purpose": "current_layer",
@@ -220,16 +232,21 @@
       "synthetic_kind",
       "primary_glyph",
       "primary_ref_token",
+      "primary_unicode_ref_token",
       "primary_after",
       "source_glyph",
       "source_after",
       "transcription_glyph",
+      "transcription_unicode_ref_token",
       "transcription_after",
       "diplomatic_glyph",
+      "diplomatic_unicode_ref_token",
       "diplomatic_after",
       "translation_glyph",
+      "translation_unicode_ref_token",
       "translation_after",
       "commentary_glyph",
+      "commentary_unicode_ref_token",
       "commentary_after"
     ],
     "node": [
