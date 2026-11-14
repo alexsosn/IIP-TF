@@ -1,0 +1,21 @@
+# Reuse published tf-build Agora host output preflight (IIP #113)
+
+## Research recorded before tests or implementation (2026-11-15)
+
+- Original common-library goal in `alexsosn/tf-build`: remove duplicated build/source/materializer infrastructure from **multiple independent** Text-Fabric converter packages. Existing ORAEC-TF currently pins `tf-build==0.1.0rc1`; other examined projects do not yet.
+- Current `src/iip_tf/agora.py::materialize` executes two handwritten checks against a pre-existing Agora-host-owned `output`: `output.is_symlink() or not output.is_dir()` and `any(output.iterdir())`. These are exactly the input invariants of `tf_build.agora.prepare_agora_output(root)` at immutable **published** tag `v0.1.0rc1` (examined actual tagged source, including its `AgoraOutputError(ValueError)` and return of a resolved root). Our existing checks raise `ValueError`, so the public exception superclass remains compatible.
+- The common function does *not* execute the converter, create paths, follow a root symlink, access the network, mutate the root, or certify source semantics. IIP-TF must **keep** its source-vs-output overlap check; Brown EpiDoc, pinned taxonomies/persons evidence, browser assets, relative JSON provenance and source revision/fixture policy stay IIP-specific.
+- `tests/test_agora_materializer.py` already exercises a real TEI-shaped Brown fixture, XML taxonomy and person authority, offline execution (socket patch), genuine `Fabric.loadAll`, metadata/conservation and TF browser packaging. It also tests symlinked and occupied output. `.github/workflows/validate-agora-materializer.yml` calls the actual Agora host v1 schema validator and real source fixture. This provides meaningful smoke after delegation instead of a mock-only gate.
+- `IIP-TF/pyproject.toml` declares Python >=3.11 and `text-fabric>=13.1,<14`; the published `tf-build==0.1.0rc1` declares Python >=3.11, `text-fabric>=13.1,<14`. Installing an immutable published prerelease is compatible; repo HEAD's `0.1.0rc2` is **not released**, so it must not be pinned. The published rc1 has a known internal `__version__` runtime attribute mismatch, but `prepare_agora_output` and its dependencies are present in tagged rc1; IIP should not read `tf_build.__version__`.
+- The existing IIP open PR #110 handles glyph display and is outside this scope; no simultaneous Agora/preflight PR exists. Outstanding IIP #11/#12 include later host registration and release acceptance; this migration does not mark them complete.
+
+## Plan (before any behavior changes)
+
+1. **RED-first integration**: append a focused test to `tests/test_agora_materializer.py` asserting the actual public adapter delegates output preflight to the shared function, rather than silently preserving a parallel implementation. Probe by patching the imported shared function in `iip_tf.agora` to reject an otherwise empty output and asserting conversion never writes to it. A separate test checks that the installable IIP project declares the pinned dependency. Tests must fail on unchanged IIP implementation and packaging.
+2. Implement only a direct import and replace the two local host-root checks with `prepare_agora_output(output)`; add the published pinned runtime dependency to `pyproject.toml`. Keep the original relative `output / "tf"`, `output / "app"` and report path behavior unchanged (the shared helper's canonical result is a preflight certificate only and is not used to rename IIP paths).
+3. Explain shared vs IIP-owned contracts concisely in the existing Agora guide. Run focused tests, full CI, real host v1 acceptance, wheel packaging and real installed Text-Fabric smoke at the frozen PR head. Package resolution must work with the pinned published version.
+4. Independent review: inspect actual tagged shared function and final consumer diff; probe missing, symlink, nonempty root, local user source sentinel, output under source, premature mutation, app resource copy, source attribution, and absence of new network access. Merge only if all exact-head checks and actual E2E pass.
+
+## Non-goals
+
+No source acquisition, Python 3.10 compatibility change, migration of IIP's corpus-specific SHA/licensing/bibliography handling, renderer rewrite, new tf-build public API, software/corpus release or Agora registry registration.
