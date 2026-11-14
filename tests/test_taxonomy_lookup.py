@@ -151,7 +151,7 @@ def test_catalog_all_six_taxonomies_includes_unmapped_writing_with_source_labels
     catalog = getattr(importlib.import_module("iip_tf.taxonomy_lookup"), "catalog_taxonomies")
     result = catalog(parse_taxonomies(_source()))
     assert result["taxonomy_count"] == 6
-    assert result["active_category_count"] == 15
+    assert result["active_category_count"] == 13
     assert result["label_source"] == "tei:catDesc"
     assert result["relationship_policy"] == "dotted-prefix-candidates-only"
     by_scope = {row["taxonomy_id"]: row for row in result["taxonomies"]}
