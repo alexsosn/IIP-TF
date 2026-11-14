@@ -16,7 +16,6 @@ from iip_tf.taxonomy_audit import (
 )
 
 
-
 def _dotted_prefix_candidate(
     category_id: str, categories: Mapping[str, str],
 ) -> str | None:
