@@ -229,11 +229,20 @@ def validate_main_language_variants(api: Any) -> None:
             f"he={len(hebrew_exact)}, heb={len(hebrew_long)}"
         )
     groups = {
-        "heb": ("he", "heb"),
-        "lat": ("la", "lat"),
-        "kat": ("geo", "Geo"),
+        "heb": {"he": 405, "heb": 4},
+        "lat": {"la": 284, "lat": 0},
+        "kat": {"geo": 3, "Geo": 1},
     }
-    for iso3, codes in groups.items():
+    for iso3, counts_by_code in groups.items():
+        codes = tuple(counts_by_code)
+        actual_counts = {
+            code: len(api.F.main_lang.s(code)) for code in codes
+        }
+        if actual_counts != counts_by_code:
+            raise RuntimeError(
+                f"{iso3}: pinned native source main_lang counts changed: "
+                f"{actual_counts!r} != {counts_by_code!r}"
+            )
         expected = set().union(*(set(api.F.main_lang.s(code)) for code in codes))
         found = find_inscriptions_by_main_language(api, iso3)
         if set(found) != expected or len(found) != len(expected):
