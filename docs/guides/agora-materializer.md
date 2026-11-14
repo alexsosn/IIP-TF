@@ -48,8 +48,11 @@ python -m iip_tf.agora \
   --source-revision 0b7dc8358ccdfd0c9391f049da4839fbd91c26e5
 ```
 
-The adapter delegates this host-owned root preflight to the published
-`tf-build==0.1.0rc1` `tf_build.agora.prepare_agora_output` helper. The gate
+The adapter delegates this host-owned root preflight to
+`tf_build.agora.prepare_agora_output` from the published **tf-build v0.1.0rc1**
+wheel. Its install requirement in `pyproject.toml` uses the immutable GitHub
+Release URL and published SHA-256 checksum (not an unverified PyPI assumption),
+so regular `pip install -e '.[dev]'` also installs the shared dependency. The gate
 checks that the directory exists, is not a symlink and is empty; it does not
 create the root, contact the network, run the converter or publish artifacts.
 The installed dependency is an immutable released version; its known outdated
