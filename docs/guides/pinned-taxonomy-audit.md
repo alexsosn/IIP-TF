@@ -135,3 +135,60 @@ reports `source_revision: null` plus its actual computed Git blob SHA.
 Omitting `--source-revision` does **not** attest that the supplied file is
 the Brown pin. Supplying the pinned revision requires an **exact matching
 blob** and fails closed otherwise. The tool never changes the corpus.
+
+
+## Browse all six source taxonomies (issue #100)
+
+The `taxonomy-lookup` command resolves labels for the five classification features
+stored on inscription nodes. To discover the complete source registry, including the
+**IIP-writing** technique vocabulary that is not assigned as a normalized
+inscription feature, use the separate catalog command:
+
+```bash
+# All active source categories across all six taxonomies
+iip-tf taxonomy-catalog upstream-iip/include_taxonomies.xml \
+  --source-revision 0b7dc8358ccdfd0c9391f049da4839fbd91c26e5
+
+# Browse only writing techniques, without first knowing the category IDs
+iip-tf taxonomy-catalog upstream-iip/include_taxonomies.xml \
+  --taxonomy-id IIP-writing \
+  --source-revision 0b7dc8358ccdfd0c9391f049da4839fbd91c26e5
+```
+
+Both commands use `parse_taxonomies` and require the **actual Git blob**
+`c273ee4f0c8e751fca3274c7ce2d1e6ec5d60637` if the pinned revision is
+claimed; omitted revision means *no* claim of pin authentication. The JSON
+reports source revision, actual Git blob, `label_source=tei:catDesc`, and
+`relationship_policy=dotted-prefix-candidates-only`. Each source taxonomy
+has a sorted `categories` list of exact source ID and `catDesc` label. The
+catalog never generates TF nodes or bundled semantic sidecars.
+
+| Source taxonomy | Active source categories |
+|---|---:|
+| `IIP-form` | 58 |
+| `IIP-materials` | 16 |
+| `IIP-genre` | 35 |
+| `IIP-preservation` | 7 |
+| `IIP-writing` | 22 |
+| `IIP-religion` | 4 |
+| **Total** | **142** |
+
+The actual `IIP-writing` source includes `impressed.inscribed.chiseled`
+with the label *Impressed (Chiseled)*. The active material
+`stone.other` has label *Other Stone*, while the string
+`clay.terracotta` is inside an XML comment and is **not** returned as a
+category. Of 39 dotted category IDs, 38 have an active same-taxonomy
+textual prefix. `fragment.single` (preservation) is the exception;
+there is no active category `fragment`. Even when
+`dotted_prefix_candidate` exists, all these active TEI `category`
+elements are siblings: **neither the source nor the catalog asserts
+`parent` or `is_a` relationships**. This is a discovery interface, not
+an inferred ontology.
+
+In Python, the same source-backed result is obtained with
+`catalog_taxonomies(parse_taxonomies(source_bytes))`, optionally passing
+`taxonomy_id="IIP-writing"`. For a claim of Brown pinned provenance, call
+`parse_taxonomies(source_bytes, expected_blob=PINNED_TAXONOMY_BLOB)`;
+the high-level CLI already enforces this when `--source-revision` is
+specified. Use exact `taxonomy-lookup` for individual classification
+IDREFs, including wrong-taxonomy and case-mismatch diagnostics.

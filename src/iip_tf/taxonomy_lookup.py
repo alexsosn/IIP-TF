@@ -6,6 +6,7 @@ is only a naming candidate, never a documented TEI parent or ontology edge.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 from iip_tf.taxonomy_audit import (
@@ -13,6 +14,54 @@ from iip_tf.taxonomy_audit import (
     TaxonomyError,
     TaxonomyRegistry,
 )
+
+
+def _dotted_prefix_candidate(
+    category_id: str, categories: Mapping[str, str],
+) -> str | None:
+    """Find a longest active name prefix without asserting TEI parentage."""
+    parts = category_id.split(".")
+    for length in range(len(parts) - 1, 0, -1):
+        prefix = ".".join(parts[:length])
+        if prefix in categories:
+            return prefix
+    return None
+
+
+def catalog_taxonomies(
+    registry: TaxonomyRegistry, taxonomy_id: str | None = None,
+) -> dict[str, Any]:
+    """List source-authenticated active TEI catDesc labels across all six scopes.
+
+    The registry was already parsed and optionally pinned by
+    taxonomy_audit.parse_taxonomies. All returned names are source values;
+    dotted_prefix_candidate is textual only, never an authoritative edge.
+    """
+    if taxonomy_id is not None and taxonomy_id not in registry.taxonomies:
+        raise TaxonomyError(f"unknown taxonomy ID: {taxonomy_id!r}")
+    names = [taxonomy_id] if taxonomy_id is not None else sorted(registry.taxonomies)
+    rows: list[dict[str, Any]] = []
+    for name in names:
+        categories = registry.taxonomies[name]
+        entries: list[dict[str, str]] = []
+        for category_id, label in sorted(categories.items()):
+            entry = {"id": category_id, "label": label}
+            prefix = _dotted_prefix_candidate(category_id, categories)
+            if prefix is not None:
+                entry["dotted_prefix_candidate"] = prefix
+            entries.append(entry)
+        rows.append({
+            "taxonomy_id": name,
+            "active_category_count": len(entries),
+            "categories": entries,
+        })
+    return {
+        "taxonomy_count": len(rows),
+        "active_category_count": sum(row["active_category_count"] for row in rows),
+        "label_source": "tei:catDesc",
+        "relationship_policy": "dotted-prefix-candidates-only",
+        "taxonomies": rows,
+    }
 
 
 def lookup_taxonomy_labels(
@@ -45,12 +94,9 @@ def lookup_taxonomy_labels(
             resolved += 1
             # Dotted category IDs in Brown's source are sibling XML elements;
             # a matching prefix is *not* evidence of TEI parentage.
-            parts = candidate.split(".")
-            for length in range(len(parts) - 1, 0, -1):
-                prefix = ".".join(parts[:length])
-                if prefix in categories:
-                    entry["dotted_prefix_candidate"] = prefix
-                    break
+            prefix = _dotted_prefix_candidate(candidate, categories)
+            if prefix is not None:
+                entry["dotted_prefix_candidate"] = prefix
         elif any(
             candidate in other_categories
             for other_id, other_categories in registry.taxonomies.items()
