@@ -14,6 +14,8 @@ import shutil
 import sys
 from pathlib import Path
 
+from tf_build.agora import prepare_agora_output
+
 from iip_tf import __version__
 from iip_tf.cli import main as convert_cli
 from iip_tf.person_register import PINNED_PERSONS_BLOB, git_blob_sha1
@@ -76,10 +78,7 @@ def _required_source(root: Path) -> tuple[Path, Path, Path]:
 
 def materialize(source: Path, output: Path, *, source_revision: str) -> Path:
     """Write native TF + original app to an existing empty Agora staging root."""
-    if output.is_symlink() or not output.is_dir():
-        raise ValueError("Agora output must be an existing non-symlink directory")
-    if any(output.iterdir()):
-        raise ValueError("Agora output must be empty before conversion")
+    prepare_agora_output(output)
     if source.resolve() == output.resolve() or source.resolve() in output.resolve().parents:
         raise ValueError("Agora output must not reside within its Brown source root")
 
