@@ -17,6 +17,8 @@ on:
       - "src/iip_tf/person_register.py"
       - "src/iip_tf/taxonomy_resolution.py"
       - "src/iip_tf/taxonomy_audit.py"
+      - "src/iip_tf/taxonomy_lookup.py"
+      - "tests/test_taxonomy_lookup.py"
       - "src/iip_tf/glyph_inventory.py"
       - "src/iip_tf/glyph_unicode.py"
       - "tests/test_glyph_inventory.py"
@@ -54,6 +56,8 @@ on:
       - "src/iip_tf/person_register.py"
       - "src/iip_tf/taxonomy_resolution.py"
       - "src/iip_tf/taxonomy_audit.py"
+      - "src/iip_tf/taxonomy_lookup.py"
+      - "tests/test_taxonomy_lookup.py"
       - "src/iip_tf/glyph_inventory.py"
       - "src/iip_tf/glyph_unicode.py"
       - "tests/test_glyph_inventory.py"
@@ -190,6 +194,53 @@ jobs:
           assert result["tokens"][0]["dotted_prefix_candidate"] == "stone"
           assert result["tokens"][1]["status"] == "unknown"
           assert "label" not in result["tokens"][1]
+          catalog = json.loads(subprocess.check_output([
+              sys.executable, "-m", "iip_tf.cli", "taxonomy-catalog",
+              str(source), "--source-revision", PINNED_SOURCE_REVISION,
+          ], text=True))
+          assert catalog["source_revision"] == PINNED_SOURCE_REVISION
+          assert catalog["taxonomy_git_blob"] == PINNED_TAXONOMY_BLOB
+          assert catalog["label_source"] == "tei:catDesc"
+          assert catalog["relationship_policy"] == "dotted-prefix-candidates-only"
+          assert catalog["taxonomy_count"] == 6
+          assert catalog["active_category_count"] == 142
+          counts = {
+              row["taxonomy_id"]: row["active_category_count"]
+              for row in catalog["taxonomies"]
+          }
+          assert counts == {
+              "IIP-form": 58, "IIP-materials": 16, "IIP-genre": 35,
+              "IIP-preservation": 7, "IIP-writing": 22, "IIP-religion": 4,
+          }
+          catalog_refs = {
+              (row["taxonomy_id"], category["id"])
+              for row in catalog["taxonomies"] for category in row["categories"]
+          }
+          assert catalog_refs == {
+              (taxonomy, category)
+              for taxonomy, categories in registry.taxonomies.items()
+              for category in categories
+          }
+          candidates = [
+              (row["taxonomy_id"], category["id"])
+              for row in catalog["taxonomies"] for category in row["categories"]
+              if "dotted_prefix_candidate" in category
+          ]
+          assert len(candidates) == 38
+          assert ("IIP-preservation", "fragment.single") not in candidates
+          assert ("IIP-materials", "clay.terracotta") not in catalog_refs
+          assert all(
+              not any(field in category for field in ("parent", "is_a"))
+              for row in catalog["taxonomies"] for category in row["categories"]
+          )
+          writing = json.loads(subprocess.check_output([
+              sys.executable, "-m", "iip_tf.cli", "taxonomy-catalog",
+              str(source), "--taxonomy-id", "IIP-writing",
+              "--source-revision", PINNED_SOURCE_REVISION,
+          ], text=True))
+          assert writing["taxonomy_count"] == 1
+          assert writing["active_category_count"] == 22
+          assert writing["taxonomies"][0]["taxonomy_id"] == "IIP-writing"
           PY
       - name: Inventory every empty source g ref before Unicode display policy
         run: |
