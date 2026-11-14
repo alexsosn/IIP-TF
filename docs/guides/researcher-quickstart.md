@@ -144,6 +144,56 @@ see [the source taxonomy guide](pinned-taxonomy-audit.md#browse-all-six-source-t
 This read-only lookup never guesses a `parent` or `is_a` relationship from
 a dotted category identifier.
 
+## Query record-level source language variants (issue #52)
+
+IIP's inscription-level `main_lang` preserves the original EpiDoc
+`textLang@mainLang` spelling. On the pinned 5,535-inscription native corpus
+the **source values** `he` and `heb` occur on **405** and **4**
+inscription nodes, respectively. An exact query for `main_lang=heb`
+therefore finds only four of these 409 Hebrew-labeled records. The source
+audit counts *textLang declarations* separately and reports 475 `he`
+instances; do not conflate that XML occurrence count with native
+inscription-node counts.
+
+Use the public, source-preserving native query helper for the **record-level**
+language aliases whose equivalence is supported by ISO language codes:
+
+```python
+from tf.fabric import Fabric
+from iip_tf.researcher_queries import find_inscriptions_by_main_language
+
+api = Fabric(locations="build/pinned-tf", silent=True).loadAll(silent=True)
+hebrew = find_inscriptions_by_main_language(api, "heb")
+print(len(hebrew))  # 409 on the verified Brown pin
+print([api.F.inscription_id.v(n) for n in hebrew[:5]])
+# The original EpiDoc main_lang values remain distinct and queryable:
+print({api.F.main_lang.v(n) for n in hebrew})  # {'he', 'heb'}
+```
+
+The helper supports only `heb` → `he`/`heb`, `lat` →
+`la`/`lat`, and `kat` → `geo`/`Geo`. It returns a sorted
+tuple of **native inscription node IDs**, using exact indexed source-value
+queries; source attributes, TF data, and node ownership are unmodified.
+The Latin and Georgian alias groups are also checked against the complete
+pinned native corpus. The equivalent explicit native query is
+`set(api.F.main_lang.s("he")) | set(api.F.main_lang.s("heb"))`.
+
+**Do not apply these aliases blindly to sign/word `lang`.** In IIP an
+inherited `xml:lang="heb"` on an Aramaic inscription can denote its
+Hebrew-script presentation, and #54/#92 are deliberately conservative
+about assigning a linguistic identity. `other_langs` may contain
+space-separated source codes and requires token-aware filtering; it is
+not handled by this exact record-level helper. Unclassified/mixed source
+values such as `Other`, `x-unknown` and `arc-Grek` are not
+silently mapped. A separate materialized ISO-derived language feature was
+**not introduced**, pending evidence-based resolution of the remaining
+script-vs-language cases.
+
+See the [source language audit](../research/iip-corpus-audit.md#languages)
+for the original EpiDoc occurrence distributions, and the
+[Library of Congress ISO language codes](https://www.loc.gov/standards/iso639-2/php/English_list.php)
+for Hebrew, Latin and Georgian identifiers.
+
 ## 5. Browse, provenance, and responsible citation
 
 To browse or search through standard Text-Fabric's local web interface, follow
