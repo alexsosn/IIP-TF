@@ -6,8 +6,10 @@ IIP-TF converts the [Inscriptions of Israel/Palestine (IIP)](https://github.com/
 
 **Pre-0.1 / working converter and local browser, not yet a released corpus.**
 The pinned Brown source can be converted into reproducible native Text-Fabric
-data and browsed offline using the standard TF app. There is not yet a
-published corpus artifact or a working Agora materializer.
+data and browsed offline using the standard TF app. A tested Agora
+materializer manifest and execution module are included, but the corpus
+has not yet been published as a release artifact or registered for
+managed Agora installation (see #10, #11 and Agora #187).
 
 **New researchers:** start with the [executable five-minute quickstart](docs/guides/researcher-quickstart.md)
 and the [local browser guide](docs/guides/local-tf-browser.md).
