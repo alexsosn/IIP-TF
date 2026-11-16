@@ -14,8 +14,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from types import MappingProxyType
 
-from iip_tf.person_register import git_blob_sha1
-
 _TEI = "http://www.tei-c.org/ns/1.0"
 _XML_ID = "{http://www.w3.org/XML/1998/namespace}id"
 _NS = {"tei": _TEI}
