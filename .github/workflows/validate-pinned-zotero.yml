@@ -4,6 +4,9 @@ on:
   pull_request:
     paths:
       - "src/iip_tf/bibliography_index.py"
+      - "src/iip_tf/bibliography_resolution.py"
+      - "src/iip_tf/tf_writer.py"
+      - "tests/test_bibliography_graph.py"
       - "tests/test_bibliography_index.py"
       - "docs/plans/issue-62-zotero-key-index.md"
       - ".github/workflows/validate-pinned-zotero.yml"
@@ -11,6 +14,9 @@ on:
     branches: [main]
     paths:
       - "src/iip_tf/bibliography_index.py"
+      - "src/iip_tf/bibliography_resolution.py"
+      - "src/iip_tf/tf_writer.py"
+      - "tests/test_bibliography_graph.py"
       - ".github/workflows/validate-pinned-zotero.yml"
 
 permissions:
@@ -58,6 +64,17 @@ jobs:
           assert index.by_key["IIP-001"] is index.by_key["IIP-694"]
           assert index.by_key["IIP-380"].monograph_title == "l'Année Épigraphique"
           assert index.by_key["IIP-609"].analytic_title == "A Greek Ostracon from Masada"
+          rahmani = index.by_key["IIP-119"]
+          assert rahmani.publication_date == "1994"
+          assert rahmani.monograph_title.startswith("A Catalogue of Jewish Ossuaries")
+          assert [(p.role, p.name, p.surname) for p in rahmani.agents] == [
+              ("author", "L.Y. Rahmani", "Rahmani"),
+              ("editor", "Ayala Sussmann", "Sussmann"),
+          ]
+          assert [(p.role, p.scope, p.name) for p in index.by_key["IIP-757"].agents
+                  if p.scope == "series"] == [("editor", "series", "Kurt Raaflaub")]
+          assert sum(len(x.agents) for x in index.entries) == 861 + 77
+          assert sum(x.publication_date is not None for x in index.entries) == 754
           print(
               f"Source-authenticated Zotero work-index PASS: "
               f"{len(index.entries)} works; {len(index.by_key)} IIP keys; "

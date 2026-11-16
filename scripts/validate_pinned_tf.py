@@ -13,6 +13,11 @@ from typing import Any
 
 from tf.fabric import Fabric  # type: ignore[import-untyped]
 
+from iip_tf.bibliography_index import (
+    PINNED_BIBLIOGRAPHY_BLOB,
+    read_bibliography_index,
+)
+from iip_tf.bibliography_resolution import resolve_bibliography_target
 from iip_tf.ir import InscriptionIR, NodeType
 from iip_tf.language_audit import AramaicLanguageAudit
 from iip_tf.person_register import (
@@ -422,6 +427,27 @@ def main() -> int:
         )
         if len(selected) >= 1000 and register is not None and len(register) != 844:
             raise SystemExit("authenticated IIP person register changed")
+        bibliography_path = args.source_dir.parent / "data-keep" / "iip-zotero-export.xml"
+        if len(selected) >= 1000 and not bibliography_path.is_file():
+            raise SystemExit("pinned Brown Zotero bibliography authority is missing")
+        bibliography = (
+            read_bibliography_index(
+                bibliography_path,
+                expected_git_sha1=PINNED_BIBLIOGRAPHY_BLOB
+                if len(selected) >= 1000 else None,
+            )
+            if bibliography_path.is_file() else None
+        )
+        if len(selected) >= 1000 and bibliography is not None and (
+            len(bibliography.entries) != 767
+            or len(bibliography.by_key) != 762
+            or len(bibliography.unkeyed_ordinals) != 6
+        ):
+            raise SystemExit("authenticated Zotero authority entry/key counts changed")
+        bibliography_resolved = 0
+        bibliography_unresolved: Counter[str] = Counter()
+        bibliography_source_targets: set[str] = set()
+        bibliography_cited_ordinals: set[int] = set()
         person_resolved_entities = 0
         person_distinct_people = 0
         person_unresolved: Counter[str] = Counter()
@@ -454,6 +480,19 @@ def main() -> int:
                 person_unresolved_contributors.update(
                     unresolved_contributor_refs(ir, register)
                 )
+            if bibliography is not None:
+                for bibl in ir.nodes_of_type(NodeType.BIBL):
+                    target = bibl.feature("target")
+                    if target is not None and not isinstance(target, str):
+                        raise SystemExit("source bibliography pointer must be a string")
+                    result = resolve_bibliography_target(bibliography, target)
+                    if target is not None:
+                        bibliography_source_targets.add(target)
+                    if result.entry is None:
+                        bibliography_unresolved[result.reason or "missing"] += 1
+                    else:
+                        bibliography_resolved += 1
+                        bibliography_cited_ordinals.add(result.entry.ordinal)
             irs.append(ir)
             parsed_files.append(path.name)
             if len(selected) >= 1000:
@@ -522,6 +561,22 @@ def main() -> int:
                 "pinned canonical IR accounting changed: "
                 + json.dumps({"expected": expected, "actual": actual}, sort_keys=True)
             )
+
+        bibliography_entries = (
+            tuple(
+                bibliography.entries[ordinal - 1]
+                for ordinal in sorted(bibliography_cited_ordinals)
+            )
+            if bibliography is not None
+            else ()
+        )
+        publication_nodes = len(bibliography_entries)
+        publication_key_nodes = sum(len(entry.keys) for entry in bibliography_entries)
+        publication_agent_nodes = sum(len(entry.agents) for entry in bibliography_entries)
+        publication_extra_nodes = (
+            publication_nodes + publication_key_nodes + publication_agent_nodes
+        )
+        publication_extra_parent_edges = publication_key_nodes + publication_agent_nodes
 
         # Corpus-wide coverage is a pinned-source gate, not a requirement of
         # synthetic one-record failure-accounting tests.
@@ -663,6 +718,7 @@ def main() -> int:
             tuple(irs),
             args.output_dir,
             converter_commit=args.converter_commit,
+            bibliography_index=bibliography,
         )
 
         stage = "tf_reload"
@@ -684,22 +740,70 @@ def main() -> int:
                 raise SystemExit(
                     f"loaded {node_type} count {loaded_node_counts[node_type]} != {count}"
                 )
+        for node_type, count in (
+            ("publication", publication_nodes),
+            ("publication_key", publication_key_nodes),
+            ("publication_agent", publication_agent_nodes),
+        ):
+            if len(api.F.otype.s(node_type)) != count:
+                raise SystemExit(f"loaded {node_type} node count mismatch")
 
         validated_oslots_nodes = validate_oslots_mapping(
             api.E.oslots.items(),
             sign_count=sign_count,
-            node_count=node_count,
+            node_count=node_count + publication_extra_nodes,
         )
 
         loaded_edge_counts: dict[str, int] = {}
-        for edge_type, expected_count in edge_counts.items():
+        for edge_type, ir_expected_count in edge_counts.items():
             feature = api.Es(edge_type)
             count = sum(len(targets) for _, targets in feature.items())
             loaded_edge_counts[edge_type] = count
+            expected_count = ir_expected_count + (
+                publication_extra_parent_edges if edge_type == "parent" else 0
+            )
             if count != expected_count:
                 raise SystemExit(
                     f"loaded edge {edge_type} count {count} != {expected_count}"
                 )
+        if bibliography is not None and bibliography_resolved:
+            publication_edges = sum(
+                len(targets) for _, targets in api.E.publication_ref.items()
+            )
+            if publication_edges != bibliography_resolved:
+                raise SystemExit("source-backed publication citation edge count changed")
+            for pub in api.F.otype.s("publication"):
+                sources = tuple(api.E.publication_ref.t(pub))
+                expected_span = set().union(
+                    *(set(api.E.oslots.s(source)) for source in sources)
+                )
+                if (
+                    not sources
+                    or set(api.E.oslots.s(pub)) != expected_span
+                    or api.E.in_inscription.f(pub)
+                ):
+                    raise SystemExit(f"publication {pub}: forged ownership or oslots")
+            source_rahmani = tuple(api.F.publication_key.s("IIP-119"))
+            if len(selected) >= 1000:
+                if len(source_rahmani) != 1:
+                    raise SystemExit("pinned Rahmani publication not linked in native TF")
+                rahmani = source_rahmani[0]
+                if (
+                    api.F.publication_date.v(rahmani) != "1994"
+                    or not str(api.F.publication_title.v(rahmani)).startswith(
+                        "A Catalogue of Jewish Ossuaries"
+                    )
+                    or not any(
+                        api.F.publication_agent_surname.v(a) == "Rahmani"
+                        and api.F.publication_agent_role.v(a) == "author"
+                        for a in api.E.parent.t(rahmani)
+                    )
+                ):
+                    raise SystemExit("pinned native Rahmani 1994 publication lost")
+                if (rahmani,) not in api.S.search(
+                    "publication publication_date=1994"
+                ):
+                    raise SystemExit("native researcher publication-year search failed")
 
         point_nodes = tuple(node for node, _ in api.Fs("point_index").items())
         if len(point_nodes) != EXPECTED_POINTS:
@@ -771,8 +875,33 @@ def main() -> int:
                 ):
                     raise SystemExit("beth0002: source/canonical Jewish classification lost")
                 person_canaries[record_id] = person_id
+        native_node_counts = dict(node_counts)
+        native_node_counts.update({
+            "publication": publication_nodes,
+            "publication_key": publication_key_nodes,
+            "publication_agent": publication_agent_nodes,
+        })
+        native_edge_counts = dict(edge_counts)
+        native_edge_counts["parent"] = (
+            edge_counts["parent"] + publication_extra_parent_edges
+        )
+        native_edge_counts["publication_ref"] = bibliography_resolved
         report = {
             **actual,
+            "nodes": node_count + publication_extra_nodes,
+            "edges": edge_count + publication_extra_parent_edges + bibliography_resolved,
+            "bibliography_resolution": {
+                "source_git_blob": bibliography.source_git_blob
+                if bibliography is not None else None,
+                "source_works": len(bibliography.entries) if bibliography is not None else 0,
+                "source_keys": len(bibliography.by_key) if bibliography is not None else 0,
+                "distinct_targets": len(bibliography_source_targets),
+                "resolved_citations": bibliography_resolved,
+                "unresolved_citations": dict(sorted(bibliography_unresolved.items())),
+                "cited_works": publication_nodes,
+                "publication_keys": publication_key_nodes,
+                "publication_agents": publication_agent_nodes,
+            },
             "metadata_queries": metadata_queries,
             "language_source_canaries": language_sources,
             "name_origin_codes": dict(sorted(name_origin_counts.items())),
@@ -796,8 +925,8 @@ def main() -> int:
             "corrected_heb_script_transcription_signs": corrected_heb_script_signs,
             "corrected_heb_script_signs_by_origin": dict(sorted(corrected_by_origin.items())),
             "aramaic_transcription_language_audit": aramaic_language_audit,
-            "node_counts": dict(sorted(node_counts.items())),
-            "edge_counts": dict(sorted(edge_counts.items())),
+            "node_counts": dict(sorted(native_node_counts.items())),
+            "edge_counts": dict(sorted(native_edge_counts.items())),
             "tf_files": len(tuple(args.output_dir.glob("*.tf"))),
             "validated_oslots_nodes": validated_oslots_nodes,
         }
@@ -825,6 +954,7 @@ def main() -> int:
                 (reparse_and_enrich(path) for path in selected),
                 second_dir,
                 converter_commit=args.converter_commit,
+                bibliography_index=bibliography,
             )
             feature_hashes = compare_tf_feature_hashes(args.output_dir, second_dir)
         if len(feature_hashes) != report["tf_files"]:

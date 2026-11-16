@@ -13,7 +13,7 @@ The manifest at `agora.materializer.json` declares two source options:
   `0b7dc8358ccdfd0c9391f049da4839fbd91c26e5`, acquired at the repository
   **root** (not the `epidoc-files/` subdirectory).
 - **User-local:** a researcher-provided copy of the same directory structure.
-  A non-Git tarball containing the *exact three pinned Brown source components*
+  A non-Git tarball containing the *exact four pinned Brown source components*
   is authenticated by their independent hashes and uses the pinned source
   revision. Other local trees are explicitly `unversioned-local` unless the
   host supplies a revision. An unverified source containing Brown's
@@ -21,16 +21,17 @@ The manifest at `agora.materializer.json` declares two source options:
   scholarly inscription.
 
 The following paths are required together:
-`epidoc-files/*.xml`, `include_taxonomies.xml`, and
-`data-keep/persons.xml`. The sibling controlled taxonomy and person register
-are essential to preserve the current converter's native metadata and
-person-linking behavior. Supplying only `epidoc-files/` would silently change
+`epidoc-files/*.xml`, `include_taxonomies.xml`, `data-keep/persons.xml`,
+and `data-keep/iip-zotero-export.xml`. The sibling taxonomy, person register
+and bibliography export preserve native classification, person links and
+source-backed publication identity. Supplying only `epidoc-files/` would silently change
 its scientific content and is rejected. The manifest uses a complete Git
 checkout initially; smaller acquisition patterns require separate proof of
 equivalent source coverage.
 
 For the pinned revision, the adapter independently checks the real EpiDoc Git
-tree, the taxonomy Git blob, and the person-register Git blob **before**
+tree, the taxonomy Git blob, person-register Git blob and Zotero-export Git
+blob **before**
 conversion. With another revision it uses the user's file contents and retains
 the supplied revision without claiming to authenticate it. Agora separately
 records the acquired tree digest.
@@ -102,7 +103,7 @@ must not be redistributed without following applicable data terms.
 
 The contract and wheel are checked against an immutable real Agora host at
 `2c94c7c024bd88b7df403cbd4ab30074367cecc5`; the IIP tests convert and
-reload real TEI-shaped fixture records with taxonomy/person authority paths.
+reload real TEI-shaped fixture records with taxonomy, person and bibliography authority paths.
 Full Git-acquisition, installed registered-host sandbox execution, distribution,
 and release smoke checks remain separate gates under downstream Agora #187
 and IIP-TF #12.

@@ -8,6 +8,10 @@ from collections.abc import Iterator, Sequence
 from pathlib import Path
 
 from iip_tf import __version__
+from iip_tf.bibliography_index import (
+    PINNED_BIBLIOGRAPHY_BLOB,
+    read_bibliography_index,
+)
 from iip_tf.ir import InscriptionIR
 from iip_tf.person_register import attach_person_register, read_person_register
 from iip_tf.release_gate import inventory_source_files, require_empty_output_directory
@@ -43,6 +47,7 @@ def build_parser() -> argparse.ArgumentParser:
     convert.add_argument("--converter-commit", required=True)
     convert.add_argument("--persons-register", type=Path)
     convert.add_argument("--taxonomy-file", type=Path)
+    convert.add_argument("--bibliography-file", type=Path)
 
     lookup = subparsers.add_parser(
         "taxonomy-lookup",
@@ -93,6 +98,21 @@ def _convert(args: argparse.Namespace) -> int:
     )
     if args.taxonomy_file is not None and taxonomy is None:
         raise ValueError(f"explicit taxonomy source does not exist: {taxonomy_path}")
+    bibliography_path = (
+        args.bibliography_file
+        or (source.parent / "data-keep" / "iip-zotero-export.xml")
+    )
+    bibliography = (
+        read_bibliography_index(
+            bibliography_path,
+            expected_git_sha1=PINNED_BIBLIOGRAPHY_BLOB
+            if source_revision == PINNED_SOURCE_REVISION else None,
+        )
+        if bibliography_path.is_file() else None
+    )
+    if args.bibliography_file is not None and bibliography is None:
+        raise ValueError(f"explicit bibliography authority does not exist: {bibliography_path}")
+
     require_empty_output_directory(output)
     def records() -> Iterator[InscriptionIR]:
         for path in paths:
@@ -102,7 +122,10 @@ def _convert(args: argparse.Namespace) -> int:
             yield attach_person_register(ir, register)[0] if register is not None else ir
 
     irs = tuple(records())
-    write_tf_corpus(irs, output, converter_commit=converter_commit)
+    write_tf_corpus(
+        irs, output, converter_commit=converter_commit,
+        bibliography_index=bibliography,
+    )
     return 0
 
 

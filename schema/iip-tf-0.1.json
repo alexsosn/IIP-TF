@@ -11,7 +11,10 @@
   "language_policy": {
     "issue": 53,
     "scope": "textual_signs_in_translation_and_commentary_layers",
-    "source_text_layers": ["transcription", "diplomatic"],
+    "source_text_layers": [
+      "transcription",
+      "diplomatic"
+    ],
     "source_inscription_language_feature": "main_lang",
     "inferred_prose_language": "eng",
     "inferred_provenance": {
@@ -20,7 +23,12 @@
     },
     "provenance_semantics": "converter inference, not source-declared language",
     "source_override": "explicit xml:lang on edition, paragraph or inline element wins, with xml:lang/inherited lang_source as applicable",
-    "pending_separate_issues": [52, 54, 55, 57],
+    "pending_separate_issues": [
+      52,
+      54,
+      55,
+      57
+    ],
     "source_glyphs_unchanged": true
   },
   "warp": {
@@ -155,6 +163,9 @@
     "person",
     "segmentation",
     "bibl",
+    "publication",
+    "publication_key",
+    "publication_agent",
     "hand",
     "decoration",
     "image",
@@ -215,7 +226,10 @@
     "publication_availability": "One original availability declaration with raw status, parent of explicit licence nodes.",
     "publication_licence": "Explicit licence text and direct text; parent of source ref and paragraph nodes, not extrapolated from a global boilerplate.",
     "publication_reference": "One TEI licence/ref with original text and optional @target, parented to licence or paragraph.",
-    "publication_paragraph": "One TEI licence/p with literal text and reference children."
+    "publication_paragraph": "One TEI licence/p with literal text and reference children.",
+    "publication": "One globally shared, source-attested TEI biblStruct per cited work. Its oslots are the exact union of original bibl citation anchors across inscriptions; it has no invented single inscription owner. Explicit publication_ref edges carry citation semantics.",
+    "publication_key": "One source-authored IIP key alias child per cited publication; ordered, including keys not themselves cited.",
+    "publication_agent": "One source-authored author/editor per cited publication, preserving role, scope (analytic/monogr/series), name components and per-role order."
   },
   "features": {
     "slot": [
@@ -404,7 +418,25 @@
       "reference_text",
       "reference_target",
       "paragraph_text",
-      "responsibility_role_source_id"
+      "responsibility_role_source_id",
+      "publication_key",
+      "publication_source_ordinal",
+      "publication_source_blob",
+      "publication_type",
+      "publication_title",
+      "publication_analytic_title",
+      "publication_monograph_title",
+      "publication_date",
+      "publication_publisher",
+      "publication_pub_place",
+      "publication_alias_key",
+      "publication_alias_order",
+      "publication_agent_role",
+      "publication_agent_order",
+      "publication_agent_scope",
+      "publication_agent_name",
+      "publication_agent_forename",
+      "publication_agent_surname"
     ],
     "edge": [
       "parent",
@@ -413,7 +445,8 @@
       "cites",
       "person_ref",
       "segmentation_of",
-      "token_from"
+      "token_from",
+      "publication_ref"
     ]
   },
   "feature_contract": {
@@ -528,13 +561,29 @@
     "script": {
       "domain": "sign|word",
       "value_type": "str",
-      "values": ["Latn", "Grek", "Hebr", "Arab", "Syrc", "Phnx", "Armn", "Geor", "Copt", "Cyrl", "Samr", "Ethi", "Ugar"],
+      "values": [
+        "Latn",
+        "Grek",
+        "Hebr",
+        "Arab",
+        "Syrc",
+        "Phnx",
+        "Armn",
+        "Geor",
+        "Copt",
+        "Cyrl",
+        "Samr",
+        "Ethi",
+        "Ugar"
+      ],
       "semantics": "ISO 15924 script of actual encoded Unicode letters; no inference of original inscription script, text language, or script for unknown, symbolic, technical or mixed words. Explicit partial #54 baseline."
     },
     "script_source": {
       "domain": "sign|word",
       "value_type": "str",
-      "values": ["encoded_unicode"],
+      "values": [
+        "encoded_unicode"
+      ],
       "semantics": "Provenance of the conservative encoded-script classification, never source-declared original writing system."
     },
     "synthetic_kind": {
@@ -655,6 +704,96 @@
       "domain": "responsibility",
       "value_type": "str",
       "semantics": "Original resp/@xml:id, scoped to the source XML file; distinct from agent xml:id. Do not synthesize cross-file identity."
+    },
+    "publication_key": {
+      "domain": "publication",
+      "value_type": "str",
+      "semantics": "Exact first source-authored IIP authority key for the source work; aliases are separate nodes."
+    },
+    "publication_source_ordinal": {
+      "domain": "publication",
+      "value_type": "int",
+      "semantics": "One-based biblStruct ordinal within pinned export, not a persistent work identifier."
+    },
+    "publication_source_blob": {
+      "domain": "publication",
+      "value_type": "str",
+      "semantics": "Git blob SHA-1 of authentic Brown Zotero export used for this publication."
+    },
+    "publication_type": {
+      "domain": "publication",
+      "value_type": "str",
+      "semantics": "Original biblStruct@type."
+    },
+    "publication_title": {
+      "domain": "publication",
+      "value_type": "str",
+      "semantics": "Convenience source title: analytic title when present else monograph title; other forms separately retained."
+    },
+    "publication_analytic_title": {
+      "domain": "publication",
+      "value_type": "str",
+      "semantics": "Original TEI analytic primary title, parser-normalized as text."
+    },
+    "publication_monograph_title": {
+      "domain": "publication",
+      "value_type": "str",
+      "semantics": "Original TEI monograph primary title, parser-normalized as text."
+    },
+    "publication_date": {
+      "domain": "publication",
+      "value_type": "str",
+      "semantics": "Original TEI monograph imprint date text, not an inferred ISO year."
+    },
+    "publication_publisher": {
+      "domain": "publication",
+      "value_type": "str",
+      "semantics": "Original TEI monograph imprint publisher text."
+    },
+    "publication_pub_place": {
+      "domain": "publication",
+      "value_type": "str",
+      "semantics": "Original TEI monograph imprint pubPlace text."
+    },
+    "publication_alias_key": {
+      "domain": "publication_key",
+      "value_type": "str",
+      "semantics": "One exact original IIP key attached to shared publication by parent edge."
+    },
+    "publication_alias_order": {
+      "domain": "publication_key",
+      "value_type": "int",
+      "semantics": "One-based ordinal of original key within source publication."
+    },
+    "publication_agent_role": {
+      "domain": "publication_agent",
+      "value_type": "str",
+      "semantics": "Original author or editor role."
+    },
+    "publication_agent_order": {
+      "domain": "publication_agent",
+      "value_type": "int",
+      "semantics": "One-based order among persons of the same role for this work."
+    },
+    "publication_agent_scope": {
+      "domain": "publication_agent",
+      "value_type": "str",
+      "semantics": "Original TEI analytic, monogr or series location for this agent."
+    },
+    "publication_agent_name": {
+      "domain": "publication_agent",
+      "value_type": "str",
+      "semantics": "Readable name from original components, no identity reconciliation."
+    },
+    "publication_agent_forename": {
+      "domain": "publication_agent",
+      "value_type": "str",
+      "semantics": "Source TEI forename text if provided."
+    },
+    "publication_agent_surname": {
+      "domain": "publication_agent",
+      "value_type": "str",
+      "semantics": "Source TEI surname text if provided."
     }
   },
   "display_readings": {
@@ -886,7 +1025,10 @@
       "publication_availability",
       "publication_licence",
       "publication_reference",
-      "publication_paragraph"
+      "publication_paragraph",
+      "publication",
+      "publication_key",
+      "publication_agent"
     ],
     "source_values_retained": true,
     "derived_values_must_be_separate_and_documented": true
@@ -1072,6 +1214,47 @@
       "child_nodes": [
         "publication_reference"
       ]
+    },
+    "publication": {
+      "features": [
+        "publication_key",
+        "publication_source_ordinal",
+        "publication_source_blob",
+        "publication_type",
+        "publication_title",
+        "publication_analytic_title",
+        "publication_monograph_title",
+        "publication_date",
+        "publication_publisher",
+        "publication_pub_place"
+      ],
+      "child_nodes": [
+        "publication_key",
+        "publication_agent"
+      ],
+      "identity": "one_per_cited_source_biblStruct",
+      "technical_oslots": "union_of_linked_bibl_anchor_slots",
+      "unique_inscription_owner": false
+    },
+    "publication_key": {
+      "parent_type": "publication",
+      "features": [
+        "publication_alias_key",
+        "publication_alias_order"
+      ],
+      "identity": "one_per_attested_source_alias"
+    },
+    "publication_agent": {
+      "parent_type": "publication",
+      "features": [
+        "publication_agent_role",
+        "publication_agent_order",
+        "publication_agent_scope",
+        "publication_agent_name",
+        "publication_agent_forename",
+        "publication_agent_surname"
+      ],
+      "identity": "one_per_source_author_or_editor"
     }
   },
   "edges": {
@@ -1081,7 +1264,8 @@
     "cites": "Resolved ana/bibliography relation to bibl nodes; raw ana value is retained.",
     "person_ref": "Exact textual persName entity→person-register edge, never a contributor or fuzzy-name match.",
     "segmentation_of": "Selected/suppressed segmentation candidate provenance linked to the edition it annotates/projects onto.",
-    "token_from": "Word node linked to the selected segmentation provenance node."
+    "token_from": "Word node linked to the selected segmentation provenance node.",
+    "publication_ref": "Exact IIP bibl citation → source-backed globally shared publication, without guessing missing or malformed targets; existing bibl.target retained."
   },
   "identity": {
     "canonical_record_key": "source_file_stem",
@@ -1165,7 +1349,10 @@
       "candidate_index",
       "selected",
       "token_count",
-      "point_index"
+      "point_index",
+      "publication_source_ordinal",
+      "publication_alias_order",
+      "publication_agent_order"
     ],
     "edge_default": "edge_without_values",
     "rule": "Every TF feature has exactly one valueType. Raw source attributes are string features; optional numeric derivatives use separately named int features."

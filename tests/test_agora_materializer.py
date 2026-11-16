@@ -62,6 +62,14 @@ def _source(root: Path) -> Path:
         '<persName>Abba</persName><faith>Jewish</faith></person></listPerson>',
         encoding="utf-8",
     )
+    (keep / "iip-zotero-export.xml").write_text(
+        '<TEI xmlns="http://www.tei-c.org/ns/1.0"><text><body><listBibl>'
+        '<biblStruct><monogr><title level="m">Test work</title>'
+        '<idno type="callNumber">IIP-119</idno>'
+        '<imprint><date>1994</date></imprint></monogr></biblStruct>'
+        '</listBibl></body></text></TEI>',
+        encoding="utf-8",
+    )
     return source
 
 
@@ -121,7 +129,11 @@ def test_bad_source_does_not_silently_drop_taxonomies_or_people(tmp_path: Path) 
     source = _source(tmp_path)
     output = tmp_path / "output"
     output.mkdir()
-    for path in (source / "include_taxonomies.xml", source / "data-keep/persons.xml"):
+    for path in (
+        source / "include_taxonomies.xml",
+        source / "data-keep/persons.xml",
+        source / "data-keep/iip-zotero-export.xml",
+    ):
         original = path.read_bytes()
         path.unlink()
         with pytest.raises(ValueError, match="required Brown source"):
@@ -175,6 +187,9 @@ def test_local_exact_pinned_source_without_git_metadata_is_verified(
         agora_module, "PINNED_PERSONS_BLOB",
         git_blob_sha1(source / "data-keep/persons.xml"),
     )
+    bibliography_blob = git_blob_sha1(source / "data-keep/iip-zotero-export.xml")
+    monkeypatch.setattr(agora_module, "PINNED_BIBLIOGRAPHY_BLOB", bibliography_blob)
+    monkeypatch.setattr(cli_module, "PINNED_BIBLIOGRAPHY_BLOB", bibliography_blob)
     output = tmp_path / "verified"
     output.mkdir()
     materialize(source, output, source_revision="")
@@ -218,6 +233,7 @@ def test_manifest_targets_full_brown_root_and_real_python_module() -> None:
             "epidoc-files/*.xml",
             "include_taxonomies.xml",
             "data-keep/persons.xml",
+            "data-keep/iip-zotero-export.xml",
         ],
         "allow_symlinks": False,
     }

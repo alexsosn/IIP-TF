@@ -400,3 +400,48 @@ all pinned glyph-only inscriptions, not only fixtures. This is a
 converter-derived display policy, not a source correction or external
 runtime sidecar; unknown source readings retain their original annotation.
 
+## Amendment #62 — one source publication across its citation occurrences
+
+The separate pinned Brown `data-keep/iip-zotero-export.xml` Zotero TEI export
+provides a source bibliography register, authenticated by its Git blob SHA-1.
+It contains 767 TEI `biblStruct` records and 762 explicit IIP keys on 761
+keyed works. Six records are unkeyed and remain unlinked. Some works have two
+real keys: `IIP-001` and `IIP-694` identify the same TEI work. Malformed
+or stale `bibl/ptr/@target` values are never rewritten or guessed, and a
+missing `ptr/@type` is no reason to exclude an otherwise exact match.
+
+One globally shared native `publication` node is created only for each
+**actually cited** source `biblStruct`. Its `oslots` are the union of the
+existing technical source `bibl` sign anchors of **every inscription citing
+that work**. This follows Text-Fabric's occurrence-based lexical node model:
+the slots are technical citation-occurrence anchors, **not claims that the
+publication text appears in these inscriptions**. No arbitrary inscription
+becomes owner of a global source work. The directed native edge
+`publication_ref` goes from the original `bibl` to the shared
+`publication`. This edge carries the semantic relationship, never inferred
+from incidental slot overlap.
+
+Every source-authored IIP key is separately retained on ordered
+`publication_key` children, preserving multiple real aliases. Every source
+`author` and `editor` is separately retained as an ordered
+`publication_agent` child, with role, TEI analytic/monogr/series location,
+parser-level forename, surname and readable name. This is **source
+bibliographic authorship**, not person-register `person` identity.
+Original analytic and monograph titles, source imprint date, publisher,
+publication place and `biblStruct@type` are distinct features.
+`publication_title` is an explicitly derived convenience selection
+(analytic title if nonempty, otherwise monograph title). Source dates remain
+strings, without assuming an ISO year. All publication nodes record their
+source ordinal and the authenticated export blob.
+
+The original inscription-owned `bibl` nodes, their verbatim `target`
+and `ptr_type`, citation-specific `bibl_scope`, original text signs,
+`cites`, and native TF text formats do not change. An unsupported target
+creates **no** publication edge. The diagnostic report counts exact resolved
+and unresolved source references separately, while every resolved source
+publication and researcher-facing metadata field lives in native TF. The
+complete pinned Brown build must authenticate the Zotero export, perform two
+independent reproducible conversions, validate the real Rahmani (1994)
+lookup without an XML sidecar at query time, and compare all native, raw CF
+and freshly compiled CFM feature data. Standalone EpiDoc-only conversion
+still works without bibliography enrichment and does not fabricate works.

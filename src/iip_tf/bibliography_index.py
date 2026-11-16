@@ -17,11 +17,22 @@ from types import MappingProxyType
 _TEI = "http://www.tei-c.org/ns/1.0"
 _XML_ID = "{http://www.w3.org/XML/1998/namespace}id"
 _NS = {"tei": _TEI}
+PINNED_BIBLIOGRAPHY_BLOB = "38f7c4d7c8c24756a0023e3e77c7ed6e02b8786d"
 _IIP_KEY = re.compile(r"IIP-[0-9]+")
 
 
 class BibliographyIndexError(ValueError):
     """An authority source key cannot be interpreted without ambiguity."""
+
+
+@dataclass(frozen=True)
+class BibliographyAgent:
+    role: str  # source author or editor, no identity inference
+    order: int  # one-based ordinal per role within this biblStruct
+    scope: str  # analytic, monogr or series
+    name: str
+    forename: str | None
+    surname: str | None
 
 
 @dataclass(frozen=True)
@@ -31,6 +42,10 @@ class BibliographyEntry:
     work_type: str | None
     analytic_title: str | None
     monograph_title: str | None
+    publication_date: str | None = None
+    publisher: str | None = None
+    pub_place: str | None = None
+    agents: tuple[BibliographyAgent, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -53,6 +68,42 @@ def _source_title(node: ET.Element | None) -> str | None:
         return None
     parsed = " ".join("".join(node.itertext()).split())
     return parsed or None
+
+
+def _at_most_one(work: ET.Element, path: str) -> str | None:
+    matches = work.findall(path, _NS)
+    if len(matches) > 1:
+        raise BibliographyIndexError(f"ambiguous repeated Zotero source field: {path}")
+    return _source_title(matches[0]) if matches else None
+
+
+def _source_agents(work: ET.Element) -> tuple[BibliographyAgent, ...]:
+    """Keep repeatable TEI authors/editors distinct, ordered and source-scoped."""
+    agents: list[BibliographyAgent] = []
+    order = {"author": 0, "editor": 0}
+    for scope in ("analytic", "monogr", "series"):
+        container = work.find(f"./tei:{scope}", _NS)
+        if container is None:
+            continue
+        for child in container:
+            role = child.tag.removeprefix(f"{{{_TEI}}}")
+            if role not in order or child.tag != f"{{{_TEI}}}{role}":
+                continue
+            forename = _source_title(child.find("./tei:forename", _NS))
+            surname = _source_title(child.find("./tei:surname", _NS))
+            other_name = _source_title(child.find("./tei:name", _NS))
+            if other_name is not None and (forename is not None or surname is not None):
+                raise BibliographyIndexError("ambiguous mixed TEI person name components")
+            name = other_name or " ".join(
+                value for value in (forename, surname) if value is not None
+            )
+            if not name:
+                raise BibliographyIndexError(f"blank Zotero {role} in {scope}")
+            order[role] += 1
+            agents.append(
+                BibliographyAgent(role, order[role], scope, name, forename, surname)
+            )
+    return tuple(agents)
 
 
 def read_bibliography_index(
@@ -115,6 +166,10 @@ def read_bibliography_index(
             work_type=work.get("type"),
             analytic_title=_source_title(work.find("./tei:analytic/tei:title", _NS)),
             monograph_title=_source_title(work.find("./tei:monogr/tei:title", _NS)),
+            publication_date=_at_most_one(work, "./tei:monogr/tei:imprint/tei:date"),
+            publisher=_at_most_one(work, "./tei:monogr/tei:imprint/tei:publisher"),
+            pub_place=_at_most_one(work, "./tei:monogr/tei:imprint/tei:pubPlace"),
+            agents=_source_agents(work),
         )
         entries.append(entry)
         if not keys:
