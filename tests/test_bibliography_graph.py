@@ -104,6 +104,12 @@ def _tf_bytes(path: Path) -> dict[str, bytes]:
     return {p.name: p.read_bytes() for p in path.glob("*.tf")}
 
 
+def _write_with_authority(*args: Any, **kwargs: Any) -> None:
+    # RED-first: production writer has not acquired the authority argument yet.
+    write: Any = write_tf_corpus
+    write(*args, **kwargs)
+
+
 def test_real_native_shared_publications_and_repeatable_authorities(
     tmp_path: Path,
 ) -> None:
@@ -113,7 +119,7 @@ def test_real_native_shared_publications_and_repeatable_authorities(
         _record("bbb0002", "IIP-119.xml", "IIP-001", "SEG", None),
     )
     native = tmp_path / "tf"
-    write_tf_corpus(records, native, converter_commit="test", bibliography_index=index)
+    _write_with_authority(records, native, converter_commit="test", bibliography_index=index)
     api = _load(native)
     F, E = api.F, api.E
 
@@ -182,8 +188,8 @@ def test_publication_graph_is_deterministic_under_ir_input_reordering(
         _record("aaa0001", "IIP-694", "IIP-119"),
     )
     first, second = tmp_path / "first", tmp_path / "second"
-    write_tf_corpus(irs, first, converter_commit="test", bibliography_index=index)
-    write_tf_corpus(reversed(irs), second, converter_commit="test", bibliography_index=index)
+    _write_with_authority(irs, first, converter_commit="test", bibliography_index=index)
+    _write_with_authority(reversed(irs), second, converter_commit="test", bibliography_index=index)
     assert _tf_bytes(first) == _tf_bytes(second)
 
 
