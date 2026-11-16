@@ -9,7 +9,7 @@
   "materializers": [
     {
       "id": "iip-epidoc-text-fabric",
-      "description": "Convert the complete pinned Brown Inscriptions of Israel/Palestine EpiDoc source with person and taxonomy authorities into local native Text-Fabric, including its source-critical browser.",
+      "description": "Convert the complete pinned Brown Inscriptions of Israel/Palestine EpiDoc source with person, taxonomy and Zotero bibliography authorities into local native Text-Fabric, including its source-critical browser.",
       "acquisition": [
         {
           "type": "git",
@@ -20,7 +20,7 @@
         {
           "type": "user-local",
           "path_type": "directory",
-          "prompt": "Select the root directory of an IIP iip-texts checkout containing epidoc-files/, include_taxonomies.xml and data-keep/persons.xml"
+          "prompt": "Select the root directory of an IIP iip-texts checkout containing epidoc-files/, include_taxonomies.xml data-keep/persons.xml and data-keep/iip-zotero-export.xml"
         }
       ],
       "input": {
@@ -28,7 +28,8 @@
         "required_globs": [
           "epidoc-files/*.xml",
           "include_taxonomies.xml",
-          "data-keep/persons.xml"
+          "data-keep/persons.xml",
+          "data-keep/iip-zotero-export.xml"
         ],
         "allow_symlinks": false
       },
