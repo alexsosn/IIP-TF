@@ -13,9 +13,11 @@ from typing import Any
 from tf.fabric import Fabric  # type: ignore[import-untyped]
 
 from iip_tf import __version__
+from iip_tf.bibliography_index import BibliographyIndex
+from iip_tf.bibliography_resolution import resolve_bibliography_target
 from iip_tf.encoded_script import encoded_script, uniform_encoded_script
 from iip_tf.glyph_unicode import glyph_display_token
-from iip_tf.ir import InscriptionIR, IRSign, Layer, NodeType
+from iip_tf.ir import EdgeType, InscriptionIR, IRSign, Layer, NodeType
 from iip_tf.source_repair import PINNED_IIP_REVISION
 
 _NODE_TYPE_ORDER = (
@@ -45,6 +47,9 @@ _NODE_TYPE_ORDER = (
     NodeType.PUBLICATION_LICENCE,
     NodeType.PUBLICATION_REFERENCE,
     NodeType.PUBLICATION_PARAGRAPH,
+    NodeType.PUBLICATION,
+    NodeType.PUBLICATION_KEY,
+    NodeType.PUBLICATION_AGENT,
 )
 _NODE_TYPE_RANK = {node_type: index for index, node_type in enumerate(_NODE_TYPE_ORDER)}
 _INT_FEATURES = {
@@ -56,6 +61,9 @@ _INT_FEATURES = {
     "selected",
     "token_count",
     "point_index",
+    "publication_source_ordinal",
+    "publication_alias_order",
+    "publication_agent_order",
 }
 _EMPTY_STRUCTURAL_TYPES = {NodeType.EDITION, NodeType.PARAGRAPH}
 
@@ -339,13 +347,109 @@ def _clear_binary_cache(output_dir: Path) -> None:
     shutil.rmtree(output_dir / ".tf", ignore_errors=True)
 
 
+def _add_publication_graph(
+    records: tuple[InscriptionIR, ...],
+    index: BibliographyIndex,
+    node_by_key: dict[str, int],
+    otype: dict[int, str | int],
+    oslots: dict[int, set[int]],
+    node_features: dict[str, dict[int, str | int]],
+    edge_features: dict[str, dict[int, set[int]]],
+) -> None:
+    """Add one shared source work per cited TEI biblStruct, never a fake owner.
+
+    The publication's technical oslots are the union of its actual citation
+    anchors, analogous to a lexeme spanning its occurrences. The direct native
+    publication_ref edge, not slot overlap, is the semantic citation relation.
+    """
+    citations: dict[int, list[int]] = defaultdict(list)
+    for ir in records:
+        for node in ir.nodes_of_type(NodeType.BIBL):
+            raw = node.feature("target")
+            if raw is not None and not isinstance(raw, str):
+                raise TFWriterError(f"{node.key}: non-string source bibliography target")
+            match = resolve_bibliography_target(index, raw)
+            if match.entry is not None:
+                citations[match.entry.ordinal].append(node_by_key[node.key])
+
+    if not citations:
+        return
+    next_node = max(otype) + 1
+    publications: dict[int, int] = {}
+    anchors: dict[int, set[int]] = {}
+    for ordinal in sorted(citations):
+        if not 1 <= ordinal <= len(index.entries):
+            raise TFWriterError("bibliography authority ordinal out of range")
+        entry = index.entries[ordinal - 1]
+        if entry.ordinal != ordinal or not entry.keys:
+            raise TFWriterError("bibliography authority entry identity mismatch")
+        union = set().union(*(oslots[n] for n in citations[ordinal]))
+        if not union:
+            raise TFWriterError(f"publication {ordinal}: no actual citing slot anchors")
+        pub = next_node
+        next_node += 1
+        publications[ordinal] = pub
+        anchors[ordinal] = union
+        otype[pub] = NodeType.PUBLICATION.value
+        oslots[pub] = set(union)
+        _set_feature(node_features, "publication_source_ordinal", pub, ordinal)
+        _set_feature(node_features, "publication_source_blob", pub, index.source_git_blob)
+        _set_feature(node_features, "publication_key", pub, entry.keys[0])
+        _set_feature(node_features, "publication_type", pub, entry.work_type)
+        _set_feature(
+            node_features, "publication_title", pub,
+            entry.analytic_title or entry.monograph_title,
+        )
+        _set_feature(node_features, "publication_analytic_title", pub, entry.analytic_title)
+        _set_feature(node_features, "publication_monograph_title", pub, entry.monograph_title)
+        _set_feature(node_features, "publication_date", pub, entry.publication_date)
+        _set_feature(node_features, "publication_publisher", pub, entry.publisher)
+        _set_feature(node_features, "publication_pub_place", pub, entry.pub_place)
+        for bibl in citations[ordinal]:
+            edge_features[EdgeType.PUBLICATION_REF.value].setdefault(bibl, set()).add(pub)
+
+    # Keep each type in a contiguous integer range, as the TF warp requires.
+    # Each source IIP key remains independently queryable, even when multiple
+    # exact keys point to the same TEI work and only one alias is cited.
+    for ordinal in sorted(publications):
+        entry = index.entries[ordinal - 1]
+        pub = publications[ordinal]
+        for order, alias in enumerate(entry.keys, start=1):
+            child = next_node
+            next_node += 1
+            otype[child] = NodeType.PUBLICATION_KEY.value
+            oslots[child] = set(anchors[ordinal])
+            _set_feature(node_features, "publication_alias_key", child, alias)
+            _set_feature(node_features, "publication_alias_order", child, order)
+            edge_features[EdgeType.PARENT.value].setdefault(child, set()).add(pub)
+
+    # Repeatable authors/editors are distinct native nodes; no delimiter-joined
+    # author strings, reconstructed contributor identities or source flattening.
+    for ordinal in sorted(publications):
+        entry = index.entries[ordinal - 1]
+        pub = publications[ordinal]
+        for agent in entry.agents:
+            child = next_node
+            next_node += 1
+            otype[child] = NodeType.PUBLICATION_AGENT.value
+            oslots[child] = set(anchors[ordinal])
+            _set_feature(node_features, "publication_agent_role", child, agent.role)
+            _set_feature(node_features, "publication_agent_order", child, agent.order)
+            _set_feature(node_features, "publication_agent_scope", child, agent.scope)
+            _set_feature(node_features, "publication_agent_name", child, agent.name)
+            _set_feature(node_features, "publication_agent_forename", child, agent.forename)
+            _set_feature(node_features, "publication_agent_surname", child, agent.surname)
+            edge_features[EdgeType.PARENT.value].setdefault(child, set()).add(pub)
+
+
 def write_tf_corpus(
     irs: Iterable[InscriptionIR],
     output_dir: Path,
     *,
     converter_commit: str,
+    bibliography_index: BibliographyIndex | None = None,
 ) -> None:
-    """Write canonical IR records as deterministic Text-Fabric feature files."""
+    """Write canonical IR and optional source-attested native bibliographic graph."""
 
     records = tuple(sorted(irs, key=lambda ir: ir.identity.inscription_id))
     if not records:
@@ -500,6 +604,12 @@ def write_tf_corpus(
             feature = edge_features[edge.edge_type.value]
             feature.setdefault(source, set()).add(target)
 
+    if bibliography_index is not None:
+        _add_publication_graph(
+            records, bibliography_index, node_by_key, otype, oslots,
+            node_features, edge_features,
+        )
+
     generic = {
         "source": _SOURCE_NAME,
         "sourceUrl": _SOURCE_URL,
@@ -511,6 +621,8 @@ def write_tf_corpus(
         "converterCommit": converter_commit,
         "schemaVersion": "0.1",
     }
+    if bibliography_index is not None:
+        generic["bibliographySourceBlob"] = bibliography_index.source_git_blob
     otext = _otext()
     for name in _otext_feature_names(otext):
         node_features.setdefault(name, {})
