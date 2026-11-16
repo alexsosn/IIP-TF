@@ -17,6 +17,7 @@ from types import MappingProxyType
 _TEI = "http://www.tei-c.org/ns/1.0"
 _XML_ID = "{http://www.w3.org/XML/1998/namespace}id"
 _NS = {"tei": _TEI}
+PINNED_BIBLIOGRAPHY_BLOB = "38f7c4d7c8c24756a0023e3e77c7ed6e02b8786d"
 _IIP_KEY = re.compile(r"IIP-[0-9]+")
 
 
