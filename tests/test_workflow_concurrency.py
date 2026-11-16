@@ -13,6 +13,7 @@ ACTIVE_PR_WORKFLOWS = {
     "validate-agora-materializer.yml",
     "audit-pinned-iip.yml",
     "validate-pinned-source.yml",
+    "validate-pinned-zotero.yml",
     "validate-pinned-text-ir.yml",
     "validate-pinned-tf.yml",
     "research-issue34.yml",
