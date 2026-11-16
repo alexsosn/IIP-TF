@@ -4,18 +4,19 @@ from __future__ import annotations
 
 import importlib
 from pathlib import Path
+from typing import Any
 
 import pytest
 
-from iip_tf.bibliography_index import read_bibliography_index
+from iip_tf.bibliography_index import BibliographyIndex, read_bibliography_index
 
 
-def resolve_bibliography_target(index, target):
+def resolve_bibliography_target(index: BibliographyIndex, target: str | None) -> Any:
     module = importlib.import_module("iip_tf.bibliography_resolution")
     return module.resolve_bibliography_target(index, target)
 
 
-def _authority(tmp_path: Path):
+def _authority(tmp_path: Path) -> BibliographyIndex:
     xml = (
         '<TEI xmlns="http://www.tei-c.org/ns/1.0"><text><body><listBibl>'
         '<biblStruct><monogr><title>Ossuaries</title>'
