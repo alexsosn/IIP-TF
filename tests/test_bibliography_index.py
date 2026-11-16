@@ -8,6 +8,8 @@ from typing import Any
 
 import pytest
 
+from iip_tf.person_register import git_blob_sha1
+
 
 def _reader() -> Any:
     return importlib.import_module("iip_tf.bibliography_index")
@@ -120,7 +122,7 @@ def test_source_git_blob_authentication_and_symlinks(
     original = _fixture(tmp_path)
     with pytest.raises(module.BibliographyIndexError, match="blob mismatch"):
         module.read_bibliography_index(original, expected_git_sha1="0" * 40)
-    actual = module.git_blob_sha1(original)
+    actual = git_blob_sha1(original)
     assert module.read_bibliography_index(
         original, expected_git_sha1=actual
     ).source_git_blob == actual
@@ -137,7 +139,7 @@ def test_authenticated_xml_is_parsed_from_same_bytes_as_git_blob(
     path = _fixture(tmp_path)
     original = path.read_bytes()
     module = _reader()
-    expected = module.git_blob_sha1(path)
+    expected = git_blob_sha1(path)
     real_read = Path.read_bytes
 
     def change_on_read(self: Path) -> bytes:
