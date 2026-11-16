@@ -17,6 +17,10 @@ from pathlib import Path
 from tf_build.agora import prepare_agora_output
 
 from iip_tf import __version__
+from iip_tf.bibliography_index import (
+    PINNED_BIBLIOGRAPHY_BLOB,
+    read_bibliography_index,
+)
 from iip_tf.cli import main as convert_cli
 from iip_tf.person_register import PINNED_PERSONS_BLOB, git_blob_sha1
 from iip_tf.release_gate import (
@@ -57,23 +61,32 @@ def _software_fingerprint() -> str:
     return "sha256:" + digest.hexdigest()
 
 
-def _required_source(root: Path) -> tuple[Path, Path, Path]:
+def _required_source(root: Path) -> tuple[Path, Path, Path, Path]:
     if root.is_symlink() or not root.is_dir():
         raise ValueError(f"required Brown source root must be a real directory: {root}")
     transcription = root / "epidoc-files"
     taxonomy = root / "include_taxonomies.xml"
     persons = root / "data-keep" / "persons.xml"
-    if any(path.is_symlink() for path in (transcription, taxonomy, persons, persons.parent)):
+    bibliography = root / "data-keep" / "iip-zotero-export.xml"
+    if any(
+        path.is_symlink()
+        for path in (transcription, taxonomy, persons, bibliography, persons.parent)
+    ):
         raise ValueError("required Brown source paths must not be symlinks")
-    if not transcription.is_dir() or not taxonomy.is_file() or not persons.is_file():
+    if (
+        not transcription.is_dir()
+        or not taxonomy.is_file()
+        or not persons.is_file()
+        or not bibliography.is_file()
+    ):
         raise ValueError(
             "required Brown source: epidoc-files/, include_taxonomies.xml, "
-            "and data-keep/persons.xml must all be present"
+            "data-keep/persons.xml, and data-keep/iip-zotero-export.xml must all be present"
         )
     for path in root.rglob("*"):
         if path.is_symlink():
             raise ValueError(f"required Brown source cannot contain symlinks: {path}")
-    return transcription, taxonomy, persons
+    return transcription, taxonomy, persons, bibliography
 
 
 def materialize(source: Path, output: Path, *, source_revision: str) -> Path:
@@ -82,18 +95,21 @@ def materialize(source: Path, output: Path, *, source_revision: str) -> Path:
     if source.resolve() == output.resolve() or source.resolve() in output.resolve().parents:
         raise ValueError("Agora output must not reside within its Brown source root")
 
-    transcription, taxonomy, persons = _required_source(source)
+    transcription, taxonomy, persons, bibliography = _required_source(source)
     requested_revision = source_revision
     pinned = False
     if not requested_revision or requested_revision == PINNED_SOURCE_REVISION:
         # A downloaded Brown snapshot with no .git is still authentically the
-        # pin when the *three consumed source components* match their hashes.
+        # pin when all four consumed source components match their hashes.
         # This also keeps aaTestFile.xml excluded by the existing converter.
         try:
             require_source_tree_sha(transcription, expected_sha=PINNED_EPIDOC_SOURCE_TREE)
             parse_taxonomies(taxonomy.read_bytes(), expected_blob=PINNED_TAXONOMY_BLOB)
             if git_blob_sha1(persons) != PINNED_PERSONS_BLOB:
                 raise ValueError("pinned Brown persons.xml Git blob mismatch")
+            read_bibliography_index(
+                bibliography, expected_git_sha1=PINNED_BIBLIOGRAPHY_BLOB
+            )
         except (ReproducibilityError, TaxonomyError, ValueError) as exc:
             if requested_revision == PINNED_SOURCE_REVISION:
                 raise ValueError("pinned Brown source components do not match") from exc
