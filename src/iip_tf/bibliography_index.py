@@ -74,7 +74,7 @@ def read_bibliography_index(
         # Authenticate and parse the *same* captured bytes. Two file reads
         # create a race where the checked XML differs from the indexed XML.
         source = path.read_bytes()
-        header = b"blob " + str(len(source)).encode("ascii") + b"\\0"
+        header = b"blob " + str(len(source)).encode("ascii") + b"\0"
         blob = hashlib.sha1(header + source, usedforsecurity=False).hexdigest()
         if expected_git_sha1 is not None and blob != expected_git_sha1:
             raise BibliographyIndexError(
