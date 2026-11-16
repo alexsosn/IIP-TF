@@ -176,7 +176,7 @@ def test_real_native_shared_publications_and_repeatable_authorities(
     assert any(F.publication_agent_name.v(n) == "et. al." for n in agents)
     assert api.T.text(api.T.nodeFromSection(("aaa0001",)), fmt="text-orig-full") == "A"
     assert api.T.text(api.T.nodeFromSection(("bbb0002",)), fmt="text-orig-full") == "A"
-    assert api.S.search("publication publication_date=1994") == [(rahmani,)]
+    assert list(api.S.search("publication publication_date=1994")) == [(rahmani,)]
 
 
 def test_publication_graph_is_deterministic_under_ir_input_reordering(
