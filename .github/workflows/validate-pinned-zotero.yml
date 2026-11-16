@@ -4,6 +4,9 @@ on:
   pull_request:
     paths:
       - "src/iip_tf/bibliography_index.py"
+      - "src/iip_tf/bibliography_resolution.py"
+      - "src/iip_tf/tf_writer.py"
+      - "tests/test_bibliography_graph.py"
       - "tests/test_bibliography_index.py"
       - "docs/plans/issue-62-zotero-key-index.md"
       - ".github/workflows/validate-pinned-zotero.yml"
@@ -11,6 +14,9 @@ on:
     branches: [main]
     paths:
       - "src/iip_tf/bibliography_index.py"
+      - "src/iip_tf/bibliography_resolution.py"
+      - "src/iip_tf/tf_writer.py"
+      - "tests/test_bibliography_graph.py"
       - ".github/workflows/validate-pinned-zotero.yml"
 
 permissions:
