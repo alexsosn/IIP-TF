@@ -40,6 +40,36 @@ def _source_value(api: Any, feature: str, node: int, present: set[str]) -> Any:
     return api.Fs(feature).v(node) if feature in present else None
 
 
+
+# Narrow ISO-backed query aliases for record-level IIP textLang@mainLang.
+# A code may have zero occurrences in this pin (native main_lang=lat: 0)
+# despite being attested in token-level xml:lang. Sign 'lang' can also
+# describe encoded script and is NOT consulted by these record queries.
+_MAIN_LANG_SOURCE_ALIASES: dict[str, tuple[str, ...]] = {
+    "heb": ("he", "heb"),  # Hebrew: ISO 639-1 and ISO 639-3
+    "lat": ("la", "lat"),  # Latin: ISO 639-1 and ISO 639-3
+    "kat": ("geo", "Geo"),  # Georgian: ISO 639-2/B and source case variant
+}
+
+
+def find_inscriptions_by_main_language(api: Any, iso3: str) -> tuple[int, ...]:
+    """Union exact *native* source mainLang codes, without rewriting the corpus.
+
+    The aliases are explicitly limited to three source-attested record-level
+    vocabularies. This method must never be used to infer sign or word
+    language from script-like xml:lang attributes. It returns native TF
+    inscription node IDs, in stable order, ready for F/L/T/S queries.
+    """
+    if iso3 not in _MAIN_LANG_SOURCE_ALIASES:
+        raise ValueError(f"unsupported source main-language alias: {iso3!r}")
+    require_native_features(api, ("main_lang",))
+    raw_codes = _MAIN_LANG_SOURCE_ALIASES[iso3]
+    found = {node for code in raw_codes for node in api.F.main_lang.s(code)}
+    if any(api.F.otype.v(node) != "inscription" for node in found):
+        raise ValueError("main_lang matched a non-inscription native TF node")
+    return tuple(sorted(found))
+
+
 def inspect_corpus(api: Any, inscription_ids: tuple[str, ...]) -> dict[str, Any]:
     """Query exact IDs, text layers and source annotations in one native TF API.
 

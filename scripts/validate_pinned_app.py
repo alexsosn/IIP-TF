@@ -16,7 +16,10 @@ from tf.advanced.app import findApp  # type: ignore[import-untyped]
 from tf.browser import kernel, web  # type: ignore[import-untyped]
 
 from iip_tf.glyph_unicode import glyph_display_token
-from iip_tf.researcher_queries import verify_pinned_examples
+from iip_tf.researcher_queries import (
+    find_inscriptions_by_main_language,
+    verify_pinned_examples,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 APP_DIR = ROOT / "app"
@@ -213,6 +216,43 @@ def validate_source_whitespace_ownership(api: Any) -> int:
         f"kinds={sorted(per_kind.items())}; examples={examples}"
     )
     return len(nodes)
+
+
+
+def validate_main_language_variants(api: Any) -> None:
+    """Source-faithful record query unions over the entire pinned native TF."""
+    hebrew_exact = tuple(api.F.main_lang.s("he"))
+    hebrew_long = tuple(api.F.main_lang.s("heb"))
+    if len(hebrew_exact) != 405 or len(hebrew_long) != 4:
+        raise RuntimeError(
+            "pinned main_lang source distribution drifted: "
+            f"he={len(hebrew_exact)}, heb={len(hebrew_long)}"
+        )
+    groups = {
+        "heb": {"he": 405, "heb": 4},
+        "lat": {"la": 284, "lat": 0},
+        "kat": {"geo": 3, "Geo": 1},
+    }
+    for iso3, counts_by_code in groups.items():
+        codes = tuple(counts_by_code)
+        actual_counts = {
+            code: len(api.F.main_lang.s(code)) for code in codes
+        }
+        if actual_counts != counts_by_code:
+            raise RuntimeError(
+                f"{iso3}: pinned native source main_lang counts changed: "
+                f"{actual_counts!r} != {counts_by_code!r}"
+            )
+        expected = set().union(*(set(api.F.main_lang.s(code)) for code in codes))
+        found = find_inscriptions_by_main_language(api, iso3)
+        if set(found) != expected or len(found) != len(expected):
+            raise RuntimeError(f"{iso3}: alias union diverges from native source values")
+        counts = ", ".join(
+            f"{code}={len(api.F.main_lang.s(code))}" for code in codes
+        )
+        print(f"Pinned main-language alias {iso3}: {len(found)} records ({counts})")
+    if len(find_inscriptions_by_main_language(api, "heb")) != 409:
+        raise RuntimeError("pinned Hebrew-language inscription union no longer has 409 nodes")
 
 
 def main() -> int:
@@ -530,6 +570,7 @@ def main() -> int:
     if content.count("⟦glyph ref=cross⟧") != 1 or "⟦glyph⟧" in content:
         raise RuntimeError("bshe0146 duplicate or missing source glyph badge")
 
+    validate_main_language_variants(api)
     research_results = verify_pinned_examples(api)
     print(
         "Researcher examples verified: "
