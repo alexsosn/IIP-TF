@@ -81,6 +81,47 @@ for edition in F.otype.s("edition"):
 unresolved raw source `ana` remains in its source feature; do not equate
 absence of a resolved edge with absence of a source reference.
 
+### Shared publication register — Rahmani (1994)
+
+A **full Brown-source build with its authenticated Zotero export** also
+contains shared `publication` nodes for precisely source-matched bibliography
+pointers. Each citation remains an original inscription-owned `bibl` node,
+linked through the new `publication_ref` edge. Full source titles, publication
+date text, repeatable ordered authors/editors and IIP key aliases are queryable
+in native TF, with no Zotero XML or JSON sidecar needed at query time.
+
+```python
+# All inscriptions citing L.Y. Rahmani's 1994 ossuary catalogue:
+for publication in F.publication_date.s("1994"):
+    if F.otype.v(publication) != "publication":
+        continue
+    agents = [
+        a for a in E.parent.t(publication)
+        if F.otype.v(a) == "publication_agent"
+    ]
+    if not any(
+        F.publication_agent_role.v(a) == "author"
+        and F.publication_agent_surname.v(a) == "Rahmani"
+        for a in agents
+    ):
+        continue
+    inscription_ids = sorted({
+        F.inscription_id.v(E.in_inscription.f(bibl)[0])
+        for bibl in E.publication_ref.t(publication)
+        if len(E.in_inscription.f(bibl)) == 1
+    })
+    print(F.publication_title.v(publication), inscription_ids)
+```
+
+The original bibliography pointer `F.target.v(bibl)` remains unchanged.
+`E.publication_ref.f(bibl)` is empty for malformed/unknown targets, including
+references to works absent from the stale source export. The shared
+publication's `oslots` are *technical positions of its citation occurrences*,
+not original publication text, so prefer `publication_ref` for bibliography
+traversal. The inscription `publication_id` node type refers instead to the
+EpiDoc `publicationStmt/idno` and must not be conflated with source works.
+
+
 ## Facsimiles, image credits and hierarchy
 
 ```python
