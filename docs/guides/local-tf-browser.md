@@ -67,7 +67,7 @@ print(app.api.T.text(inscription, fmt="text-orig-full"))
 The section hierarchy is inscription → textpart → line. The **core TF
 `T.text` default** remains `text-orig-full` and selects the
 **primary** inscription layer. Unlike the core default, the standard
-browser now uses `text-section-normalized-full` to display the
+browser now uses `text-section-normalized-unicode-full` to display the
 normalized reading of **each selected textpart/line**, even when it is
 nonprimary. This includes the diplomatic textpart in `haif0003` and
 the translation in `bloy0002`. It excludes alternate `orig` branches
@@ -81,8 +81,10 @@ format explicitly:
 this development snapshot still have known source-versus-display problems
 tracked in [#57](https://github.com/alexsosn/IIP-TF/issues/57).
 
-**Known reading limitations:** some non-primary sections render as empty in
-the default format ([#51](https://github.com/alexsosn/IIP-TF/issues/51)).
+The browser's section-aware default also displays reviewed Unicode characters
+or explicit source-label fallbacks for empty glyph references. This is a
+derived display convenience: use `text-orig-full` to cite only attested
+source characters, and inspect source `ref` metadata for exact provenance.
 The default `text-orig-full` displays **only attested source characters**
 and remains empty for inscriptions containing exclusively empty
 `<g ref=.../>` elements. To inspect their **source identifiers**, choose
@@ -103,13 +105,16 @@ spans now have separate start and end markers**. For example
 characters are supplied; `⟦unclear⟧…⟦/unclear⟧`,
 `⟦abbr⟧…⟦/abbr⟧` and `⟦ex⟧…⟦/ex⟧` work similarly.
 The labels are presentational and **not source letters**: copying/querying
-`api.T.text` never includes them. Source-tail whitespace remains outside
-the marked span. Zero-width `gap` and source `glyph ref` events show only
+`api.T.text` never includes them. Source-tail whitespace retains its source ownership: it can fall inside
+or outside the annotated span, and is never duplicated. Zero-width `gap`
+and source `glyph ref` events show only
 a point note, not an invented closing delimiter. Source Hebrew/RTL glyph
 order is unchanged and editorial labels are direction-isolated. Native `markup` nodes and their raw `kind=glyph` /
 `ref` features are authoritative; labels are a convenience, not a
-replacement for source-critical data. Nonprimary references and glyphs
-without source identifiers remain limitations of [#58](https://github.com/alexsosn/IIP-TF/issues/58).
+replacement for source-critical data. The source-backed glyph display policy is tracked in the completed
+[#58](https://github.com/alexsosn/IIP-TF/issues/58): the pinned corpus
+uses reviewed Unicode where available and explicit source-label fallbacks
+otherwise. Unpinned references are never silently assigned characters.
 The app does not infer missing text or normalize undeciphered marks.
 
 Original IIP texts are © their respective owners and supplied under the
