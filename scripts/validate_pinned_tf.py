@@ -563,8 +563,12 @@ def main() -> int:
             )
 
         bibliography_entries = (
-            tuple(bibliography.entries[ordinal - 1] for ordinal in sorted(bibliography_cited_ordinals))
-            if bibliography is not None else ()
+            tuple(
+                bibliography.entries[ordinal - 1]
+                for ordinal in sorted(bibliography_cited_ordinals)
+            )
+            if bibliography is not None
+            else ()
         )
         publication_nodes = len(bibliography_entries)
         publication_key_nodes = sum(len(entry.keys) for entry in bibliography_entries)
