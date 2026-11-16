@@ -1,0 +1,66 @@
+name: Validate pinned Zotero bibliography keys
+
+on:
+  pull_request:
+    paths:
+      - "src/iip_tf/bibliography_index.py"
+      - "tests/test_bibliography_index.py"
+      - "docs/plans/issue-62-zotero-key-index.md"
+      - ".github/workflows/validate-pinned-zotero.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/iip_tf/bibliography_index.py"
+      - ".github/workflows/validate-pinned-zotero.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  audited-keys:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout exact event head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install
+        run: python -m pip install -e '.[dev]'
+      - name: Download immutable Brown TEI Zotero export
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          curl --fail --location --retry 3 --output build/iip-zotero-export.xml \
+            "https://raw.githubusercontent.com/Brown-University-Library/iip-texts/0b7dc8358ccdfd0c9391f049da4839fbd91c26e5/data-keep/iip-zotero-export.xml"
+          test -s build/iip-zotero-export.xml
+      - name: Parse and authenticate every real bibliography authority entry
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from iip_tf.bibliography_index import read_bibliography_index
+
+          index = read_bibliography_index(
+              Path("build/iip-zotero-export.xml"),
+              expected_git_sha1="38f7c4d7c8c24756a0023e3e77c7ed6e02b8786d",
+          )
+          assert len(index.entries) == 767, len(index.entries)
+          assert len(index.by_key) == 762, len(index.by_key)
+          assert len(index.unkeyed_ordinals) == 6, index.unkeyed_ordinals
+          assert index.by_key["IIP-001"] is index.by_key["IIP-694"]
+          assert index.by_key["IIP-380"].monograph_title == "l'Année Épigraphique"
+          assert index.by_key["IIP-609"].analytic_title == "A Greek Ostracon from Masada"
+          print(
+              f"Source-authenticated Zotero work-index PASS: "
+              f"{len(index.entries)} works; {len(index.by_key)} IIP keys; "
+              f"{len(index.unkeyed_ordinals)} unkeyed works; IIP-001=IIP-694"
+          )
+          PY
