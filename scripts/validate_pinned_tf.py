@@ -13,6 +13,11 @@ from typing import Any
 
 from tf.fabric import Fabric  # type: ignore[import-untyped]
 
+from iip_tf.bibliography_index import (
+    PINNED_BIBLIOGRAPHY_BLOB,
+    read_bibliography_index,
+)
+from iip_tf.bibliography_resolution import resolve_bibliography_target
 from iip_tf.ir import InscriptionIR, NodeType
 from iip_tf.language_audit import AramaicLanguageAudit
 from iip_tf.person_register import (
@@ -422,6 +427,27 @@ def main() -> int:
         )
         if len(selected) >= 1000 and register is not None and len(register) != 844:
             raise SystemExit("authenticated IIP person register changed")
+        bibliography_path = args.source_dir.parent / "data-keep" / "iip-zotero-export.xml"
+        if len(selected) >= 1000 and not bibliography_path.is_file():
+            raise SystemExit("pinned Brown Zotero bibliography authority is missing")
+        bibliography = (
+            read_bibliography_index(
+                bibliography_path,
+                expected_git_sha1=PINNED_BIBLIOGRAPHY_BLOB
+                if len(selected) >= 1000 else None,
+            )
+            if bibliography_path.is_file() else None
+        )
+        if len(selected) >= 1000 and bibliography is not None and (
+            len(bibliography.entries) != 767
+            or len(bibliography.by_key) != 762
+            or len(bibliography.unkeyed_ordinals) != 6
+        ):
+            raise SystemExit("authenticated Zotero authority entry/key counts changed")
+        bibliography_resolved = 0
+        bibliography_unresolved: Counter[str] = Counter()
+        bibliography_source_targets: set[str] = set()
+        bibliography_cited_ordinals: set[int] = set()
         person_resolved_entities = 0
         person_distinct_people = 0
         person_unresolved: Counter[str] = Counter()
@@ -454,6 +480,19 @@ def main() -> int:
                 person_unresolved_contributors.update(
                     unresolved_contributor_refs(ir, register)
                 )
+            if bibliography is not None:
+                for bibl in ir.nodes_of_type(NodeType.BIBL):
+                    target = bibl.feature("target")
+                    if target is not None and not isinstance(target, str):
+                        raise SystemExit("source bibliography pointer must be a string")
+                    result = resolve_bibliography_target(bibliography, target)
+                    if target is not None:
+                        bibliography_source_targets.add(target)
+                    if result.entry is None:
+                        bibliography_unresolved[result.reason or "missing"] += 1
+                    else:
+                        bibliography_resolved += 1
+                        bibliography_cited_ordinals.add(result.entry.ordinal)
             irs.append(ir)
             parsed_files.append(path.name)
             if len(selected) >= 1000:
@@ -522,6 +561,18 @@ def main() -> int:
                 "pinned canonical IR accounting changed: "
                 + json.dumps({"expected": expected, "actual": actual}, sort_keys=True)
             )
+
+        bibliography_entries = (
+            tuple(bibliography.entries[ordinal - 1] for ordinal in sorted(bibliography_cited_ordinals))
+            if bibliography is not None else ()
+        )
+        publication_nodes = len(bibliography_entries)
+        publication_key_nodes = sum(len(entry.keys) for entry in bibliography_entries)
+        publication_agent_nodes = sum(len(entry.agents) for entry in bibliography_entries)
+        publication_extra_nodes = (
+            publication_nodes + publication_key_nodes + publication_agent_nodes
+        )
+        publication_extra_parent_edges = publication_key_nodes + publication_agent_nodes
 
         # Corpus-wide coverage is a pinned-source gate, not a requirement of
         # synthetic one-record failure-accounting tests.
