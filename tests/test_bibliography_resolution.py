@@ -66,6 +66,8 @@ def test_two_explicit_aliases_share_one_work(tmp_path: Path) -> None:
     ("IIP-0118.xml", "unknown_key"),
     ("IIIP-119.xml", "malformed"),
     ("IIP-119.XML", "malformed"),
+    (r"IIP-119\\zxml", "malformed"),  # reject an escaped-backslash pseudo-suffix
+    ("IIP-119Xxml", "malformed"),
     ("IIP-119.xml#x", "malformed"),
     ("./IIP-119.xml", "malformed"),
     ("https://example.org/IIP-119.xml", "malformed"),
