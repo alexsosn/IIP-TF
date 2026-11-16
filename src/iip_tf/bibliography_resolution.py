@@ -12,7 +12,7 @@ from typing import Literal
 from iip_tf.bibliography_index import BibliographyEntry, BibliographyIndex
 
 _REASON = Literal["missing", "malformed", "unknown_key"]
-_TARGET = re.compile(r"(IIP-[0-9]+)(?:\\.xml)?")
+_TARGET = re.compile(r"(IIP-[0-9]+)(?:\.xml)?")
 
 
 @dataclass(frozen=True)
