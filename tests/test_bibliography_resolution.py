@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
+import importlib
 from pathlib import Path
 
 import pytest
 
 from iip_tf.bibliography_index import read_bibliography_index
-from iip_tf.bibliography_resolution import resolve_bibliography_target
+
+
+def resolve_bibliography_target(index, target):
+    module = importlib.import_module("iip_tf.bibliography_resolution")
+    return module.resolve_bibliography_target(index, target)
 
 
 def _authority(tmp_path: Path):
