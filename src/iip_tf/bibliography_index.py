@@ -6,6 +6,7 @@ identify it. This module does not infer a citation target or create TF nodes.
 
 from __future__ import annotations
 
+import hashlib
 import re
 import xml.etree.ElementTree as ET
 from collections.abc import Mapping
@@ -70,12 +71,16 @@ def read_bibliography_index(
     if not path.is_file():
         raise BibliographyIndexError(f"missing bibliography authority: {path}")
     try:
-        blob = git_blob_sha1(path)
+        # Authenticate and parse the *same* captured bytes. Two file reads
+        # create a race where the checked XML differs from the indexed XML.
+        source = path.read_bytes()
+        header = b"blob " + str(len(source)).encode("ascii") + b"\\0"
+        blob = hashlib.sha1(header + source, usedforsecurity=False).hexdigest()
         if expected_git_sha1 is not None and blob != expected_git_sha1:
             raise BibliographyIndexError(
                 f"bibliography Git blob mismatch: {blob} != {expected_git_sha1}"
             )
-        root = ET.parse(path).getroot()
+        root = ET.fromstring(source)
     except (OSError, UnicodeError, ET.ParseError) as exc:
         raise BibliographyIndexError(f"cannot parse bibliography authority: {path}") from exc
     if root.tag != f"{{{_TEI}}}TEI":
