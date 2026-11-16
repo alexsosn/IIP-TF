@@ -128,3 +128,28 @@ def test_source_git_blob_authentication_and_symlinks(
     alias.symlink_to(original)
     with pytest.raises(module.BibliographyIndexError, match="symlink"):
         module.read_bibliography_index(alias)
+
+
+def test_authenticated_xml_is_parsed_from_same_bytes_as_git_blob(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A source file can change between separate checksum and XML reads."""
+    path = _fixture(tmp_path)
+    original = path.read_bytes()
+    module = _reader()
+    expected = module.git_blob_sha1(path)
+    real_read = Path.read_bytes
+
+    def change_on_read(self: Path) -> bytes:
+        data = real_read(self)
+        if self == path:
+            path.write_bytes(b"<broken>")
+        return data
+
+    monkeypatch.setattr(Path, "read_bytes", change_on_read)
+    try:
+        index = module.read_bibliography_index(path, expected_git_sha1=expected)
+    finally:
+        path.write_bytes(original)
+    assert len(index.entries) == 6
+    assert index.source_git_blob == expected
