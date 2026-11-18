@@ -84,6 +84,18 @@ def smoke_extracted_corpus(root: Path) -> None:
         data = passage.get_json()
         if passage.status_code != 200 or not isinstance(data, dict) or not data.get("table"):
             raise RuntimeError("unpacked browser failed to render native passage")
+        # A researcher must be able to click to the original Brown edition
+        # directly from the downloaded archive's normal browser passage.
+        # The native webLink API alone does not prove a rendered HTML anchor.
+        expected_source = source_prefix + "chor0001.xml"
+        passage_html = data["table"]
+        if not isinstance(passage_html, str) or (
+            f'href="{expected_source}"' not in passage_html
+            or passage_html.count('class="iip-epidoc-link"') != 1
+        ):
+            raise RuntimeError(
+                "unpacked browser passage lacks one clickable original EpiDoc link"
+            )
 
     print(
         "Clean Text-Fabric-only installation: 5,535 native inscriptions; "
