@@ -13,7 +13,9 @@ from iip_tf.release_gate import tf_feature_hashes
 from iip_tf.source_repair import PINNED_IIP_REVISION
 
 # Import at runtime so the RED suite reaches pytest, not MyPy import discovery.
-build_researcher_archive = import_module("scripts.build_researcher_archive").build_researcher_archive
+build_researcher_archive = import_module(
+    "scripts.build_researcher_archive"
+).build_researcher_archive
 
 
 @pytest.fixture
