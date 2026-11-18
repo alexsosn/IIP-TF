@@ -24,7 +24,11 @@ def test_publication_is_an_explicit_main_only_one_shot() -> None:
     assert '      - ".github/workflows/publish-researcher-corpus.yml"' in workflow
     assert "pull_request:" not in workflow
     assert "workflow_run:" not in workflow
-    assert "corpus-data-0.1.0rc1" in workflow
+    # The publicly accepted rc1 tag is immutable. Shipping the newly linked
+    # browser must target a distinct data-version tag and metadata version.
+    assert "corpus-data-0.1.0rc2" in workflow
+    assert '"corpus_version": "0.1.0rc2"' in workflow
+    assert "corpus-data-0.1.0rc1" not in workflow
     assert "--prerelease" in workflow
     assert "--target \"$GITHUB_SHA\"" in workflow
 

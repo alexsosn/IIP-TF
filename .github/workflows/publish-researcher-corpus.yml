@@ -1,7 +1,7 @@
 name: Publish verified researcher corpus prerelease
 
-# Initial push of this new workflow to main is intentional; further candidate
-# releases require manual dispatch and a new tag, not ordinary main pushes.
+# Only a reviewed main-branch change to this workflow or an explicit dispatch
+# can publish a NEW tag. An existing tag is never modified or reused.
 on:
   push:
     branches: [main]
@@ -13,11 +13,11 @@ permissions:
   contents: read
 
 concurrency:
-  group: iip-tf-corpus-data-0.1.0rc1
+  group: iip-tf-corpus-data-0.1.0rc2
   cancel-in-progress: false
 
 env:
-  TAG: corpus-data-0.1.0rc1
+  TAG: corpus-data-0.1.0rc2
   IIP_REVISION: 0b7dc8358ccdfd0c9391f049da4839fbd91c26e5
 
 jobs:
@@ -101,7 +101,7 @@ jobs:
               archive_sha256 = hashlib.file_digest(stream, "sha256").hexdigest()
           metadata = {
               "schema_version": 1,
-              "corpus_version": "0.1.0rc1",
+              "corpus_version": "0.1.0rc2",
               "kind": "corpus prerelease candidate, not IIP-TF 0.1.0",
               "source_repository": "Brown-University-Library/iip-texts",
               "source_revision": os.environ["IIP_REVISION"],
@@ -187,6 +187,9 @@ jobs:
           cat > /tmp/release-notes.md <<EOF
           IIP-TF DATA prerelease: 5,535 Text-Fabric inscriptions.
           This is NOT the final IIP-TF 0.1.0 release.
+          Includes verified local-browser links to the original EpiDoc XML
+          for records from the pinned Brown source revision.
+
 
           Brown IIP source: https://github.com/Brown-University-Library/iip-texts
           Brown source revision: ${IIP_REVISION}
@@ -206,7 +209,7 @@ jobs:
             candidate/corpus-provenance.json \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
-            --title "IIP-TF corpus data 0.1.0rc1 (prerelease)" \
+            --title "IIP-TF corpus data 0.1.0rc2 (prerelease)" \
             --prerelease \
             --notes-file /tmp/release-notes.md
 
