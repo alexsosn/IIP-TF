@@ -1,6 +1,6 @@
 # Standalone researcher distribution (issue #10)
 
-**Status: the 0.1.0rc1 corpus DATA prerelease is a versioned public download.
+**Status: the 0.1.0rc2 corpus DATA prerelease is a versioned public download.
 Final IIP-TF 0.1.0 has not been released.** This snapshot is a plain
 native Text-Fabric dataset and browser app, not a converter wheel or
 an automatically hosted corpus. Do not use `tf alexsosn/IIP-TF` as an
@@ -9,17 +9,17 @@ automatic install command.
 ## Download the versioned corpus and verify its checksum
 
 Download the three public assets from the
-[corpus-data-0.1.0rc1 prerelease](https://github.com/alexsosn/IIP-TF/releases/tag/corpus-data-0.1.0rc1).
+[corpus-data-0.1.0rc2 prerelease](https://github.com/alexsosn/IIP-TF/releases/tag/corpus-data-0.1.0rc2).
 No GitHub login, repository checkout, IIP source XML, or converter installation
 should be needed:
 
 ```bash
 curl --fail --location --remote-name \
-  "https://github.com/alexsosn/IIP-TF/releases/download/corpus-data-0.1.0rc1/iip-tf-corpus.tar.gz"
+  "https://github.com/alexsosn/IIP-TF/releases/download/corpus-data-0.1.0rc2/iip-tf-corpus.tar.gz"
 curl --fail --location --remote-name \
-  "https://github.com/alexsosn/IIP-TF/releases/download/corpus-data-0.1.0rc1/iip-tf-corpus.tar.gz.sha256"
+  "https://github.com/alexsosn/IIP-TF/releases/download/corpus-data-0.1.0rc2/iip-tf-corpus.tar.gz.sha256"
 curl --fail --location --remote-name \
-  "https://github.com/alexsosn/IIP-TF/releases/download/corpus-data-0.1.0rc1/corpus-provenance.json"
+  "https://github.com/alexsosn/IIP-TF/releases/download/corpus-data-0.1.0rc2/corpus-provenance.json"
 
 sha256sum -c iip-tf-corpus.tar.gz.sha256
 ```
@@ -89,6 +89,35 @@ n = api.T.nodeFromSection(("chor0001",))
 print(api.T.text(n, fmt="text-orig-full"))
 print(tuple(api.S.search("inscription inscription_id=chor0001")))
 ```
+
+## Follow a reading to its original EpiDoc source
+
+The rc2 local browser has an **Original EpiDoc** link in the source-backed
+passage. It opens the original Brown XML at the authenticated immutable source
+revision, independently of the converter. A raw citation should still identify
+the original IIP edition and its scholarly source rather than citing generated
+display annotations as attested characters.
+
+From the extracted archive root, the standard TF app exposes the same URL
+programmatically:
+
+```python
+from pathlib import Path
+from tf.app import use
+from tf.fabric import Fabric
+
+root = Path.cwd()
+api = Fabric(locations=str(root / "tf"), silent=True).loadAll()
+app = use(f"app:{root / 'app'}", api=api, silent="deep")
+inscription = api.T.nodeFromSection(("chor0001",))
+print(app.webLink(inscription, urlOnly=True))
+# https://github.com/Brown-University-Library/iip-texts/blob/0b7dc8358ccdfd0c9391f049da4839fbd91c26e5/epidoc-files/chor0001.xml
+```
+
+The app only enables the pinned Brown URL if TF provenance matches that
+source revision. For arbitrary local-source corpora it does not invent a
+Brown link. The older immutable `corpus-data-0.1.0rc1` archive remains
+available, but does not contain the new browser link.
 
 Be careful when citing inscriptions: source `text-orig-full` is a primary
 reading; the browser's section-normalized format can show other layers.
