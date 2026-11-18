@@ -69,3 +69,16 @@ def test_independent_unauthenticated_download_retests_extracted_tf() -> None:
     verify = workflow.split("  verify_public:", maxsplit=1)[1]
     assert "GH_TOKEN:" not in verify
     assert "GITHUB_TOKEN:" not in verify
+
+
+def test_existing_full_pinned_pr_gate_covers_publication_changes() -> None:
+    full_gate = (
+        Path(__file__).resolve().parents[1]
+        / ".github/workflows/validate-pinned-tf.yml"
+    ).read_text(encoding="utf-8")
+    for path in (
+        ".github/workflows/publish-researcher-corpus.yml",
+        "tests/test_corpus_publication.py",
+    ):
+        # PR and main-branch path filters both need the release gate.
+        assert full_gate.count(f'      - "{path}"') == 2
