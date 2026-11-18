@@ -126,8 +126,12 @@ def build_researcher_archive(
     if destination.is_symlink() or destination.exists():
         raise FileExistsError(f"refusing to replace existing archive: {destination}")
     sources = _validated_sources(tf_dir, report_path)
+    # Exclusive creation must succeed before entering cleanup scope.
+    # Otherwise a concurrent creator could own the path and our cleanup
+    # would delete their file after FileExistsError.
+    output = destination.open("xb")
     try:
-        with destination.open("xb") as output:
+        with output:
             with gzip.GzipFile(fileobj=output, mode="wb", filename="", mtime=0) as zipped:
                 with tarfile.open(fileobj=zipped, mode="w") as archive:
                     for name in sorted(sources):
