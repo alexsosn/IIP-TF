@@ -8,7 +8,7 @@ from __future__ import annotations
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-BASE = "https://github.com/alexsosn/IIP-TF/releases/download/corpus-data-0.1.0rc1"
+BASE = "https://github.com/alexsosn/IIP-TF/releases/download/corpus-data-0.1.0rc2"
 
 
 def test_readme_offers_versioned_public_archive_and_preserves_release_status() -> None:
@@ -36,4 +36,6 @@ def test_researcher_guide_downloads_archive_checksum_and_provenance() -> None:
     assert "0b7dc8358ccdfd0c9391f049da4839fbd91c26e5" in guide
     assert "python -m tf.browser.start" in guide
     assert "text-fabric>=13.1,<14" in guide
+    assert "app.webLink(inscription, urlOnly=True)" in guide
+    assert "Original EpiDoc" in guide
     assert "no official IIP-TF 0.1.0" in guide.lower() or "0.1.0 has not" in guide.lower()

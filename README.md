@@ -4,14 +4,18 @@ IIP-TF converts the [Inscriptions of Israel/Palestine (IIP)](https://github.com/
 
 ## Status
 
-**Researcher corpus DATA prerelease 0.1.0rc1:** the complete source-free
+**Researcher corpus DATA prerelease 0.1.0rc2:** the complete source-free
 Text-Fabric archive for 5,535 inscriptions is distributed separately from
 the converter as a versioned public GitHub Release asset. The archive is
-[available here](https://github.com/alexsosn/IIP-TF/releases/download/corpus-data-0.1.0rc1/iip-tf-corpus.tar.gz);
-[SHA-256 checksum](https://github.com/alexsosn/IIP-TF/releases/download/corpus-data-0.1.0rc1/iip-tf-corpus.tar.gz.sha256)
-and [provenance manifest](https://github.com/alexsosn/IIP-TF/releases/download/corpus-data-0.1.0rc1/corpus-provenance.json)
+[available here](https://github.com/alexsosn/IIP-TF/releases/download/corpus-data-0.1.0rc2/iip-tf-corpus.tar.gz);
+[SHA-256 checksum](https://github.com/alexsosn/IIP-TF/releases/download/corpus-data-0.1.0rc2/iip-tf-corpus.tar.gz.sha256)
+and [provenance manifest](https://github.com/alexsosn/IIP-TF/releases/download/corpus-data-0.1.0rc2/corpus-provenance.json)
 are published alongside it. Native corpus data retain the original
 **CC BY-NC 4.0** licence and scholarly-edition attribution.
+The standard local TF browser in this archive includes a source-link control
+for the original [Brown EpiDoc XML](https://github.com/Brown-University-Library/iip-texts)
+at its authenticated pinned revision. Earlier `corpus-data-0.1.0rc1`
+remains available as a separate immutable prerelease.
 
 **The final IIP-TF 0.1.0 release is not yet available.** The converter is
 still `0.1.0.dev0` and managed Agora registration is pending (#11, Agora #187).
