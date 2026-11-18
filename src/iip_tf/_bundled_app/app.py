@@ -245,6 +245,25 @@ def render_sign(app: Any, options: Any, chunk: Any, n_type: str, outer: bool) ->
         f'{early}{after_html}{late}'
     )
 
+# Do not misrepresent an arbitrary local EpiDoc source tree as a record at
+# Brown's authenticated frozen revision.
+_PINNED_BROWN_REVISION = "0b7dc8358ccdfd0c9391f049da4839fbd91c26e5"
+
+
+def install_verified_source_links(app: Any) -> None:
+    """Enable stock TF external links only for the authenticated source pin.
+
+    The same browser app is bundled for the Agora user-local materializer. A
+    source file named 'chor0001.xml' alone is not evidence of Brown provenance.
+    """
+    api = getattr(app, "api", None)
+    record_feature = getattr(api.F, "inscription_id", None) if api is not None else None
+    metadata = getattr(record_feature, "meta", {}) if record_feature is not None else {}
+    if metadata.get("sourceCommit") != _PINNED_BROWN_REVISION:
+        for setting in ("webBase", "webFeature", "webUrl"):
+            setattr(app.context, setting, None)
+
+
 def install_editorial_renderer(app: Any) -> None:
     """Register one sign-only renderer in TF's existing method registry."""
     custom = getattr(app, "customMethods", None)
@@ -259,7 +278,9 @@ class TfApp(App):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
+        install_verified_source_links(self)
         install_editorial_renderer(self)
 
     def reinit(self) -> None:
+        install_verified_source_links(self)
         install_editorial_renderer(self)
