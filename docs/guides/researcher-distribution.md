@@ -1,9 +1,42 @@
 # Standalone researcher distribution (issue #10)
 
-**Status: candidate packaging under review; no official IIP-TF 0.1.0
-corpus release has been published.** The documented local
-[build from Brown's source](local-tf-browser.md) remains available.
-Do not use `tf alexsosn/IIP-TF` as an automatic install command.
+**Status: the 0.1.0rc1 corpus DATA prerelease is a versioned public download.
+Final IIP-TF 0.1.0 has not been released.** This snapshot is a plain
+native Text-Fabric dataset and browser app, not a converter wheel or
+an automatically hosted corpus. Do not use `tf alexsosn/IIP-TF` as an
+automatic install command.
+
+## Download the versioned corpus and verify its checksum
+
+Download the three public assets from the
+[corpus-data-0.1.0rc1 prerelease](https://github.com/alexsosn/IIP-TF/releases/tag/corpus-data-0.1.0rc1).
+No GitHub login, repository checkout, IIP source XML, or converter installation
+should be needed:
+
+```bash
+curl --fail --location --remote-name \
+  "https://github.com/alexsosn/IIP-TF/releases/download/corpus-data-0.1.0rc1/iip-tf-corpus.tar.gz"
+curl --fail --location --remote-name \
+  "https://github.com/alexsosn/IIP-TF/releases/download/corpus-data-0.1.0rc1/iip-tf-corpus.tar.gz.sha256"
+curl --fail --location --remote-name \
+  "https://github.com/alexsosn/IIP-TF/releases/download/corpus-data-0.1.0rc1/corpus-provenance.json"
+
+sha256sum -c iip-tf-corpus.tar.gz.sha256
+```
+
+The checksum command must report `iip-tf-corpus.tar.gz: OK`. Stop if it
+does not match. On systems without `sha256sum`, compare the archive SHA-256
+using your platform's SHA-256 command or Python before extraction.
+
+The separately downloaded `corpus-provenance.json` records the full
+authenticated Brown source revision
+`0b7dc8358ccdfd0c9391f049da4839fbd91c26e5`,
+the exact converter commit, the archive digest and the 5,535-record
+count. The archive's TF feature headers independently retain source and
+converter provenance. Cite the underlying Brown IIP
+[DOI 10.26300/pz1d-st89](https://doi.org/10.26300/pz1d-st89)
+and the original scholarly editions in addition to this conversion.
+Data remain **CC BY-NC 4.0**; bundled app/software is MIT.
 
 ## What a researcher receives
 
@@ -89,10 +122,11 @@ section navigation, indexed search, source reading and actual local Flask
 homepage/passage routes. Two archives built from the same input have identical
 bytes. Any failure blocks candidate upload.
 
-A successful Actions run may temporarily expose the
-`iip-tf-researcher-candidate` artifact (GitHub Actions downloads wrap the
-`.tar.gz` file in a zip). The ephemeral CI artifact is for acceptance and
-review, **not** a persistent versioned data release or managed Agora install.
-Issue [#10](https://github.com/alexsosn/IIP-TF/issues/10) remains open until a
-public immutable release artifact and separate-machine download/load check are
-verified. See the final [0.1.0 release gate](https://github.com/alexsosn/IIP-TF/issues/12).
+The temporary `iip-tf-researcher-candidate` artifact in GitHub Actions is
+for CI review only. Use the versioned public prerelease linked above for
+downloads, not a short-lived Actions artifact. The public publishing workflow
+requires an independently downloaded byte-for-byte checksum, fresh Text-Fabric
+installation, exact provenance and browser/search smoke on a separate runner.
+See [issue #10](https://github.com/alexsosn/IIP-TF/issues/10) for acceptance
+evidence and [issue #12](https://github.com/alexsosn/IIP-TF/issues/12)
+for the final 0.1.0 release gate.
