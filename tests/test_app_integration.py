@@ -235,8 +235,9 @@ def test_source_links_follow_only_pinned_brown_provenance(tmp_path: Path) -> Non
     result = pinned_app.webLink(
         record, text="Original EpiDoc", _asString=True
     )
-    assert f'href="{expected}"' in result
-    assert "Original EpiDoc" in result
+    # In the programmatic API TF formats links as text, not HTML.
+    # The authenticated browser-mode test checks real href markup separately.
+    assert result == f"Original EpiDoc => {expected}"
 
 
 def test_bundled_app_source_link_configuration_matches_standard_app() -> None:
