@@ -157,3 +157,25 @@ def test_never_overwrite_existing_user_file(
     with pytest.raises(FileExistsError):
         build_researcher_archive(tf_dir, report, destination)
     assert destination.read_bytes() == b"my original research"
+
+
+def test_racing_exclusive_open_never_deletes_another_writers_file(
+    source_build: tuple[Path, Path], tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The preflight absence check and exclusive creation are not atomic."""
+    tf_dir, report = source_build
+    destination = tmp_path / "racing-researcher-archive.tar.gz"
+    original_open = Path.open
+
+    def simulate_other_writer(
+        path: Path, mode: str = "r", *args: object, **kwargs: object,
+    ) -> object:
+        if path == destination and mode == "xb":
+            destination.write_bytes(b"other researcher's valuable content")
+            raise FileExistsError("another writer won the exclusive-open race")
+        return original_open(path, mode, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", simulate_other_writer)
+    with pytest.raises(FileExistsError, match="another writer"):
+        build_researcher_archive(tf_dir, report, destination)
+    assert destination.read_bytes() == b"other researcher's valuable content"
