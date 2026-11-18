@@ -45,6 +45,23 @@ def smoke_extracted_corpus(root: Path) -> None:
             raise RuntimeError(f"inscription navigation missing: {record_id}")
         if api.F.source_file.v(node) != f"{record_id}.xml":
             raise RuntimeError(f"source provenance missing: {record_id}")
+    # This public-install acceptance also checks the researcher-to-source
+    # journey. A local TF-only user must be able to follow the stable original
+    # EpiDoc source without installing the converter or accessing a guessed URL.
+    source_prefix = (
+        "https://github.com/Brown-University-Library/iip-texts/blob/"
+        "0b7dc8358ccdfd0c9391f049da4839fbd91c26e5/epidoc-files/"
+    )
+    for record_id in ("abil0001", "chor0001", "caes0260", "masa0286"):
+        record = api.T.nodeFromSection((record_id,))
+        assert record is not None
+        expected_link = source_prefix + f"{record_id}.xml"
+        if app.webLink(record, urlOnly=True) != expected_link:
+            raise RuntimeError(f"archive has no source-faithful EpiDoc link: {record_id}")
+        lines = api.L.d(record, otype="line")
+        if not lines or app.webLink(lines[0], urlOnly=True) != expected_link:
+            raise RuntimeError(f"archive passage source link is wrong: {record_id}")
+
     matches = tuple(api.S.search("inscription inscription_id=chor0001"))
     chor = api.T.nodeFromSection(("chor0001",))
     if chor is None or len(matches) != 1 or matches[0][0] != chor:

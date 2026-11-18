@@ -4,6 +4,13 @@ provenanceSpec:
   version: ''  # Unversioned local .tf directory; TF 13.1 links require a string.
   # Intentionally no org/repo: the browser must not fetch unpublished TF data.
   # Source and converter provenance live in the native TF header features.
+  # Text-Fabric's stock webLink() points from native sections back to the
+  # authenticated original EpiDoc XML, not to an invented IIP web edition.
+  # app.py DISABLES these links for all unverified/local-source corpora.
+  webBase: https://github.com/Brown-University-Library/iip-texts/blob/0b7dc8358ccdfd0c9391f049da4839fbd91c26e5/epidoc-files/
+  webFeature: source_file
+  webUrl: https://github.com/Brown-University-Library/iip-texts/blob/0b7dc8358ccdfd0c9391f049da4839fbd91c26e5/epidoc-files/<1>.xml
+  webHint: Original EpiDoc at authenticated Brown source revision
 dataDisplay:
   textFormat: text-section-normalized-unicode-full
   browseNavLevel: 2

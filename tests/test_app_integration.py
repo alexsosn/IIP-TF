@@ -186,3 +186,109 @@ def test_browser_cli_serves_http_offline(tmp_path: Path) -> None:
         except TimeoutExpired:
             process.kill()
             process.communicate()
+
+
+
+def test_source_links_follow_only_pinned_brown_provenance(tmp_path: Path) -> None:
+    """#8 RED: a local fixture must never get a fabricated Brown EpiDoc URL."""
+    from iip_tf.taxonomy_audit import PINNED_SOURCE_REVISION
+
+    source = tmp_path / "minimal.xml"
+    source.write_text(
+        '<TEI xmlns="http://www.tei-c.org/ns/1.0">'
+        "<teiHeader><fileDesc><titleStmt><title>Evidence</title>"
+        "</titleStmt><publicationStmt><idno>minimal</idno></publicationStmt>"
+        "</fileDesc></teiHeader><text><body>"
+        '<div type="edition" subtype="transcription"><p>ABC</p></div>'
+        "</body></text></TEI>",
+        encoding="utf-8",
+    )
+    native = tmp_path / "tf"
+    write_tf_corpus(
+        (parse_epidoc_file(source, source_revision="unversioned-local"),),
+        native,
+        converter_commit="fixture-commit",
+    )
+    api: Any = Fabric(locations=str(native), silent=True).loadAll(silent=True)
+    record = api.T.nodeFromSection(("minimal",))
+    assert record is not None
+    line = api.L.d(record, otype="line")[0]
+    assert api.F.source_file.v(record) == "minimal.xml"
+
+    # This app is also used by Agora with unversioned-local user data; it
+    # must not imply that those fixtures occur in the authenticated Brown pin.
+    local_app: Any = use(f"app:{APP}", api=api, silent="deep")
+    assert local_app.webLink(record, urlOnly=True) is None
+    assert local_app.webLink(line, urlOnly=True) is None
+
+    # Simulate native TF feature metadata of the authenticated release; a
+    # separate complete-pinned CI gate checks these values on actual Brown
+    # files, not merely on this fixture.
+    api.F.inscription_id.meta["sourceCommit"] = PINNED_SOURCE_REVISION
+    pinned_app: Any = use(f"app:{APP}", api=api, silent="deep")
+    expected = (
+        "https://github.com/Brown-University-Library/iip-texts/blob/"
+        f"{PINNED_SOURCE_REVISION}/epidoc-files/minimal.xml"
+    )
+    assert pinned_app.webLink(record, urlOnly=True) == expected
+    assert pinned_app.webLink(line, urlOnly=True) == expected
+    result = pinned_app.webLink(
+        record, text="Original EpiDoc", _asString=True
+    )
+    # In the programmatic API TF formats links as text, not HTML.
+    # The authenticated browser-mode test checks real href markup separately.
+    assert result == f"Original EpiDoc => {expected}"
+
+
+def test_bundled_app_source_link_configuration_matches_standard_app() -> None:
+    """An installed Agora package must show the same links as a local build."""
+    bundled = ROOT / "src/iip_tf/_bundled_app"
+    for path in ("config.yaml", "app.py"):
+        assert (APP / path).read_bytes() == (bundled / path).read_bytes()
+    config = yaml.safe_load((APP / "config.yaml").read_text(encoding="utf-8"))
+    assert config["provenanceSpec"]["webFeature"] == "source_file"
+    assert config["provenanceSpec"]["webHint"].startswith("Original EpiDoc")
+
+
+
+def test_browser_mode_exposes_source_hyperlink_in_real_passage(tmp_path: Path) -> None:
+    """Check the source link in actual TF browser output, not just the API."""
+    from iip_tf.taxonomy_audit import PINNED_SOURCE_REVISION
+
+    source = tmp_path / "minimal.xml"
+    source.write_text(
+        '<TEI xmlns="http://www.tei-c.org/ns/1.0">'
+        "<teiHeader><fileDesc><titleStmt><title>Source link fixture</title>"
+        "</titleStmt><publicationStmt><idno>minimal</idno></publicationStmt>"
+        "</fileDesc></teiHeader><text><body>"
+        '<div type="edition" subtype="transcription"><p>'
+        '<choice><orig>X</orig><reg>Y</reg></choice>BC'
+        '</p></div>'
+        "</body></text></TEI>",
+        encoding="utf-8",
+    )
+    output = tmp_path / "tf"
+    write_tf_corpus(
+        (parse_epidoc_file(source, source_revision=PINNED_SOURCE_REVISION),),
+        output,
+        converter_commit="fixture-commit",
+    )
+    # The real pinned-corpus workflow independently verifies the source tree.
+    # Here this header is only a small, deliberate browser-mode fixture.
+    browser: Any = setup(False, f"app:{APP}", f"--locations={output}", "-noweb")
+    expected = (
+        "https://github.com/Brown-University-Library/iip-texts/blob/"
+        f"{PINNED_SOURCE_REVISION}/epidoc-files/minimal.xml"
+    )
+    with browser.test_client() as client:
+        passage = client.post(
+            "/passage", data={"sec0": "minimal", "sec1": "transcription"}
+        )
+    assert passage.status_code == 200
+    payload = passage.get_json()
+    assert isinstance(payload, dict)
+    assert isinstance(payload.get("table"), str)
+    assert f'href="{expected}"' in payload["table"]
+    visible = _VisibleText()
+    visible.feed(payload["table"])
+    assert "YBC" in "".join(visible.parts)

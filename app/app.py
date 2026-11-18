@@ -180,6 +180,49 @@ def _end_annotations(app: Any, node: int, fmt: str) -> list[tuple[str, bool]]:
     return [(entry[3], entry[4]) for entry in sorted(candidates)]
 
 
+def _original_epidoc_link(app: Any, node: int, fmt: str | None) -> str:
+    """Show one source link per textpart in the standard browser passage.
+
+    TF's own internal passage links deliberately use href="#"; its webLink()
+    alone does not yield a clickable outbound link in the passage. Reuse the
+    existing sign customization to expose a separate, safe external anchor.
+    """
+    if not getattr(app.context, "webBase", None) or not _is_selected_sign(app, node, fmt):
+        return ""
+    parts = tuple(app.api.L.u(node, otype="textpart"))
+    if len(parts) != 1:
+        return ""
+    # A textpart may start with an <orig> sign hidden by the selected
+    # normalized <reg> reading. Cache the first actually displayed sign by
+    # (textpart, text format), to avoid scanning its slots once per character.
+    key = (parts[0], fmt)
+    first_visible = getattr(app, "_iip_source_link_first", None)
+    if first_visible is None:
+        first_visible = {}
+        app._iip_source_link_first = first_visible
+    if key not in first_visible:
+        first_visible[key] = next(
+            (
+                sign for sign in app.api.E.oslots.s(parts[0])
+                if _is_selected_sign(app, sign, fmt)
+            ),
+            None,
+        )
+    if node != first_visible[key]:
+        return ""
+    source_url = app.webLink(parts[0], urlOnly=True)
+    if not isinstance(source_url, str) or not source_url.startswith(
+        "https://github.com/Brown-University-Library/iip-texts/blob/"
+    ):
+        return ""
+    return (
+        '<a class="iip-epidoc-link" target="_blank" rel="noopener noreferrer" '
+        f'href="{escape(source_url, quote=True)}" '
+        'title="Compare this reading with the original EpiDoc XML">'
+        "Original EpiDoc</a> "
+    )
+
+
 def render_sign(app: Any, options: Any, chunk: Any, n_type: str, outer: bool) -> str:
     """Render one sign without suppressing its original characters or spacing."""
     node = chunk[0]
@@ -240,10 +283,31 @@ def render_sign(app: Any, options: Any, chunk: Any, n_type: str, outer: bool) ->
     # after the same space. Never invent or duplicate any whitespace.
     early = "".join(closing_label(kind) for kind, inside in closings if not inside)
     late = "".join(closing_label(kind) for kind, inside in closings if inside)
+    source_link = _original_epidoc_link(app, node, display_fmt)
     return (
-        f'{note_html}<span class="iip-source-sign">{material}</span>'
+        f'{source_link}{note_html}<span class="iip-source-sign">{material}</span>'
         f'{early}{after_html}{late}'
     )
+
+# Do not misrepresent an arbitrary local EpiDoc source tree as a record at
+# Brown's authenticated frozen revision.
+_PINNED_BROWN_REVISION = "0b7dc8358ccdfd0c9391f049da4839fbd91c26e5"
+
+
+def install_verified_source_links(app: Any) -> None:
+    """Enable stock TF external links only for the authenticated source pin.
+
+    The same browser app is bundled for the Agora user-local materializer. A
+    source file named 'chor0001.xml' alone is not evidence of Brown provenance.
+    """
+    api = getattr(app, "api", None)
+    record_feature = getattr(api.F, "inscription_id", None) if api is not None else None
+    metadata = getattr(record_feature, "meta", {}) if record_feature is not None else {}
+    app._iip_source_link_first = {}
+    if metadata.get("sourceCommit") != _PINNED_BROWN_REVISION:
+        for setting in ("webBase", "webFeature", "webUrl"):
+            setattr(app.context, setting, None)
+
 
 def install_editorial_renderer(app: Any) -> None:
     """Register one sign-only renderer in TF's existing method registry."""
@@ -259,7 +323,9 @@ class TfApp(App):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
+        install_verified_source_links(self)
         install_editorial_renderer(self)
 
     def reinit(self) -> None:
+        install_verified_source_links(self)
         install_editorial_renderer(self)
