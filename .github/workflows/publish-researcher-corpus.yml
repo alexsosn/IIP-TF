@@ -1,0 +1,265 @@
+name: Publish verified researcher corpus prerelease
+
+# Initial push of this new workflow to main is intentional; further candidate
+# releases require manual dispatch and a new tag, not ordinary main pushes.
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/publish-researcher-corpus.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: iip-tf-corpus-data-0.1.0rc1
+  cancel-in-progress: false
+
+env:
+  TAG: corpus-data-0.1.0rc1
+  IIP_REVISION: 0b7dc8358ccdfd0c9391f049da4839fbd91c26e5
+
+jobs:
+  build:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout exact main commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install and verify converter
+        run: |
+          python -m pip install -e '.[dev]'
+          ruff check .
+          mypy
+          pytest -q
+      - name: Acquire authenticated pinned Brown source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir upstream-iip
+          curl --fail --location --retry 3 \
+            "https://codeload.github.com/Brown-University-Library/iip-texts/tar.gz/${IIP_REVISION}" \
+            | tar -xz --strip-components=1 -C upstream-iip
+          test -d upstream-iip/epidoc-files
+      - name: Double-build and authenticate all 5535 native TF records
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/validate_pinned_tf.py \
+            upstream-iip/epidoc-files build/pinned-tf \
+            --revision "$IIP_REVISION" \
+            --converter-commit "$GITHUB_SHA"
+          python scripts/validate_pinned_app.py build/pinned-tf
+      - name: Package certified source-free archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/researcher-dist
+          python scripts/build_researcher_archive.py \
+            build/pinned-tf \
+            build/pinned-tf-reports/iip-corpus-report.json \
+            build/researcher-dist/iip-tf-corpus.tar.gz
+          mkdir -p build/researcher-extracted
+          tar -xzf build/researcher-dist/iip-tf-corpus.tar.gz \
+            -C build/researcher-extracted
+          python -m venv build/isolated-tf
+          build/isolated-tf/bin/python -m pip install 'text-fabric>=13.1,<14'
+          build/isolated-tf/bin/python -I \
+            scripts/smoke_researcher_archive.py build/researcher-extracted
+      - name: Record checksum and original source and converter identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          (
+            cd build/researcher-dist
+            sha256sum iip-tf-corpus.tar.gz > iip-tf-corpus.tar.gz.sha256
+          )
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          report = json.loads(
+              Path("build/pinned-tf-reports/iip-corpus-report.json").read_text()
+          )
+          assert report["status"] == "success"
+          assert report["source_revision"] == os.environ["IIP_REVISION"]
+          assert report["converter_commit"] == os.environ["GITHUB_SHA"]
+          assert len(report["source_files"]["converted"]) == 5535
+          assert report["source_files"]["failed"] == []
+          archive = Path("build/researcher-dist/iip-tf-corpus.tar.gz")
+          with archive.open("rb") as stream:
+              archive_sha256 = hashlib.file_digest(stream, "sha256").hexdigest()
+          metadata = {
+              "schema_version": 1,
+              "corpus_version": "0.1.0rc1",
+              "kind": "corpus prerelease candidate, not IIP-TF 0.1.0",
+              "source_repository": "Brown-University-Library/iip-texts",
+              "source_revision": os.environ["IIP_REVISION"],
+              "converter_repository": os.environ["GITHUB_REPOSITORY"],
+              "converter_commit": os.environ["GITHUB_SHA"],
+              "inscription_count": 5535,
+              "data_license": "CC BY-NC 4.0",
+              "source_doi": "10.26300/pz1d-st89",
+              "archive_name": archive.name,
+              "archive_sha256": archive_sha256,
+          }
+          (archive.parent / "corpus-provenance.json").write_text(
+              json.dumps(metadata, sort_keys=True, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          PY
+      - name: Transfer exactly the tested files
+        uses: actions/upload-artifact@v4
+        with:
+          name: iip-tf-public-corpus-input
+          path: |
+            build/researcher-dist/iip-tf-corpus.tar.gz
+            build/researcher-dist/iip-tf-corpus.tar.gz.sha256
+            build/researcher-dist/corpus-provenance.json
+          retention-days: 2
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Retrieve tested candidate only
+        uses: actions/download-artifact@v4
+        with:
+          name: iip-tf-public-corpus-input
+          path: candidate
+      - name: Verify exact bytes and provenance prior to upload
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd candidate
+          sha256sum -c iip-tf-corpus.tar.gz.sha256
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          metadata = json.loads(Path("corpus-provenance.json").read_text())
+          with Path("iip-tf-corpus.tar.gz").open("rb") as stream:
+              actual = hashlib.file_digest(stream, "sha256").hexdigest()
+          assert metadata["archive_sha256"] == actual
+          assert metadata["converter_commit"] == os.environ["GITHUB_SHA"]
+          assert metadata["source_revision"] == os.environ["IIP_REVISION"]
+          assert metadata["inscription_count"] == 5535
+          PY
+      - name: Refuse a preexisting immutable release tag
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${TAG}" \
+              > /dev/null 2> /tmp/iip-tag-check.err; then
+            echo "::error::Corpus data tag already exists; refuse replacement."
+            exit 1
+          fi
+          if ! grep -q 'HTTP 404' /tmp/iip-tag-check.err; then
+            echo "::error::Could not confirm tag is unused."
+            cat /tmp/iip-tag-check.err
+            exit 1
+          fi
+      - name: Publish fixed-commit public DATA prerelease
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          digest="$(cut -d ' ' -f1 candidate/iip-tf-corpus.tar.gz.sha256)"
+          cat > /tmp/release-notes.md <<EOF
+          IIP-TF DATA prerelease: 5,535 Text-Fabric inscriptions.
+          This is NOT the final IIP-TF 0.1.0 release.
+
+          Brown IIP source: https://github.com/Brown-University-Library/iip-texts
+          Brown source revision: ${IIP_REVISION}
+          Converter commit: ${GITHUB_SHA}
+          Original IIP DOI: https://doi.org/10.26300/pz1d-st89
+          Generated corpus data license: CC BY-NC 4.0.
+          Bundled app/software license: MIT.
+          SHA-256 for iip-tf-corpus.tar.gz: ${digest}
+
+          Download the archive, .sha256 and corpus-provenance.json files.
+          Run sha256sum -c iip-tf-corpus.tar.gz.sha256 before extracting.
+          START_HERE.txt contains the TF local install and browser commands.
+          EOF
+          gh release create "$TAG" \
+            candidate/iip-tf-corpus.tar.gz \
+            candidate/iip-tf-corpus.tar.gz.sha256 \
+            candidate/corpus-provenance.json \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "IIP-TF corpus data 0.1.0rc1 (prerelease)" \
+            --prerelease \
+            --notes-file /tmp/release-notes.md
+
+  verify_public:
+    needs: publish
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout only independent smoke script without stored credentials
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Anonymous public download and checksum and provenance check
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir downloaded
+          cd downloaded
+          for name in iip-tf-corpus.tar.gz iip-tf-corpus.tar.gz.sha256 corpus-provenance.json; do
+            curl --fail --location --silent --show-error \
+              --retry 10 --retry-all-errors --retry-delay 4 \
+              --output "$name" \
+              "https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${name}"
+          done
+          sha256sum -c iip-tf-corpus.tar.gz.sha256
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          metadata = json.loads(Path("corpus-provenance.json").read_text())
+          with Path("iip-tf-corpus.tar.gz").open("rb") as stream:
+              actual = hashlib.file_digest(stream, "sha256").hexdigest()
+          assert actual == metadata["archive_sha256"]
+          assert metadata["converter_commit"] == os.environ["GITHUB_SHA"]
+          assert metadata["source_revision"] == os.environ["IIP_REVISION"]
+          assert metadata["inscription_count"] == 5535
+          assert metadata["data_license"] == "CC BY-NC 4.0"
+          PY
+      - name: Fresh isolated TF-only public extraction and real browser smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/public-extracted
+          tar -xzf downloaded/iip-tf-corpus.tar.gz -C build/public-extracted
+          python -m venv build/public-tf-only
+          build/public-tf-only/bin/python -m pip install 'text-fabric>=13.1,<14'
+          build/public-tf-only/bin/python -I \
+            scripts/smoke_researcher_archive.py build/public-extracted
