@@ -285,6 +285,29 @@ def main() -> int:
         if node is None or api.F.inscription_id.v(node) != source_id:
             raise RuntimeError(f"native IIP section navigation failed: {source_id}")
 
+    # A browser result must link to the actual authenticated original EpiDoc,
+    # not to a guessed live-edition page or a locally invented source.
+    brown = (
+        "https://github.com/Brown-University-Library/iip-texts/blob/"
+        "0b7dc8358ccdfd0c9391f049da4839fbd91c26e5/epidoc-files/"
+    )
+    for record_id in ("abil0001", "chor0001", "masa0286", "haif0003"):
+        record = api.T.nodeFromSection((record_id,))
+        assert record is not None
+        source_file = api.F.source_file.v(record)
+        if source_file != f"{record_id}.xml":
+            raise RuntimeError(f"{record_id}: source filename provenance missing")
+        target = brown + source_file
+        if app.webLink(record, urlOnly=True) != target:
+            raise RuntimeError(f"{record_id}: wrong original EpiDoc link")
+        lines = api.L.d(record, otype="line")
+        if not lines or app.webLink(lines[0], urlOnly=True) != target:
+            raise RuntimeError(f"{record_id}: nested section links to wrong source")
+        linked = app.webLink(record, text="Original EpiDoc", _asString=True)
+        if not isinstance(linked, str) or f'href="{target}"' not in linked:
+            raise RuntimeError(f"{record_id}: source link absent from native browser HTML")
+    print("Pinned browser original EpiDoc links: source files and nested sections verified")
+
     chor = api.T.nodeFromSection(("chor0001",))
     assert chor is not None
     content = api.T.text(chor, fmt="text-orig-full")
