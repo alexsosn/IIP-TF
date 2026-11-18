@@ -180,6 +180,34 @@ def _end_annotations(app: Any, node: int, fmt: str) -> list[tuple[str, bool]]:
     return [(entry[3], entry[4]) for entry in sorted(candidates)]
 
 
+def _original_epidoc_link(app: Any, node: int, fmt: str | None) -> str:
+    """Show one source link per textpart in the standard browser passage.
+
+    TF's own internal passage links deliberately use href="#"; its webLink()
+    alone does not yield a clickable outbound link in the passage. Reuse the
+    existing sign customization to expose a separate, safe external anchor.
+    """
+    if not getattr(app.context, "webBase", None) or not _is_selected_sign(app, node, fmt):
+        return ""
+    parts = tuple(app.api.L.u(node, otype="textpart"))
+    if len(parts) != 1:
+        return ""
+    slots = app.api.E.oslots.s(parts[0])
+    if not slots or node != slots[0]:
+        return ""
+    source_url = app.webLink(parts[0], urlOnly=True)
+    if not isinstance(source_url, str) or not source_url.startswith(
+        "https://github.com/Brown-University-Library/iip-texts/blob/"
+    ):
+        return ""
+    return (
+        '<a class="iip-epidoc-link" target="_blank" rel="noopener noreferrer" '
+        f'href="{escape(source_url, quote=True)}" '
+        'title="Compare this reading with the original EpiDoc XML">'
+        "Original EpiDoc</a> "
+    )
+
+
 def render_sign(app: Any, options: Any, chunk: Any, n_type: str, outer: bool) -> str:
     """Render one sign without suppressing its original characters or spacing."""
     node = chunk[0]
@@ -240,8 +268,9 @@ def render_sign(app: Any, options: Any, chunk: Any, n_type: str, outer: bool) ->
     # after the same space. Never invent or duplicate any whitespace.
     early = "".join(closing_label(kind) for kind, inside in closings if not inside)
     late = "".join(closing_label(kind) for kind, inside in closings if inside)
+    source_link = _original_epidoc_link(app, node, display_fmt)
     return (
-        f'{note_html}<span class="iip-source-sign">{material}</span>'
+        f'{source_link}{note_html}<span class="iip-source-sign">{material}</span>'
         f'{early}{after_html}{late}'
     )
 
