@@ -5,7 +5,8 @@ This is an executable, researcher-oriented guide for the **native**
 Brown's Inscriptions of Israel/Palestine (IIP). No released auto-downloadable
 IIP-TF corpus exists yet (distribution issue
 [#10](https://github.com/alexsosn/IIP-TF/issues/10)).
-Run the commands from the **IIP-TF converter repository root**.
+For the candidate standalone TF-only install, see the [distribution guide](researcher-distribution.md).
+The converter-specific commands below run from the **IIP-TF converter repository root**.
 
 ## 1. Obtain and authenticate the corpus
 

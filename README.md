@@ -11,8 +11,10 @@ materializer manifest and execution module are included, but the corpus
 has not yet been published as a release artifact or registered for
 managed Agora installation (see #10, #11 and Agora #187).
 
-**New researchers:** start with the [executable five-minute quickstart](docs/guides/researcher-quickstart.md)
-and the [local browser guide](docs/guides/local-tf-browser.md).
+**New researchers:** see the [standalone archive installation guide](docs/guides/researcher-distribution.md)
+for the pending release candidate and the [executable five-minute quickstart](docs/guides/researcher-quickstart.md)
+for source-built, verified examples. The [local browser guide](docs/guides/local-tf-browser.md)
+explains building from Brown's source. No permanent corpus download is published yet.
 
 The release target is a native Text-Fabric corpus that:
 

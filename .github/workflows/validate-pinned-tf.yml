@@ -7,6 +7,10 @@ on:
       - "src/iip_tf/encoded_script.py"
       - "app/**"
       - "scripts/validate_pinned_app.py"
+      - "scripts/build_researcher_archive.py"
+      - "scripts/smoke_researcher_archive.py"
+      - "tests/test_researcher_distribution.py"
+      - "docs/guides/researcher-distribution.md"
       - "src/iip_tf/researcher_queries.py"
       - "docs/guides/researcher-quickstart.md"
       - "src/iip_tf/cli.py"
@@ -47,6 +51,10 @@ on:
     paths:
       - "app/**"
       - "scripts/validate_pinned_app.py"
+      - "scripts/build_researcher_archive.py"
+      - "scripts/smoke_researcher_archive.py"
+      - "tests/test_researcher_distribution.py"
+      - "docs/guides/researcher-distribution.md"
       - "src/iip_tf/researcher_queries.py"
       - "docs/guides/researcher-quickstart.md"
       - "src/iip_tf/tf_writer.py"
@@ -282,6 +290,24 @@ jobs:
             --converter-commit "${{ github.event.pull_request.head.sha || github.sha }}"
       - name: Validate native app + Flask browser against pinned corpus
         run: python scripts/validate_pinned_app.py build/pinned-tf
+      # Reuse the authenticated, byte-reproducible complete build rather than
+      # rebuilding a third corpus for distribution.
+      - name: Package source-free researcher archive candidate
+        run: |
+          mkdir -p build/researcher-dist
+          python scripts/build_researcher_archive.py \
+            build/pinned-tf \
+            build/pinned-tf-reports/iip-corpus-report.json \
+            build/researcher-dist/iip-tf-corpus.tar.gz
+      - name: Extract and test in a clean Text-Fabric-only installation
+        run: |
+          mkdir -p build/researcher-install
+          tar -xzf build/researcher-dist/iip-tf-corpus.tar.gz \
+            -C build/researcher-install
+          python -m venv build/researcher-venv
+          build/researcher-venv/bin/python -m pip install 'text-fabric>=13.1,<14'
+          build/researcher-venv/bin/python -I \
+            scripts/smoke_researcher_archive.py build/researcher-install
       - name: Audit pinned Brown taxonomy source vs native classification values
         run: |
           python -m iip_tf.taxonomy_audit \
@@ -311,6 +337,15 @@ jobs:
             build/pinned-tf \
             build/pinned-tf-reports/iip-corpus-report.json \
             build/pinned-tf-reports/context-fabric-parity.json
+      # A short-lived CI artifact, NOT a published immutable GitHub release.
+      - name: Upload source-free researcher archive candidate
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iip-tf-researcher-candidate
+          path: build/researcher-dist/iip-tf-corpus.tar.gz
+          if-no-files-found: error
+          retention-days: 7
       - name: Upload reproducibility or failure reports
         if: always()
         uses: actions/upload-artifact@v4
