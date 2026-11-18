@@ -192,8 +192,23 @@ def _original_epidoc_link(app: Any, node: int, fmt: str | None) -> str:
     parts = tuple(app.api.L.u(node, otype="textpart"))
     if len(parts) != 1:
         return ""
-    slots = app.api.E.oslots.s(parts[0])
-    if not slots or node != slots[0]:
+    # A textpart may start with an <orig> sign hidden by the selected
+    # normalized <reg> reading. Cache the first actually displayed sign by
+    # (textpart, text format), to avoid scanning its slots once per character.
+    key = (parts[0], fmt)
+    first_visible = getattr(app, "_iip_source_link_first", None)
+    if first_visible is None:
+        first_visible = {}
+        app._iip_source_link_first = first_visible
+    if key not in first_visible:
+        first_visible[key] = next(
+            (
+                sign for sign in app.api.E.oslots.s(parts[0])
+                if _is_selected_sign(app, sign, fmt)
+            ),
+            None,
+        )
+    if node != first_visible[key]:
         return ""
     source_url = app.webLink(parts[0], urlOnly=True)
     if not isinstance(source_url, str) or not source_url.startswith(
@@ -288,6 +303,7 @@ def install_verified_source_links(app: Any) -> None:
     api = getattr(app, "api", None)
     record_feature = getattr(api.F, "inscription_id", None) if api is not None else None
     metadata = getattr(record_feature, "meta", {}) if record_feature is not None else {}
+    app._iip_source_link_first = {}
     if metadata.get("sourceCommit") != _PINNED_BROWN_REVISION:
         for setting in ("webBase", "webFeature", "webUrl"):
             setattr(app.context, setting, None)
