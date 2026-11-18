@@ -67,7 +67,9 @@ def test_archive_is_self_contained_and_excludes_xml_and_conversion_package(
         ]
         for member in stream:
             assert member.isfile()
-            assert member.mtime == member.uid == member.gid == 0
+            # TF 13.1 interprets os.path.getmtime(...) == 0 as missing .tf data.
+            assert member.mtime > 0
+            assert member.uid == member.gid == 0
             assert member.name.endswith(".xml") is False
         instructions = stream.extractfile("START_HERE.txt")
         assert instructions is not None
@@ -184,3 +186,16 @@ def test_racing_exclusive_open_never_deletes_another_writers_file(
     with pytest.raises(FileExistsError, match="another writer"):
         build_researcher_archive(tf_dir, report, destination)
     assert destination.read_bytes() == b"other researcher's valuable content"
+
+
+def test_extracted_tf_source_has_a_nonzero_stable_mtime(
+    source_build: tuple[Path, Path], tmp_path: Path,
+) -> None:
+    """TF 13.1 calls a present source feature 'X' when its mtime is zero."""
+    tf_dir, report = source_build
+    archive = build_researcher_archive(tf_dir, report, tmp_path / "timestamp.tar.gz")
+    destination = tmp_path / "extract"
+    destination.mkdir()
+    with tarfile.open(archive, mode="r:gz") as stream:
+        stream.extract("tf/otype.tf", path=destination)
+    assert (destination / "tf" / "otype.tf").stat().st_mtime > 0
