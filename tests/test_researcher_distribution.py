@@ -4,13 +4,16 @@ from __future__ import annotations
 import hashlib
 import json
 import tarfile
+from importlib import import_module
 from pathlib import Path
 
 import pytest
 
 from iip_tf.release_gate import tf_feature_hashes
 from iip_tf.source_repair import PINNED_IIP_REVISION
-from scripts.build_researcher_archive import build_researcher_archive
+
+# Import at runtime so the RED suite reaches pytest, not MyPy import discovery.
+build_researcher_archive = import_module("scripts.build_researcher_archive").build_researcher_archive
 
 
 @pytest.fixture
