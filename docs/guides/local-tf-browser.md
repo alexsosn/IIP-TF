@@ -1,9 +1,11 @@
 # Browse IIP-TF locally with standard Text-Fabric
 
-This guide describes the **converter repository** workflow. There is no
-published versioned Text-Fabric dataset yet: `tf alexsosn/IIP-TF` must **not**
-be advertised as a working one-command install. Distribution is tracked in
-[#10](https://github.com/alexsosn/IIP-TF/issues/10).
+This guide describes the **converter repository** workflow, rebuilding
+native Text-Fabric data from Brown's EpiDoc source. A separate, already
+published [researcher corpus-data prerelease](researcher-distribution.md)
+is available for source-free download. The converter repository itself
+is not a hosted Text-Fabric dataset: `tf alexsosn/IIP-TF` is **not** a
+working one-command install. The final IIP-TF 0.1.0 release is pending.
 
 ## Build the authenticated corpus
 
@@ -116,6 +118,36 @@ replacement for source-critical data. The source-backed glyph display policy is 
 uses reviewed Unicode where available and explicit source-label fallbacks
 otherwise. Unpinned references are never silently assigned characters.
 The app does not infer missing text or normalize undeciphered marks.
+
+## Follow an inscription back to original EpiDoc
+
+For native data authenticated against the frozen Brown revision
+`0b7dc8358ccdfd0c9391f049da4839fbd91c26e5`, the current source-built
+TF app maps inscription, textpart and line nodes to their **original EpiDoc
+XML files** at that exact Git commit. The standard TF `webLink()` API
+is used, without a custom web service. For example:
+
+```python
+inscription = app.api.T.nodeFromSection(("chor0001",))
+source_url = app.webLink(inscription, urlOnly=True)
+print(source_url)
+# https://github.com/Brown-University-Library/iip-texts/blob/0b7dc8358ccdfd0c9391f049da4839fbd91c26e5/epidoc-files/chor0001.xml
+```
+
+Follow the link to compare the converted reading, apparatus and metadata
+against the original EpiDoc edition. These links are enabled only when
+native TF feature provenance identifies the authenticated Brown pin.
+For an arbitrary user-local, unversioned or other-revision conversion,
+`app.webLink(inscription, urlOnly=True)` returns `None`; it must not
+pretend that such a record is at the pinned Brown URL. In those cases
+inspect `source_file` and `sourceCommit` and use the source location
+the user actually supplied.
+
+**Distribution note:** this enhancement is part of the current converter
+browser app and must be included in a subsequent versioned corpus artifact.
+The previously published immutable `corpus-data-0.1.0rc1` archive contains
+the browser configuration from its earlier release commit. Do not assume
+new browser changes have been retroactively applied to that archive.
 
 Original IIP texts are © their respective owners and supplied under the
 source project's terms (CC BY-NC 4.0); see `LICENSE_SCOPE.md`.
