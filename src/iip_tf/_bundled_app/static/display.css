@@ -21,3 +21,14 @@
 .iip-editorial-end {
   border-style: solid;
 }
+
+/* A single outbound scholarly-source link per visible textpart.
+   It must not be mistaken for a letter in the attested reading. */
+.iip-epidoc-link {
+  display: inline-block;
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-size: 0.78em;
+  margin-inline-end: 0.5em;
+  white-space: nowrap;
+}
