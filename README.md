@@ -4,17 +4,25 @@ IIP-TF converts the [Inscriptions of Israel/Palestine (IIP)](https://github.com/
 
 ## Status
 
-**Pre-0.1 / working converter and local browser, not yet a released corpus.**
-The pinned Brown source can be converted into reproducible native Text-Fabric
-data and browsed offline using the standard TF app. A tested Agora
-materializer manifest and execution module are included, but the corpus
-has not yet been published as a release artifact or registered for
-managed Agora installation (see #10, #11 and Agora #187).
+**Researcher corpus DATA prerelease 0.1.0rc1:** the complete source-free
+Text-Fabric archive for 5,535 inscriptions is distributed separately from
+the converter as a versioned public GitHub Release asset. The archive is
+[available here](https://github.com/alexsosn/IIP-TF/releases/download/corpus-data-0.1.0rc1/iip-tf-corpus.tar.gz);
+[SHA-256 checksum](https://github.com/alexsosn/IIP-TF/releases/download/corpus-data-0.1.0rc1/iip-tf-corpus.tar.gz.sha256)
+and [provenance manifest](https://github.com/alexsosn/IIP-TF/releases/download/corpus-data-0.1.0rc1/corpus-provenance.json)
+are published alongside it. Native corpus data retain the original
+**CC BY-NC 4.0** licence and scholarly-edition attribution.
 
-**New researchers:** see the [standalone archive installation guide](docs/guides/researcher-distribution.md)
-for the pending release candidate and the [executable five-minute quickstart](docs/guides/researcher-quickstart.md)
-for source-built, verified examples. The [local browser guide](docs/guides/local-tf-browser.md)
-explains building from Brown's source. No permanent corpus download is published yet.
+**The final IIP-TF 0.1.0 release is not yet available.** The converter is
+still `0.1.0.dev0` and managed Agora registration is pending (#11, Agora #187).
+This data prerelease does not imply that the GitHub converter repository can
+be automatically loaded as a hosted Text-Fabric dataset.
+
+**New researchers:** follow the [download, checksum and standalone installation guide](docs/guides/researcher-distribution.md).
+The [executable five-minute quickstart](docs/guides/researcher-quickstart.md)
+demonstrates verified source-built examples; the
+[local browser guide](docs/guides/local-tf-browser.md) covers conversion from
+Brown's original EpiDoc files.
 
 The release target is a native Text-Fabric corpus that:
 
