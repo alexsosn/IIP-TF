@@ -18,6 +18,9 @@ from iip_tf.source_repair import PINNED_IIP_REVISION
 ROOT = Path(__file__).resolve().parents[1]
 APP_FILES = ("app.py", "config.yaml", "static/display.css")
 REQUIRED_TF_FILES = frozenset({"otype.tf", "oslots.tf", "otext.tf"})
+# TF 13.1 treats a feature with mtime == 0 as absent (Data.load -> "X").
+# Use a fixed nonzero time: 2000-01-01 UTC, independent of build clock.
+ARCHIVE_MEMBER_MTIME = 946684800
 
 # This travels in the archive. It is guidance, not a TF semantic sidecar.
 START_HERE = f"""IIP-TF: local Text-Fabric corpus
@@ -142,7 +145,7 @@ def build_researcher_archive(
                         info.gid = 0
                         info.uname = ""
                         info.gname = ""
-                        info.mtime = 0
+                        info.mtime = ARCHIVE_MEMBER_MTIME
                         if isinstance(source, bytes):
                             info.size = len(source)
                             archive.addfile(info, io.BytesIO(source))
