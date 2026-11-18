@@ -248,3 +248,42 @@ def test_bundled_app_source_link_configuration_matches_standard_app() -> None:
     config = yaml.safe_load((APP / "config.yaml").read_text(encoding="utf-8"))
     assert config["provenanceSpec"]["webFeature"] == "source_file"
     assert config["provenanceSpec"]["webHint"].startswith("Original EpiDoc")
+
+
+
+def test_browser_mode_exposes_source_hyperlink_in_real_passage(tmp_path: Path) -> None:
+    """Check the source link in actual TF browser output, not just the API."""
+    from iip_tf.taxonomy_audit import PINNED_SOURCE_REVISION
+
+    source = tmp_path / "minimal.xml"
+    source.write_text(
+        '<TEI xmlns="http://www.tei-c.org/ns/1.0">'
+        "<teiHeader><fileDesc><titleStmt><title>Source link fixture</title>"
+        "</titleStmt><publicationStmt><idno>minimal</idno></publicationStmt>"
+        "</fileDesc></teiHeader><text><body>"
+        '<div type="edition" subtype="transcription"><p>ABC</p></div>'
+        "</body></text></TEI>",
+        encoding="utf-8",
+    )
+    output = tmp_path / "tf"
+    write_tf_corpus(
+        (parse_epidoc_file(source, source_revision=PINNED_SOURCE_REVISION),),
+        output,
+        converter_commit="fixture-commit",
+    )
+    # The real pinned-corpus workflow independently verifies the source tree.
+    # Here this header is only a small, deliberate browser-mode fixture.
+    browser: Any = setup(False, f"app:{APP}", f"--locations={output}", "-noweb")
+    expected = (
+        "https://github.com/Brown-University-Library/iip-texts/blob/"
+        f"{PINNED_SOURCE_REVISION}/epidoc-files/minimal.xml"
+    )
+    with browser.test_client() as client:
+        passage = client.post(
+            "/passage", data={"sec0": "minimal", "sec1": "transcription"}
+        )
+    assert passage.status_code == 200
+    payload = passage.get_json()
+    assert isinstance(payload, dict)
+    assert isinstance(payload.get("table"), str)
+    assert f'href="{expected}"' in payload["table"]
