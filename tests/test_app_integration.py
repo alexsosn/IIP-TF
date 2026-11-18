@@ -261,7 +261,9 @@ def test_browser_mode_exposes_source_hyperlink_in_real_passage(tmp_path: Path) -
         "<teiHeader><fileDesc><titleStmt><title>Source link fixture</title>"
         "</titleStmt><publicationStmt><idno>minimal</idno></publicationStmt>"
         "</fileDesc></teiHeader><text><body>"
-        '<div type="edition" subtype="transcription"><p>ABC</p></div>'
+        '<div type="edition" subtype="transcription"><p>'
+        '<choice><orig>X</orig><reg>Y</reg></choice>BC'
+        '</p></div>'
         "</body></text></TEI>",
         encoding="utf-8",
     )
@@ -287,3 +289,6 @@ def test_browser_mode_exposes_source_hyperlink_in_real_passage(tmp_path: Path) -
     assert isinstance(payload, dict)
     assert isinstance(payload.get("table"), str)
     assert f'href="{expected}"' in payload["table"]
+    visible = _VisibleText()
+    visible.feed(payload["table"])
+    assert "YBC" in "".join(visible.parts)
