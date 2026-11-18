@@ -168,12 +168,17 @@ def test_racing_exclusive_open_never_deletes_another_writers_file(
     original_open = Path.open
 
     def simulate_other_writer(
-        path: Path, mode: str = "r", *args: object, **kwargs: object,
+        path: Path,
+        mode: str = "r",
+        buffering: int = -1,
+        encoding: str | None = None,
+        errors: str | None = None,
+        newline: str | None = None,
     ) -> object:
         if path == destination and mode == "xb":
             destination.write_bytes(b"other researcher's valuable content")
             raise FileExistsError("another writer won the exclusive-open race")
-        return original_open(path, mode, *args, **kwargs)
+        return original_open(path, mode, buffering, encoding, errors, newline)
 
     monkeypatch.setattr(Path, "open", simulate_other_writer)
     with pytest.raises(FileExistsError, match="another writer"):
