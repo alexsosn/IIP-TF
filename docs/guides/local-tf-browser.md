@@ -143,11 +143,10 @@ pretend that such a record is at the pinned Brown URL. In those cases
 inspect `source_file` and `sourceCommit` and use the source location
 the user actually supplied.
 
-**Distribution note:** this enhancement is part of the current converter
-browser app and must be included in a subsequent versioned corpus artifact.
-The previously published immutable `corpus-data-0.1.0rc1` archive contains
-the browser configuration from its earlier release commit. Do not assume
-new browser changes have been retroactively applied to that archive.
+**Distribution note:** the original-EpiDoc browser link is shipped in
+[the `corpus-data-0.1.0rc2` researcher archive](researcher-distribution.md).
+The earlier `corpus-data-0.1.0rc1` archive is immutable and still has its
+original browser app. The final IIP-TF 0.1.0 release is separate and pending.
 
 Original IIP texts are © their respective owners and supplied under the
 source project's terms (CC BY-NC 4.0); see `LICENSE_SCOPE.md`.
