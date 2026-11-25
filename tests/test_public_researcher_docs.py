@@ -39,3 +39,15 @@ def test_researcher_guide_downloads_archive_checksum_and_provenance() -> None:
     assert "app.webLink(inscription, urlOnly=True)" in guide
     assert "Original EpiDoc" in guide
     assert "no official IIP-TF 0.1.0" in guide.lower() or "0.1.0 has not" in guide.lower()
+
+
+def test_quickstart_distinguishes_public_data_from_converter_source_build() -> None:
+    guide = (ROOT / "docs/guides/researcher-quickstart.md").read_text(encoding="utf-8")
+    intro, source_build = guide.split("## 1. Build the authenticated corpus", 1)
+    assert "corpus-data-0.1.0rc2" in intro
+    assert "Final IIP-TF 0.1.0 has not been released" in intro
+    assert "[standalone download and installation guide](researcher-distribution.md)" in intro
+    assert "without cloning the converter" in intro
+    assert "No released auto-downloadable" not in guide
+    assert "Build the authenticated corpus" in source_build
+    assert "from iip_tf.researcher_queries import" in source_build
