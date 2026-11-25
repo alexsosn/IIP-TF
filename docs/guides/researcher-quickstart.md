@@ -2,13 +2,19 @@
 
 This is an executable, researcher-oriented guide for the **native**
 [Text-Fabric](https://annotation.github.io/text-fabric/) corpus derived from
-Brown's Inscriptions of Israel/Palestine (IIP). No released auto-downloadable
-IIP-TF corpus exists yet (distribution issue
-[#10](https://github.com/alexsosn/IIP-TF/issues/10)).
-For the candidate standalone TF-only install, see the [distribution guide](researcher-distribution.md).
-The converter-specific commands below run from the **IIP-TF converter repository root**.
+Brown's Inscriptions of Israel/Palestine (IIP). The versioned **corpus-data-0.1.0rc2** public data prerelease contains all
+5,535 inscriptions and the local TF browser with Original EpiDoc links.
+**Final IIP-TF 0.1.0 has not been released.**
 
-## 1. Obtain and authenticate the corpus
+- To begin searching, browsing and following original source links without cloning the converter,
+  start with the [standalone download and installation guide](researcher-distribution.md).
+  It covers checksum verification, Text-Fabric-only installation and a native search.
+- To reproduce the corpus or run the converter-specific `iip_tf.researcher_queries`
+  examples below, follow the source-build route in this quickstart. Run these
+  commands from the **IIP-TF converter repository root** with its dependencies
+  installed as described in the local browser guide.
+
+## 1. Build the authenticated corpus
 
 Use Python 3.11+, sufficient free storage and RAM for 1,466,387 Unicode-sign
 slots, and the pinned upstream source revision. Copy/paste the fully specified
@@ -229,9 +235,10 @@ source-critical editorial apparatus remains only partially visualized
 (#65), and some non-primary display issues remain (#51). Glyph references
 now have explicit reviewed Unicode/fallback display (#58).
 Do not infer an absence of reading, person identity or dating merely from a
-missing feature or empty display. Current IIP public deep links are not assumed
-to be stable. Researcher distribution and Agora integration are tracked in
-[#10](https://github.com/alexsosn/IIP-TF/issues/10) and
+missing feature or empty display. The Original EpiDoc browser link targets the authenticated Brown Git revision;
+other IIP public deep links are not assumed to be stable. The published data
+prerelease is documented in the [distribution guide](researcher-distribution.md).
+Managed Agora integration remains tracked in
 [#11](https://github.com/alexsosn/IIP-TF/issues/11).
 
 ## Native personal names and register data
