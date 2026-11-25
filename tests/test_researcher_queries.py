@@ -80,7 +80,8 @@ def test_researcher_guide_command_links_to_executable_entrypoint() -> None:
     assert "caes0260" in guide
     assert "masa0286" in guide
     assert "CC BY-NC 4.0" in guide
-    assert "No released" in guide or "not yet released" in guide
+    assert "Final IIP-TF 0.1.0 has not been released" in guide
+    assert "corpus-data-0.1.0rc2" in guide
     assert "TF_DIR" not in guide  # every copied command is self-contained
     assert 'print(tuple(api.S.search("inscription inscription_id=abil0001")))' in guide
 
