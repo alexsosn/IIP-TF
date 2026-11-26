@@ -86,9 +86,6 @@ def audit_facsimiles(source_dir: Path, image_paths: set[str]) -> dict[str, objec
                     unmatched[value] += 1
         records_with_exact += int(has_exact)
     return {
-        "source_revision": PINNED_IIP_REVISION,
-        "image_revision": IMAGE_REVISION,
-        "image_tree": IMAGE_TREE,
         "records": len(paths),
         "excluded": excluded,
         "repaired_files": repaired_files,
@@ -120,6 +117,11 @@ def main() -> int:
     if len(image_paths) != 802:
         raise ValueError("unexpected pinned image path count")
     report = audit_facsimiles(args.source_dir, image_paths)
+    report.update({
+        "source_revision": PINNED_IIP_REVISION,
+        "image_revision": IMAGE_REVISION,
+        "image_tree": IMAGE_TREE,
+    })
     if report["records"] != 5535:
         raise ValueError("unexpected pinned source record count")
     args.report.write_text(
