@@ -96,6 +96,12 @@ def smoke_extracted_corpus(root: Path) -> None:
             raise RuntimeError(
                 "unpacked browser passage lacks one clickable original EpiDoc link"
             )
+        expected_place = "https://pleiades.stoa.org/places/678091"
+        if api.F.settlement_ref.v(chor) != expected_place or (
+            passage_html.count('class="iip-pleiades-link"') != 1
+            or f'href="{expected_place}"' not in passage_html
+        ):
+            raise RuntimeError("unpacked browser lacks the attested Pleiades settlement link")
 
     print(
         "Clean Text-Fabric-only installation: 5,535 native inscriptions; "
