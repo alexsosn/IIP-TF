@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - "src/iip_tf/audit.py"
+      - "src/iip_tf/facsimile_audit.py"
+      - "tests/test_facsimile_audit.py"
       - "docs/research/iip-inventory.json"
       - "docs/research/iip-corpus-audit.md"
       - ".github/workflows/audit-pinned-iip.yml"
@@ -11,6 +13,8 @@ on:
     branches: [main]
     paths:
       - "src/iip_tf/audit.py"
+      - "src/iip_tf/facsimile_audit.py"
+      - "tests/test_facsimile_audit.py"
       - "docs/research/iip-inventory.json"
       - "docs/research/iip-corpus-audit.md"
       - ".github/workflows/audit-pinned-iip.yml"
@@ -52,6 +56,14 @@ jobs:
             --revision 0b7dc8358ccdfd0c9391f049da4839fbd91c26e5 \
             --json /tmp/iip-inventory.json \
             --markdown /tmp/iip-corpus-audit.md
+      - name: Measure source-explicit facsimile matches
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 \
+            'https://api.github.com/repos/Brown-University-Library/iip-images/git/trees/8c5f4dc08cd31ed1fb8ae919c318206ffd5a67ab?recursive=1' \
+            -o /tmp/iip-image-tree.json
+          python -m iip_tf.facsimile_audit upstream-iip/epidoc-files \
+            /tmp/iip-image-tree.json /tmp/iip-facsimile-audit.json
       - name: Upload generated evidence
         uses: actions/upload-artifact@v4
         with:
@@ -59,6 +71,7 @@ jobs:
           path: |
             /tmp/iip-inventory.json
             /tmp/iip-corpus-audit.md
+            /tmp/iip-facsimile-audit.json
       - name: Verify committed evidence is fresh
         run: |
           cmp /tmp/iip-inventory.json docs/research/iip-inventory.json
