@@ -30,6 +30,9 @@ def test_facsimile_inventory_uses_explicit_refs_not_inscription_ids(tmp_path: Pa
 
     report = audit_facsimiles(tmp_path, paths)
 
+    assert "source_revision" not in report  # arbitrary fixture is not authenticated
+    assert "image_revision" not in report
+    assert "image_tree" not in report
     assert report["records"] == 3
     assert report["excluded"] == {"aaTestFile.xml": "pinned source test fixture"}
     assert report["graphic_occurrences"] == 9
