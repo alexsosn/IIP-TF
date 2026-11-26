@@ -148,5 +148,22 @@ the user actually supplied.
 The earlier `corpus-data-0.1.0rc1` archive is immutable and still has its
 original browser app. The final IIP-TF 0.1.0 release is separate and pending.
 
+## Follow the source's settlement reference
+
+In the current source-built app, an authenticated Brown passage with a single
+explicit Pleiades place URL in native `settlement_ref` shows a **Pleiades
+settlement** link next to Original EpiDoc. For example, `chor0001` points to
+`https://pleiades.stoa.org/places/678091` and `abil0001` has the source HTTP
+reference `http://pleiades.stoa.org/places/677994` (opened via HTTPS).
+The raw TF feature is unchanged. This is the source's settlement reference,
+not an independently confirmed exact findspot or a claim that the external
+page is currently available. Missing, compound and unsupported references
+are not converted into links. The browser does not automatically request
+external place data. Relative or missing image filenames are not turned into
+invented facsimile URLs; query the native image metadata instead.
+
+This addition is not in the immutable published rc2 archive; it requires a
+subsequent versioned data release after validation.
+
 Original IIP texts are © their respective owners and supplied under the
 source project's terms (CC BY-NC 4.0); see `LICENSE_SCOPE.md`.
