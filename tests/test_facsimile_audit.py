@@ -53,6 +53,9 @@ def test_image_tree_requires_complete_expected_tree_and_regular_root_blobs() -> 
         "tree": [{"path": "a.jpg", "type": "blob", "mode": "100644"}],
     }
     assert image_paths_from_tree(tree, expected_sha="expected") == {"a.jpg"}
+    # The real Brown image tree contains 58 regular executable-mode JPEGs.
+    executable = {**tree, "tree": [{"path": "b.jpg", "type": "blob", "mode": "100755"}]}
+    assert image_paths_from_tree(executable, expected_sha="expected") == {"b.jpg"}
     with pytest.raises(ValueError):
         image_paths_from_tree(tree, expected_sha="other")
     with pytest.raises(ValueError):
