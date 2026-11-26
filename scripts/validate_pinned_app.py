@@ -401,6 +401,26 @@ def main() -> int:
         if not isinstance(payload.get("table"), str) or not payload["table"]:
             raise RuntimeError("pinned browser returned empty passage HTML")
 
+        # Source-grounded HTTPS and HTTP settlement references, not inferred places.
+        for record_id, source_ref in (
+            ("chor0001", "https://pleiades.stoa.org/places/678091"),
+            ("abil0001", "http://pleiades.stoa.org/places/677994"),
+        ):
+            record = api.T.nodeFromSection((record_id,))
+            if record is None or api.F.settlement_ref.v(record) != source_ref:
+                raise RuntimeError(f"{record_id}: native settlement reference changed")
+            line = api.L.d(record, otype="line")[0]
+            part = api.T.sectionFromNode(line)[1]
+            result = client.post("/passage", data={"sec0": record_id, "sec1": str(part)})
+            data = result.get_json()
+            html = data.get("table") if isinstance(data, dict) else None
+            target = source_ref.replace("http://", "https://", 1)
+            if result.status_code != 200 or not isinstance(html, str) or (
+                html.count('class="iip-pleiades-link"') != 1
+                or f'href="{target}"' not in html
+            ):
+                raise RuntimeError(f"{record_id}: source settlement link absent in browser")
+
         # Researcher E2E through the actual HTML passage endpoint: primary
         # source-only Masada ostracon is no longer a blank browser reading.
         masada_lines = api.L.d(masada, otype="line")

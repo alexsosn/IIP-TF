@@ -6,6 +6,7 @@ format. Editorial notes are visual labels, never changes to source reading.
 
 from __future__ import annotations
 
+import re
 import types
 from html import escape
 from typing import Any
@@ -223,6 +224,28 @@ def _original_epidoc_link(app: Any, node: int, fmt: str | None) -> str:
     )
 
 
+def _pleiades_settlement_link(app: Any, node: int) -> str:
+    """Expose only explicit single-place references, without guessing a findspot."""
+    api = app.api
+    owners = tuple(api.L.u(node, otype="inscription"))
+    feature = getattr(api.F, "settlement_ref", None)
+    if len(owners) != 1 or feature is None:
+        return ""
+    value = feature.v(owners[0])
+    if not isinstance(value, str):
+        return ""
+    match = re.fullmatch(r"https?://pleiades\.stoa\.org/places/([0-9]+)", value)
+    if match is None:
+        return ""
+    # Use HTTPS for navigation only; preserve the original native feature.
+    target = f"https://pleiades.stoa.org/places/{match[1]}"
+    return (
+        '<a class="iip-pleiades-link" target="_blank" rel="noopener noreferrer" '
+        f'href="{target}" title="Settlement reference supplied by the source">'
+        "Pleiades settlement</a> "
+    )
+
+
 def render_sign(app: Any, options: Any, chunk: Any, n_type: str, outer: bool) -> str:
     """Render one sign without suppressing its original characters or spacing."""
     node = chunk[0]
@@ -284,6 +307,8 @@ def render_sign(app: Any, options: Any, chunk: Any, n_type: str, outer: bool) ->
     early = "".join(closing_label(kind) for kind, inside in closings if not inside)
     late = "".join(closing_label(kind) for kind, inside in closings if inside)
     source_link = _original_epidoc_link(app, node, display_fmt)
+    if source_link:
+        source_link += _pleiades_settlement_link(app, node)
     return (
         f'{source_link}{note_html}<span class="iip-source-sign">{material}</span>'
         f'{early}{after_html}{late}'

@@ -292,3 +292,58 @@ def test_browser_mode_exposes_source_hyperlink_in_real_passage(tmp_path: Path) -
     visible = _VisibleText()
     visible.feed(payload["table"])
     assert "YBC" in "".join(visible.parts)
+
+
+def test_pinned_passage_links_only_explicit_pleiades_place_references(tmp_path: Path) -> None:
+    """Real origin/settlement shape from Brown chor0001 and abil0001."""
+    from iip_tf.taxonomy_audit import PINNED_SOURCE_REVISION
+
+    refs = {
+        "sample1": "https://pleiades.stoa.org/places/678091",
+        "sample2": "http://pleiades.stoa.org/places/677994",
+        "sample3": "",
+        "sample4": "https://pleiades.stoa.org.evil.example/places/678091",
+        "sample5": "https://pleiades.stoa.org/places/678091?redirect=evil",
+        "sample6": "https://pleiades.stoa.org/places/678091 https://example.org",
+    }
+    records = []
+    for record_id, ref in refs.items():
+        source = tmp_path / f"{record_id}.xml"
+        source.write_text(
+            '<TEI xmlns="http://www.tei-c.org/ns/1.0">'
+            "<teiHeader><fileDesc><titleStmt><title>Place</title></titleStmt>"
+            f"<publicationStmt><idno>{record_id}</idno></publicationStmt>"
+            "<sourceDesc><msDesc><history><origin><placeName>"
+            f'<settlement ref="{ref}">Attested place</settlement>'
+            "</placeName></origin></history></msDesc></sourceDesc>"
+            "</fileDesc></teiHeader><text><body>"
+            '<div type="edition" subtype="transcription"><p>'
+            "<choice><orig>X</orig><reg>Y</reg></choice>BC"
+            "</p></div></body></text></TEI>",
+            encoding="utf-8",
+        )
+        records.append(parse_epidoc_file(source, source_revision=PINNED_SOURCE_REVISION))
+    output = tmp_path / "tf"
+    write_tf_corpus(tuple(records), output, converter_commit="fixture-commit")
+    api: Any = Fabric(locations=str(output), silent=True).loadAll(silent=True)
+    browser: Any = setup(False, f"app:{APP}", f"--locations={output}", "-noweb")
+    with browser.test_client() as client:
+        for record_id, ref in refs.items():
+            record = api.T.nodeFromSection((record_id,))
+            assert record is not None
+            assert (api.F.settlement_ref.v(record) or "") == ref
+            response = client.post(
+                "/passage", data={"sec0": record_id, "sec1": "transcription"}
+            )
+            assert response.status_code == 200
+            html = response.get_json()["table"]
+            if record_id in {"sample1", "sample2"}:
+                expected = ref.replace("http://", "https://", 1)
+                assert html.count('class="iip-pleiades-link"') == 1
+                assert f'href="{expected}"' in html
+            else:
+                assert 'class="iip-pleiades-link"' not in html
+            assert html.count('class="iip-epidoc-link"') == 1
+            visible = _VisibleText()
+            visible.feed(html)
+            assert "YBC" in "".join(visible.parts)
